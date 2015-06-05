@@ -18,9 +18,9 @@ class Emulator
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
 		$file=$errfile;
-		if (isset($this->last_file)) $file=$this->last_file;
 		$line=$errline;;
-		if (isset($this->last_node)) $line=$this->last_node->getLine();
+		// if (isset($this->last_file)) $file=$this->last_file;
+		// if (isset($this->last_node)) $line=$this->last_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -42,6 +42,10 @@ class Emulator
 	{
 		trigger_error($msg);
 	}
+	function warning($msg)
+	{
+		trigger_error($msg);
+	}
 	function output_array(array $args)
 	{
 		$this->output.=implode("",$args);
@@ -50,13 +54,6 @@ class Emulator
 	{
 		$args=func_get_args();
 		$this->output.=implode("",$args);
-	}
-	protected function evaluate_expression_array(array $ast)
-	{
-		$out=[];
-		foreach ($ast as $element)
-			$out[]=$this->evaluate_expression($element);
-		return $out;
 	}
 	protected function push()
 	{
@@ -71,24 +68,51 @@ class Emulator
 	{
 		$this->push();
 		$function=$this->functions[$name];
-		if (count($function['params'])!=count($args))
-			$this->error("{$name} expects ".count($function['params'])." arguments but received ".count($args));
+		// if (count($function['params'])!=count($args))
+			// $this->error("{$name} expects ".count($function['params'])." arguments but received ".count($args));
 		reset($args);
+		$count=count($args);
+		$index=0;
 		foreach ($function['params'] as $param)
 		{
 			$this->variables[$param->name]=current($args);
-			next($args);
+			if ($index>=$count) //all args consumed, either defaults or error
+			{
+				if (isset($param->default))
+					$this->variables[$param->name]=$this->evaluate_expression($param->default);
+				else
+				{
+
+					$this->warning("Missing argument ".($index+1)." for {$name}()");
+					return null;
+				}
+
+			}
+			else
+			{
+				next($args);
+			}
+			$index++;
 		}
 		$res=$this->run_code($function['code']);
 
 		$this->pop();
 		return $res;
 	}
+	protected function evaluate_expression_array(array $ast)
+	{
+		$out=[];
+		foreach ($ast as $element)
+			$out[]=$this->evaluate_expression($element);
+		return $out;
+	}
 	protected function evaluate_expression($ast)
 	{
 		$node=$ast;
 		$this->last_node=$node;
 		if (false);
+		elseif (is_array($node))
+			die("array node!");
 		elseif ($node instanceof Node\Expr\FuncCall)
 		{
 			$name=$this->name($node->name);
@@ -98,11 +122,52 @@ class Emulator
 			if (isset($this->functions[$name]))
 				return $this->run_function($name,$args); //user function
 			else
-				return call_user_func_array($name,$args); //core function
-			// die("Yoyo");
+			{
+				#FIXME: handle critical internal functions (e.g function_exists, ob_start, etc.)
+				ob_start();	
+				$ret=call_user_func_array($name,$args); //core function
+				$output=ob_get_clean();
+				$this->output($output);
+				return $ret;
+			}
 		}
 		elseif ($node instanceof Node\Expr\Assign)
-			return $this->variables[$node->var->name]=$this->evaluate_expression($node->expr);
+		{
+			// print_r($node);
+			if ($node->var instanceof Node\Expr\Variable)	
+				return $this->variables[$this->name($node->var->name)]=$this->evaluate_expression($node->expr);	
+			elseif ($node->var instanceof Node\Expr\List_) //list(x,y)=f()
+			{
+				$resArray=$this->evaluate_expression($node->expr);
+				if (count($resArray)!=count($node->var->vars))
+					$this->warning("list() used but number of arguments do not match");
+				reset($resArray);
+				foreach ($node->var->vars as $var)
+				{
+					if ($var instanceof Node\Expr\Variable)
+					{
+						$this->variables[$this->name($var->name)]=current($resArray);
+						next($resArray);
+					}
+				}
+			}
+			elseif ($node->var instanceof Node\Expr\ArrayDimFetch) //$x[...]=...
+			{
+				$this->variables[$this->name($node->var->var->name)][$this->name($node->var->dim)]=$this->evaluate_expression($node->expr);
+			}
+			else
+			{
+				echo "Unknown assign: ";
+				print_r($node);
+			}
+		}
+		elseif ($node instanceof Node\Expr\Array_)
+		{
+			$out=[];
+			foreach ($node->items as $item)
+				$out[$this->evaluate_expression($item->key)]=$this->evaluate_expression($item->value);
+			return $out;
+		}
 		elseif ($node instanceof Node\Expr\Cast)
 		{
 			if ($node instanceof Node\Expr\Cast\Int_)
@@ -113,6 +178,8 @@ class Emulator
 				print_r($node);
 			}
 		}
+		elseif ($node instanceof Node\Expr\BooleanNot)
+			return !$this->evaluate_expression($node->expr);
 		elseif ($node instanceof Node\Expr\BinaryOp)
 		{
 			if ($node instanceof Node\Expr\BinaryOp\Plus)
@@ -171,6 +238,7 @@ class Emulator
 				print_r($node);
 			}
 		}
+		// elseif ($node instanceof Node\Expr\ArrayItem); //this is handled in Array_ implicitly
 		elseif ($node instanceof Node\Expr\ArrayDimFetch)
 		{
 			$name=$node->var->name;
@@ -210,7 +278,12 @@ class Emulator
 	{
 		if (is_string($ast))
 			return $ast;
+		elseif ($ast instanceof Node\Scalar)
+			return $ast->value;
+		elseif ($ast instanceof Node\Expr\Variable)
+			return $ast->name;
 		$res="";
+		// print_r($ast);
 		foreach ($ast->parts as $part)
 		{
 			if (is_string($part))
@@ -227,6 +300,28 @@ class Emulator
 		$code=file_get_contents($file);
 		$ast=$this->parser->parse($code);
 		return $this->run_code($ast);
+	}
+	
+	function __construct()
+	{
+		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
+		$this->traverser     = new PhpParser\NodeTraverser;
+    	$this->traverser->addVisitor(new LiteralExplodeDetector);
+    	$this->init();
+	}
+	function init()
+	{
+		$this->variables['_GET']=isset($_GET)?$_GET:array();
+		$this->variables['_POST']=isset($_POST)?$_POST:array();
+
+	}
+	function start($file)
+	{
+		set_error_handler(array($this,"error_handler"));
+		$res=$this->run_file($file);
+		restore_error_handler();
+
+		return $res;
 	}
 	protected function run_code($ast)
 	{
@@ -267,8 +362,35 @@ class Emulator
 			}
 			elseif ($node instanceof Node\Stmt\Return_)
 				return $this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Stmt\Foreach_)
+			{
+				// print_r($node);
+				$list=$this->evaluate_expression($node->expr);
+				if (isset($node->keyVar))
+					$keyVar=$this->name($node->keyVar->name);
+				$valueVar=$this->name($node->valueVar->name);
+				// $keyVarExists=false;
+				// $valueVarExists=false;
+				// if (isset($this->variables[$keyVar]))
+				// 	$keyVarExists=true;
+				// if (isset($this->variables[$valueVar]))
+				// 	$valueVarExists=true;
+				foreach ($list as $k=>$v)
+				{
+					if (isset($keyVar))
+						$this->variables[$keyVar]=$k;
+					$this->variables[$valueVar]=$v;
+					$this->run_code($node->stmts);
+				}
+				// if (!$valueVarExists)
+				// 	unset($this->variables[$valueVar]);
+				// if (!$keyVarExists)
+				// 	unset($this->variables[$keyVar]);
+			}
 			elseif ($node instanceof Node\Expr\FuncCall)
+			{
 				$this->evaluate_expression($node); //function call without return value used
+			}
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\Assign)
@@ -281,28 +403,7 @@ class Emulator
 
 
 		}
-	}
-	function __construct()
-	{
-		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
-		$this->traverser     = new PhpParser\NodeTraverser;
-    	$this->traverser->addVisitor(new LiteralExplodeDetector);
-    	$this->init();
-	}
-	function init()
-	{
-		$this->variables['_GET']=isset($_GET)?$_GET:array();
-		$this->variables['_POST']=isset($_POST)?$_POST:array();
-
-	}
-	function start($file)
-	{
-		set_error_handler(array($this,"error_handler"));
-		$res=$this->run_file($file);
-		restore_error_handler();
-
-		return $res;
-	}
+	}	
 }
 
 
