@@ -11,10 +11,16 @@ class Emulator
 {	
 	protected $last_node,$last_file;
 	public $output;
+	public $variables=[];
+	public $functions=[];
+	public $parser;
+	public $variable_stack=[];
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
-		$file=isset($this->last_file)?$this->last_file:$errfile;
-		$line=isset($this->last_node)?$this->last_node->getLine():$errline;
+		$file=$errfile;
+		if (isset($this->last_file)) $file=$this->last_file;
+		$line=$errline;;
+		if (isset($this->last_node)) $line=$this->last_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -52,6 +58,32 @@ class Emulator
 			$out[]=$this->evaluate_expression($element);
 		return $out;
 	}
+	protected function push()
+	{
+		array_push($this->variable_stack, $this->variables);
+		$this->variables=[];
+	}
+	protected function pop()
+	{
+		$this->variables=array_pop($this->variable_stack);
+	}
+	protected function run_function($name,$args)
+	{
+		$this->push();
+		$function=$this->functions[$name];
+		if (count($function['params'])!=count($args))
+			$this->error("{$name} expects ".count($function['params'])." arguments but received ".count($args));
+		reset($args);
+		foreach ($function['params'] as $param)
+		{
+			$this->variables[$param->name]=current($args);
+			next($args);
+		}
+		$res=$this->run_code($function['code']);
+
+		$this->pop();
+		return $res;
+	}
 	protected function evaluate_expression($ast)
 	{
 		$node=$ast;
@@ -63,7 +95,10 @@ class Emulator
 			$args=[];
 			foreach ($node->args as $arg)
 				$args[]=$this->evaluate_expression($arg->value);
-			return call_user_func_array($name,$args);
+			if (isset($this->functions[$name]))
+				return $this->run_function($name,$args); //user function
+			else
+				return call_user_func_array($name,$args); //core function
 			// die("Yoyo");
 		}
 		elseif ($node instanceof Node\Expr\Assign)
@@ -92,7 +127,7 @@ class Emulator
 			elseif ($node instanceof Node\Expr\BinaryOp\Equal)
 				return $this->evaluate_expression($node->left)==$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\NotEqual)
-				return $this->evaluate_expression($node->left)==$this->evaluate_expression($node->right);
+				return $this->evaluate_expression($node->left)!=$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Smaller)
 				return $this->evaluate_expression($node->left)<$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\SmallerOrEqual)
@@ -173,6 +208,8 @@ class Emulator
 	}
 	protected function name($ast)
 	{
+		if (is_string($ast))
+			return $ast;
 		$res="";
 		foreach ($ast->parts as $part)
 		{
@@ -184,7 +221,6 @@ class Emulator
 
 		return $res;		
 	}
-	public $variables;
 	public function run_file($file)
 	{
 		$this->last_file=realpath($file);
@@ -223,6 +259,14 @@ class Emulator
 						$this->run_code($node->else->stmts);
 				}
 			}
+			elseif ($node instanceof Node\Stmt\Function_)
+			{
+				$name=$this->name($node->name);
+				$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts);
+				// print_r($node);
+			}
+			elseif ($node instanceof Node\Stmt\Return_)
+				return $this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\FuncCall)
 				$this->evaluate_expression($node); //function call without return value used
 			elseif ($node instanceof Node\Expr\Exit_)
@@ -238,7 +282,6 @@ class Emulator
 
 		}
 	}
-	public $parser;
 	function __construct()
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
@@ -261,6 +304,27 @@ class Emulator
 		return $res;
 	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class LiteralExplodeDetector extends MyNodeVisitor
 {
     public function leaveNode_(Node $node) {

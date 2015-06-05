@@ -12,6 +12,11 @@ elseif ($x>5)
 	// $x=$x-1;
 // echo $y.$x;
 echo $x,PHP_EOL;
+function f($x)
+{
+	return $x;
+}
+echo f("zart");
 exit(0);
 // function stringtoURL($string,$set=TRUE){ 
 //     $strPos = strpos($string,'?'); 
