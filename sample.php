@@ -4,11 +4,15 @@ echo "Hi";
 $x=5+2.0;
 $x=(int)($x/3);
 $y="abc{$x}efg";
-echo $y.$x;
-echo $x;
-echo PHP_EOL;
+if ($x!=5)
+	$x=123;
+elseif ($x>5)
+	$x=$x+1;
+// else
+	// $x=$x-1;
+// echo $y.$x;
+echo $x,PHP_EOL;
 exit(0);
-abc
 // function stringtoURL($string,$set=TRUE){ 
 //     $strPos = strpos($string,'?'); 
 //     $str = substr($string,$strPos+1); 

@@ -66,6 +66,8 @@ class Emulator
 			return call_user_func_array($name,$args);
 			// die("Yoyo");
 		}
+		elseif ($node instanceof Node\Expr\Assign)
+			return $this->variables[$node->var->name]=$this->evaluate_expression($node->expr);
 		elseif ($node instanceof Node\Expr\Cast)
 		{
 			if ($node instanceof Node\Expr\Cast\Int_)
@@ -84,6 +86,22 @@ class Emulator
 				return $this->evaluate_expression($node->left)/$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Minus)
 				return $this->evaluate_expression($node->left)-$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\Mul)
+				return $this->evaluate_expression($node->left)*$this->evaluate_expression($node->right);
+			
+			elseif ($node instanceof Node\Expr\BinaryOp\Equal)
+				return $this->evaluate_expression($node->left)==$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\NotEqual)
+				return $this->evaluate_expression($node->left)==$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\Smaller)
+				return $this->evaluate_expression($node->left)<$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\SmallerOrEqual)
+				return $this->evaluate_expression($node->left)<=$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\Greater)
+				return $this->evaluate_expression($node->left)>$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\GreaterOrEqual)
+				return $this->evaluate_expression($node->left)>=$this->evaluate_expression($node->right);
+			
 			elseif ($node instanceof Node\Expr\BinaryOp\Concat)
 				return $this->evaluate_expression($node->left).$this->evaluate_expression($node->right);
 
@@ -181,12 +199,36 @@ class Emulator
 			// echo get_class($node),PHP_EOL;
 			if ($node instanceof Node\Stmt\Echo_)
 				$this->output_array($this->evaluate_expression_array($node->exprs));
+			elseif ($node instanceof Node\Stmt\If_)
+			{
+				$done=false;
+				if ($this->evaluate_expression($node->cond))
+				{
+					$done=true;
+					$this->run_code($node->stmts);
+				}
+				else
+				{
+					if (is_array($node->elseifs))
+						foreach ($node->elseifs as $elseif)
+						{
+							if ($this->evaluate_expression($elseif->cond))
+							{
+								$done=true;
+								$this->run_code($elseif->stmts);
+								break;
+							}
+						}
+					if (!$done and isset($node->else))
+						$this->run_code($node->else->stmts);
+				}
+			}
 			elseif ($node instanceof Node\Expr\FuncCall)
 				$this->evaluate_expression($node); //function call without return value used
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\Assign)
-				$this->variables[$node->var->name]=$this->evaluate_expression($node->expr);
+				$this->evaluate_expression($node);
 			else
 			{
 				echo "Unknown node type: ";	
@@ -308,5 +350,5 @@ $_GET['q']='123';
 $x=new Emulator;
 $x->start("sample.php");
 var_dump($x->output);
-echo "Variables: ",PHP_EOL;
+echo PHP_EOL,"### Variables ###",PHP_EOL;
 var_dump($x->variables);
