@@ -13,6 +13,6 @@ do {
 } while($i<10);
 echo $i;
 $a[1][2][3][4]=5;
-exit(0);
 $x=$a[1][2][3][4];
-echo $x;
+print_r($x);
+exit(0);

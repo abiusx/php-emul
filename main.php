@@ -154,18 +154,18 @@ class Emulator
 			}
 			elseif ($node->var instanceof Node\Expr\ArrayDimFetch) //$x[...][...]=...
 			{
-				$t=$node;
+				$t=$node->var;
 				$dim=0;
 				$indexes=[];
 				//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
-				while ($t->var instanceof Node\Expr\ArrayDimFetch)
+				while ($t instanceof Node\Expr\ArrayDimFetch)
 				{
 					$dim++;
-					$indexes[]=$this->evaluate_expression($t->var->dim);
+					$indexes[]=$this->evaluate_expression($t->dim);
 					$t=$t->var;
 				}
 				$indexes=array_reverse($indexes);
-				$varName=$this->name($t->var);
+				$varName=$this->name($t);
 
 				$base=&$this->variables[$varName];
 				foreach ($indexes as $index)
@@ -178,6 +178,34 @@ class Emulator
 				echo "Unknown assign: ";
 				print_r($node);
 			}
+		}
+		elseif ($node instanceof Node\Expr\ArrayDimFetch) //access multidimensional arrays $x[...][..][...]
+		{
+			$t=$node;
+			$dim=0;
+			$indexes=[];
+			//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
+			while ($t instanceof Node\Expr\ArrayDimFetch)
+			{
+				$dim++;
+				$indexes[]=$this->evaluate_expression($t->dim);
+				$t=$t->var;
+			}
+			$indexes=array_reverse($indexes);
+			$varName=$this->name($t);
+			if (!isset($this->variables[$varName]))
+				$this->warning("Variable '\$$varName' not defined");
+			$base=&$this->variables[$varName];
+			foreach ($indexes as $index)
+			{
+				if (!isset($base[$index]))	
+					$this->warning("Undefined array index {$index} in '\$$varName'");
+				$base=&$base[$index];
+			}
+			return $base;
+			// $base=$this->evaluate_expression($node->expr);
+
+
 		}
 		elseif ($node instanceof Node\Expr\Array_)
 		{
@@ -279,18 +307,7 @@ class Emulator
 			}
 		}
 		// elseif ($node instanceof Node\Expr\ArrayItem); //this is handled in Array_ implicitly
-		elseif ($node instanceof Node\Expr\ArrayDimFetch)
-		{
-			$name=$node->var->name;
-			$dim=$this->evaluate_expression($node->dim);
-			if (!isset($this->variables[$name]))
-				$this->error("Undefined array \${$name}");
-			elseif (!isset($this->variables[$name][$dim]))
-				$this->error("Undefined array index \${$name}[{$dim}]");
-			else
-				return $this->variables[$name][$dim];
-
-		}
+		
 		elseif ($node instanceof Node\Expr\Variable)
 		{
 			if (isset($this->variables[$node->name]))
