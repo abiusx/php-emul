@@ -400,6 +400,35 @@ class Emulator
 				}
 
 			}
+			elseif ($node instanceof Node\Stmt\While_)
+			{
+				$i=0;
+				while ($this->evaluate_expression($node->cond))
+				{
+					$this->run_code($node->stmts);
+					$i++;
+					if ($i>self::$infinite_loop)
+					{
+						$this->error("Infinite loop");
+						break;
+					}
+				}
+			}
+			elseif ($node instanceof Node\Stmt\Do_)
+			{
+				$i=0;
+				do
+				{
+					$this->run_code($node->stmts);
+					$i++;
+					if ($i>self::$infinite_loop)
+					{
+						$this->error("Infinite loop");
+						break;
+					}
+				}
+				while ($this->evaluate_expression($node->cond));
+			}
 			elseif ($node instanceof Node\Stmt\Foreach_)
 			{
 				// print_r($node);
