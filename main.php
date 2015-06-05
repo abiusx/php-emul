@@ -20,8 +20,8 @@ class Emulator
 	{
 		$file=$errfile;
 		$line=$errline;;
-		if (isset($this->last_file)) $file=$this->last_file;
-		if (isset($this->last_node)) $line=$this->last_node->getLine();
+		// if (isset($this->last_file)) $file=$this->last_file;
+		// if (isset($this->last_node)) $line=$this->last_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -152,9 +152,26 @@ class Emulator
 					}
 				}
 			}
-			elseif ($node->var instanceof Node\Expr\ArrayDimFetch) //$x[...]=...
+			elseif ($node->var instanceof Node\Expr\ArrayDimFetch) //$x[...][...]=...
 			{
-				$this->variables[$this->name($node->var->var->name)][$this->name($node->var->dim)]=$this->evaluate_expression($node->expr);
+				$t=$node;
+				$dim=0;
+				$indexes=[];
+				//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
+				while ($t->var instanceof Node\Expr\ArrayDimFetch)
+				{
+					$dim++;
+					$indexes[]=$this->evaluate_expression($t->var->dim);
+					$t=$t->var;
+				}
+				$indexes=array_reverse($indexes);
+				$varName=$this->name($t->var);
+
+				$base=&$this->variables[$varName];
+				foreach ($indexes as $index)
+					$base=&$base[$index];
+				$base=$this->evaluate_expression($node->expr);
+				// $this->variables[$this->name($node->var->var->name)][$this->name($node->var->dim)]=$this->evaluate_expression($node->expr);
 			}
 			else
 			{
