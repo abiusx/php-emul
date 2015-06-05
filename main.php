@@ -20,8 +20,8 @@ class Emulator
 	{
 		$file=$errfile;
 		$line=$errline;;
-		// if (isset($this->last_file)) $file=$this->last_file;
-		// if (isset($this->last_node)) $line=$this->last_node->getLine();
+		if (isset($this->last_file)) $file=$this->last_file;
+		if (isset($this->last_node)) $line=$this->last_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -211,7 +211,10 @@ class Emulator
 		{
 			$out=[];
 			foreach ($node->items as $item)
-				$out[$this->evaluate_expression($item->key)]=$this->evaluate_expression($item->value);
+				if (isset($item->key))
+					$out[$this->evaluate_expression($item->key)]=$this->evaluate_expression($item->value);
+				else
+					$out[]=$this->evaluate_expression($item->value);
 			return $out;
 		}
 		elseif ($node instanceof Node\Expr\Cast)
@@ -310,10 +313,14 @@ class Emulator
 		
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			if (isset($this->variables[$node->name]))
+			if (array_key_exists($this->name($node), $this->variables))
 				return $this->variables[$node->name];
 			else
+			{
+
+				print_r($this->variables);
 				$this->error("Undefined variable {$node->name}");
+			}
 		}
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
@@ -324,6 +331,14 @@ class Emulator
 				$this->error("Undefined constant {$name}");
 
 		}
+		elseif ($node instanceof Node\Expr\ErrorSuppress)
+		{
+			#TODO: error handling
+			return $this->evaluate_expression($node->expr);
+			// print_r($node);
+		} 
+		elseif ($node instanceof Node\Expr\Exit_)
+			return $this->evaluate_expression($node->expr);
 		else
 		{
 			echo "Unknown expression node: ",
@@ -489,7 +504,7 @@ class Emulator
 				// 	unset($this->variables[$keyVar]);
 			}
 			elseif ($node instanceof Node\Expr\Exit_)
-				return $this->evaluate_expression($node->expr);
+				return $this->evaluate_expression($node);
 			elseif ($node instanceof Node\Expr)
 				$this->evaluate_expression($node);
 			else
@@ -606,8 +621,9 @@ function analyze($dir,$visitor)
 	// echo memory_get_usage()/1024,"KB,",memory_get_peak_usage()/1024,"KB",PHP_EOL;
 	return $statements;
 }
+$_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-$x->start("sample2.php");
+$x->start("sample3.php");
 var_dump($x->output);
 echo PHP_EOL,"### Variables ###",PHP_EOL;
 var_dump($x->variables);
