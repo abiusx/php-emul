@@ -9,6 +9,7 @@ class MyNodeVisitor extends  PhpParser\NodeVisitorAbstract
 
 class Emulator
 {	
+	static $infinite_loop=20; #1000000;
 	protected $last_node,$last_file;
 	public $output;
 	public $variables=[];
@@ -19,8 +20,8 @@ class Emulator
 	{
 		$file=$errfile;
 		$line=$errline;;
-		// if (isset($this->last_file)) $file=$this->last_file;
-		// if (isset($this->last_node)) $line=$this->last_node->getLine();
+		if (isset($this->last_file)) $file=$this->last_file;
+		if (isset($this->last_node)) $line=$this->last_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -180,6 +181,21 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\BooleanNot)
 			return !$this->evaluate_expression($node->expr);
+		
+		elseif ($node instanceof Node\Expr\PreInc)
+			return ++$this->variables[$this->name($node->var)];
+		elseif ($node instanceof Node\Expr\PostInc)
+			return $this->variables[$this->name($node->var)]++;
+		elseif ($node instanceof Node\Expr\PreDec)
+			return --$this->variables[$this->name($node->var)];
+		elseif ($node instanceof Node\Expr\PostDec)
+			return $this->variables[$this->name($node->var)]--;
+
+		elseif ($node instanceof Node\Expr\AssignOp)
+		{
+			if ($node instanceof Node\Expr\AssignOp\Plus)
+				return $this->variables[$this->name($node->var)]+=$this->evaluate_expression($node->expr);
+		}
 		elseif ($node instanceof Node\Expr\BinaryOp)
 		{
 			if ($node instanceof Node\Expr\BinaryOp\Plus)
@@ -204,6 +220,13 @@ class Emulator
 			elseif ($node instanceof Node\Expr\BinaryOp\GreaterOrEqual)
 				return $this->evaluate_expression($node->left)>=$this->evaluate_expression($node->right);
 			
+			elseif ($node instanceof Node\Expr\BinaryOp\LogicalAnd)
+				return $this->evaluate_expression($node->left) and $this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\LogicalOr)
+				return $this->evaluate_expression($node->left) or $this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\LogicalXor)
+				return $this->evaluate_expression($node->left) xor $this->evaluate_expression($node->right);
+
 			elseif ($node instanceof Node\Expr\BinaryOp\Concat)
 				return $this->evaluate_expression($node->left).$this->evaluate_expression($node->right);
 
@@ -362,6 +385,21 @@ class Emulator
 			}
 			elseif ($node instanceof Node\Stmt\Return_)
 				return $this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Stmt\For_)
+			{
+				$i=0;
+				for ($this->run_code($node->init);$this->evaluate_expression($node->cond[0]);$this->run_code($node->loop))
+				{
+					$i++;	
+					$this->run_code($node->stmts);
+					if ($i>self::$infinite_loop)
+					{
+						$this->error("Infinite loop");
+						break;
+					}
+				}
+
+			}
 			elseif ($node instanceof Node\Stmt\Foreach_)
 			{
 				// print_r($node);
@@ -387,13 +425,9 @@ class Emulator
 				// if (!$keyVarExists)
 				// 	unset($this->variables[$keyVar]);
 			}
-			elseif ($node instanceof Node\Expr\FuncCall)
-			{
-				$this->evaluate_expression($node); //function call without return value used
-			}
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\Assign)
+			elseif ($node instanceof Node\Expr)
 				$this->evaluate_expression($node);
 			else
 			{
@@ -509,11 +543,8 @@ function analyze($dir,$visitor)
 	// echo memory_get_usage()/1024,"KB,",memory_get_peak_usage()/1024,"KB",PHP_EOL;
 	return $statements;
 }
-$_GET['name']='123';
-$_GET['str']='123';
-$_GET['q']='123';
 $x=new Emulator;
-$x->start("sample.php");
+$x->start("sample2.php");
 var_dump($x->output);
 echo PHP_EOL,"### Variables ###",PHP_EOL;
 var_dump($x->variables);
