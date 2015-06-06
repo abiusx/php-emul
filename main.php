@@ -2,6 +2,7 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: eval,empty,closure,closureUse,AssignRef
+#TODO: function byref
 class Emulator
 {	
 	static $infinite_loop=20; #1000000;
@@ -139,6 +140,12 @@ class Emulator
 				$this->output($output);
 				return $ret;
 			}
+		}
+		elseif ($node instanceof Node\Expr\AssignRef)
+		{
+			$originalVar=$this->name($node->expr);
+			$var=$this->name($node->var);
+			$this->variables[$var]=&$this->variables[$originalVar];
 		}
 		elseif ($node instanceof Node\Expr\Assign)
 		{
