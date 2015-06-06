@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
-
+#remaining for procedural completeness: eval,empty,closure,closureUseAssignRef
 class Emulator
 {	
 	static $infinite_loop=20; #1000000;
@@ -433,6 +433,8 @@ class Emulator
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
 			return $this->evaluate_expression($node->expr);
+		elseif ($node instanceof Node\Expr\Empty_)
+			return empty($this->variables[$this->name($node->expr)]);
 		elseif ($node instanceof Node\Expr\Isset_)
 		{
 			foreach ($node->vars as $var)
