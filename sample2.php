@@ -1,6 +1,8 @@
 <?php
+`ls`;
 $s=0;
 $q=__DIR__.__FILE__;
+print $q."a";
 exit(0);
 for ($i=0;$i<10 and 1<2;$i++)
 {

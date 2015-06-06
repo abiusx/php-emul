@@ -245,7 +245,15 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\BooleanNot)
 			return !$this->evaluate_expression($node->expr);
+
+		elseif ($node instanceof Node\Expr\BitwiseNot)
+			return ~$this->evaluate_expression($node->expr);
 		
+		elseif ($node instanceof Node\Expr\UnaryMinus)
+			return -$this->variables[$this->name($node->var)];
+		elseif ($node instanceof Node\Expr\UnaryPlus)
+			return +$this->variables[$this->name($node->var)];
+
 		elseif ($node instanceof Node\Expr\PreInc)
 			return ++$this->variables[$this->name($node->var)];
 		elseif ($node instanceof Node\Expr\PostInc)
@@ -368,32 +376,30 @@ class Emulator
 
 				return $res;
 			}
+			elseif ($node instanceof Node\Scalar\MagicConst)
+			{
+				if ($node instanceof Node\Scalar\MagicConst\File)
+					return $this->current_file;
+				elseif ($node instanceof Node\Scalar\MagicConst\Dir)
+					return dirname($this->current_file);
+				elseif ($node instanceof Node\Scalar\MagicConst\Line)
+					return $node->getLine();
+				elseif ($node instanceof Node\Scalar\MagicConst\Function_)
+					return $this->current_function;
+				elseif ($node instanceof Node\Scalar\MagicConst\Class_)
+					return $this->current_class;
+				elseif ($node instanceof Node\Scalar\MagicConst\Method_)
+					return $this->current_method;
+				elseif ($node instanceof Node\Scalar\MagicConst\Namespace_)
+					return $this->current_namespace;
+				elseif ($node instanceof Node\Scalar\MagicConst\Trait_)
+					return $this->current_trait;
+			}
 			else
 			{
 				echo "Unknown scalar node: ";
 				print_r($node);
 			}
-		}
-		elseif ($node instanceof Node\Scalar\MagicConst)
-		{
-			if ($node instanceof Node\Scalar\MagicConst\File)
-				return $this->current_file;
-			elseif ($node instanceof Node\Scalar\MagicConst\Dir)
-				return dirname($this->current_file);
-			elseif ($node instanceof Node\Scalar\MagicConst\Line)
-				return $node->getLine();
-			elseif ($node instanceof Node\Scalar\MagicConst\Function_)
-				return $this->current_function;
-			elseif ($node instanceof Node\Scalar\MagicConst\Class_)
-				return $this->current_class;
-			elseif ($node instanceof Node\Scalar\MagicConst\Method_)
-				return $this->current_method;
-			elseif ($node instanceof Node\Scalar\MagicConst\Namespace_)
-				return $this->current_namespace;
-			elseif ($node instanceof Node\Scalar\MagicConst\Trait_)
-				return $this->current_trait;
-
-
 		}
 		// elseif ($node instanceof Node\Expr\ArrayItem); //this is handled in Array_ implicitly
 		
@@ -425,6 +431,12 @@ class Emulator
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
 			return $this->evaluate_expression($node->expr);
+		elseif ($node instanceof Node\Expr\Print_)
+		{
+			$out=$this->evaluate_expression($node->expr);
+			$this->output($out);	
+			return $out;
+		}
 		else
 		{
 			echo "Unknown expression node: ",
