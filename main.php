@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
-#remaining for procedural completeness: eval,empty,closure,closureUseAssignRef
+#remaining for procedural completeness: eval,empty,closure,closureUse,AssignRef
 class Emulator
 {	
 	static $infinite_loop=20; #1000000;
@@ -444,6 +444,14 @@ class Emulator
 			}
 			return true;
 		}
+		elseif ($node instanceof Node\Expr\Eval_)
+		{
+			ob_start();
+			$res=eval($this->evaluate_expression($node->expr));
+			$out=ob_get_clean();
+			$this->output($out);
+			return $res;
+		}
 		elseif ($node instanceof Node\Expr\ShellExec)
 		{
 				$res="";
@@ -705,7 +713,7 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-$x->start("sample2.php");
+$x->start("sample4.php");
 var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
