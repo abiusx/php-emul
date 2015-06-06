@@ -431,6 +431,32 @@ class Emulator
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
 			return $this->evaluate_expression($node->expr);
+		elseif ($node instanceof Node\Expr\Isset_)
+		{
+			foreach ($node->vars as $var)
+			{
+				if (!isset($this->variables[$this->name($var)]))
+					return false;
+			}
+			return true;
+		}
+		elseif ($node instanceof Node\Expr\ShellExec)
+		{
+				$res="";
+				foreach ($node->parts as $part)	
+					if (is_string($part))
+						$res.=$part;
+					else
+						$res.=$this->evaluate_expression($part);
+
+				return shell_exec($res);
+		}
+		elseif ($node instanceof Node\Expr\Instanceof_)
+		{
+			$var=$this->evaluate_expression($node->expr);
+			$classname=$this->name($node->class);
+			return $var instanceof $classname;
+		}
 		elseif ($node instanceof Node\Expr\Print_)
 		{
 			$out=$this->evaluate_expression($node->expr);
@@ -452,16 +478,24 @@ class Emulator
 			return $ast->value;
 		elseif ($ast instanceof Node\Expr\Variable)
 			return $ast->name;
-		$res="";
-		// print_r($ast);
-		foreach ($ast->parts as $part)
+		elseif ($ast instanceof Node\Name)
 		{
-			if (is_string($part))
-				$res.=$part;
-			else
-				$res.=$this->evaluate_expression($part);
-		}
 
+			$res="";
+			// print_r($ast);
+			foreach ($ast->parts as $part)
+			{
+				if (is_string($part))
+					$res.=$part;
+				else
+					$res.=$this->evaluate_expression($part);
+			}
+		}
+		else
+		{
+			echo "Can not determine name: ";
+			print_r($ast);
+		}
 		return $res;		
 	}
 	public function run_file($file)
@@ -647,5 +681,5 @@ $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
 $x->start("sample2.php");
 var_dump($x->output);
-echo PHP_EOL,"### Variables ###",PHP_EOL;
-var_dump($x->variables);
+// echo PHP_EOL,"### Variables ###",PHP_EOL;
+// var_dump($x->variables);

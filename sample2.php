@@ -1,6 +1,9 @@
 <?php
-`ls`;
 $s=0;
+var_dump($s instanceof PDO);
+exit(0);
+var_dump(isset($s));
+`ls `;
 $q=__DIR__.__FILE__;
 print $q."a";
 exit(0);
