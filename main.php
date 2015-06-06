@@ -1,8 +1,7 @@
 <?php
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
-#remaining for procedural completeness: eval,empty,closure,closureUse,AssignRef
-#TODO: function byref
+#remaining for procedural completeness: closure,closureUse
 class Emulator
 {	
 	static $infinite_loop=20; #1000000;
