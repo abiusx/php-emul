@@ -9,11 +9,13 @@ class Emulator
 	protected $current_function;
 	protected $current_class,$current_method,$current_trait;
 	protected $current_namespace;
+	protected $included_files=[];
 	public $output;
-	public $variables=[]; #TODO: make this a class, so that it can lookup magic variables, an retain them on push/pop
+	public $variables=[]; #TODO: make this a object, so that it can lookup magic variables, and retain them on push/pop
 	public $functions=[];
 	public $parser;
 	public $variable_stack=[];
+
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
 		$file=$errfile;
@@ -463,6 +465,26 @@ class Emulator
 			$this->output($out);	
 			return $out;
 		}
+		elseif ($node instanceof Node\Expr\Include_)
+		{
+			$type=$node->type; //1:include,2:include_once,3:require,4:require_once
+			$file=$this->evaluate_expression($node->expr);
+			$realfile=realpath($file);
+			if ($type%2==0) //once
+				if (isset($this->included_files[$realfile])) return true;
+			if (!file_exists($realfile) or !is_file($realfile))
+				if ($type<=2) //include
+				{
+					$this->warning("include({$realfile}): failed to open stream: No such file or directory");
+					return false;
+				}
+				else
+				{
+					$this->error("require({$realfile}): failed to open stream: No such file or directory");
+					return false;
+				}
+			$this->run_file($realfile);
+		}
 		else
 		{
 			echo "Unknown expression node: ",
@@ -502,6 +524,8 @@ class Emulator
 	{
 		$last_file=$this->current_file;
 		$this->current_file=realpath($file);
+		$this->included_files[$this->current_file]=true;
+		
 		$code=file_get_contents($file);
 		$ast=$this->parser->parse($code);
 

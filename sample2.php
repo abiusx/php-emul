@@ -1,7 +1,10 @@
 <?php
 $s=0;
-var_dump($s instanceof PDO);
+echo "a";
+var_dump(require_once __FILE__);
+var_dump(require_once __FILE__);
 exit(0);
+var_dump($s instanceof PDO);
 var_dump(isset($s));
 `ls `;
 $q=__DIR__.__FILE__;
