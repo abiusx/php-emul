@@ -5,7 +5,10 @@ use PhpParser\Node;
 class Emulator
 {	
 	static $infinite_loop=20; #1000000;
-	protected $last_node,$last_file;
+	protected $current_node,$current_file;
+	protected $current_function;
+	protected $current_class,$current_method,$current_trait;
+	protected $current_namespace;
 	public $output;
 	public $variables=[]; #TODO: make this a class, so that it can lookup magic variables, an retain them on push/pop
 	public $functions=[];
@@ -15,8 +18,8 @@ class Emulator
 	{
 		$file=$errfile;
 		$line=$errline;;
-		if (isset($this->last_file)) $file=$this->last_file;
-		if (isset($this->last_node)) $line=$this->last_node->getLine();
+		if (isset($this->current_file)) $file=$this->current_file;
+		if (isset($this->current_node)) $line=$this->current_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -62,6 +65,8 @@ class Emulator
 	}
 	protected function run_function($name,$args)
 	{
+		$last_function=$this->current_function;
+		$this->current_function=$name;
 		$this->push();
 		$function=$this->functions[$name];
 		// if (count($function['params'])!=count($args))
@@ -93,6 +98,7 @@ class Emulator
 		$res=$this->run_code($function['code']);
 
 		$this->pop();
+		$this->current_function=$last_function;
 		return $res;
 	}
 	protected function evaluate_expression_array(array $ast)
@@ -102,10 +108,15 @@ class Emulator
 			$out[]=$this->evaluate_expression($element);
 		return $out;
 	}
+	/**
+	 * Evaluate all nodes of type Node\Expr and return appropriate value
+	 * @param  Node $ast Abstract Syntax Tree node
+	 * @return mixed      value
+	 */
 	protected function evaluate_expression($ast)
 	{
 		$node=$ast;
-		$this->last_node=$node;
+		$this->current_node=$node;
 		if (false);
 		elseif (is_array($node))
 			die("array node!");
@@ -216,6 +227,16 @@ class Emulator
 		{
 			if ($node instanceof Node\Expr\Cast\Int_)
 				return (int)$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\Cast\Array_)
+				return (array)$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\Cast\Double_)
+				return (double)$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\Cast\Bool_)
+				return (bool)$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\Cast\String_)
+				return (string)$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\Cast\Object_)
+				return (object)$this->evaluate_expression($node->expr);
 			else
 			{
 				echo "Unknown cast: ";
@@ -238,6 +259,28 @@ class Emulator
 		{
 			if ($node instanceof Node\Expr\AssignOp\Plus)
 				return $this->variables[$this->name($node->var)]+=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\Minus)
+				return $this->variables[$this->name($node->var)]=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\Mod)
+				return $this->variables[$this->name($node->var)]*=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\Mul)
+				return $this->variables[$this->name($node->var)]*=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\Div)
+				return $this->variables[$this->name($node->var)]/=$this->evaluate_expression($node->expr);
+			// elseif ($node instanceof Node\Expr\AssignOp\Pow)
+			// 	return $this->variables[$this->name($node->var)]**=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\ShiftLeft)
+				return $this->variables[$this->name($node->var)]<<=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\ShiftRight)
+				return $this->variables[$this->name($node->var)]>>=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\Concat)
+				return $this->variables[$this->name($node->var)].=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\BitwiseAnd)
+				return $this->variables[$this->name($node->var)]&=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\BitwiseOr)
+				return $this->variables[$this->name($node->var)]|=$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\AssignOp\BitwiseXor)
+				return $this->variables[$this->name($node->var)]^=$this->evaluate_expression($node->expr);
 		}
 		elseif ($node instanceof Node\Expr\BinaryOp)
 		{
@@ -249,7 +292,13 @@ class Emulator
 				return $this->evaluate_expression($node->left)-$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Mul)
 				return $this->evaluate_expression($node->left)*$this->evaluate_expression($node->right);
+			// elseif ($node instanceof Node\Expr\BinaryOp\Pow)
+			// 	return $this->evaluate_expression($node->left)**$this->evaluate_expression($node->right);
 			
+			elseif ($node instanceof Node\Expr\BinaryOp\Identical)
+				return $this->evaluate_expression($node->left)===$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\NotIdentical)
+				return $this->evaluate_expression($node->left)!==$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Equal)
 				return $this->evaluate_expression($node->left)==$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\NotEqual)
@@ -270,8 +319,29 @@ class Emulator
 			elseif ($node instanceof Node\Expr\BinaryOp\LogicalXor)
 				return $this->evaluate_expression($node->left) xor $this->evaluate_expression($node->right);
 
+			elseif ($node instanceof Node\Expr\BinaryOp\BooleanOr)
+				return $this->evaluate_expression($node->left) || $this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\BooleanAnd)
+				return $this->evaluate_expression($node->left) && $this->evaluate_expression($node->right);
+
+			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseAnd)
+				return $this->evaluate_expression($node->left) & $this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseOr)
+				return $this->evaluate_expression($node->left) | $this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseXor)
+				return $this->evaluate_expression($node->left) ^ $this->evaluate_expression($node->right);
+
+			elseif ($node instanceof Node\Expr\BinaryOp\ShiftLeft)
+				return $this->evaluate_expression($node->left)<<$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\ShiftRight)
+				return $this->evaluate_expression($node->left)<<$this->evaluate_expression($node->right);
+
 			elseif ($node instanceof Node\Expr\BinaryOp\Concat)
 				return $this->evaluate_expression($node->left).$this->evaluate_expression($node->right);
+
+			// elseif ($node instanceof Node\Expr\BinaryOp\Spaceship)
+			// 	return $this->evaluate_expression($node->left)<=>$this->evaluate_expression($node->right);
+
 
 			else
 			{
@@ -281,7 +351,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Scalar)
 		{
-			if ($node instanceof Node\Scalar\String)
+			if ($node instanceof Node\Scalar\String_)
 				return $node->value;
 			elseif ($node instanceof Node\Scalar\DNumber)
 				return $node->value;
@@ -303,6 +373,27 @@ class Emulator
 				echo "Unknown scalar node: ";
 				print_r($node);
 			}
+		}
+		elseif ($node instanceof Node\Scalar\MagicConst)
+		{
+			if ($node instanceof Node\Scalar\MagicConst\File)
+				return $this->current_file;
+			elseif ($node instanceof Node\Scalar\MagicConst\Dir)
+				return dirname($this->current_file);
+			elseif ($node instanceof Node\Scalar\MagicConst\Line)
+				return $node->getLine();
+			elseif ($node instanceof Node\Scalar\MagicConst\Function_)
+				return $this->current_function;
+			elseif ($node instanceof Node\Scalar\MagicConst\Class_)
+				return $this->current_class;
+			elseif ($node instanceof Node\Scalar\MagicConst\Method_)
+				return $this->current_method;
+			elseif ($node instanceof Node\Scalar\MagicConst\Namespace_)
+				return $this->current_namespace;
+			elseif ($node instanceof Node\Scalar\MagicConst\Trait_)
+				return $this->current_trait;
+
+
 		}
 		// elseif ($node instanceof Node\Expr\ArrayItem); //this is handled in Array_ implicitly
 		
@@ -363,10 +454,14 @@ class Emulator
 	}
 	public function run_file($file)
 	{
-		$this->last_file=realpath($file);
+		$last_file=$this->current_file;
+		$this->current_file=realpath($file);
 		$code=file_get_contents($file);
 		$ast=$this->parser->parse($code);
-		return $this->run_code($ast);
+
+		$res=$this->run_code($ast);
+		$this->current_file=$last_file;
+		return $res;
 	}
 	
 	function __construct()
@@ -538,7 +633,7 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-$x->start("sample.php");
+$x->start("sample2.php");
 var_dump($x->output);
 echo PHP_EOL,"### Variables ###",PHP_EOL;
 var_dump($x->variables);
