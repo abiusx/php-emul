@@ -21,8 +21,8 @@ class Emulator
 	{
 		$file=$errfile;
 		$line=$errline;;
-		if (isset($this->current_file)) $file=$this->current_file;
-		if (isset($this->current_node)) $line=$this->current_node->getLine();
+		// if (isset($this->current_file)) $file=$this->current_file;
+		// if (isset($this->current_node)) $line=$this->current_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -71,6 +71,8 @@ class Emulator
 		$last_function=$this->current_function;
 		$this->current_function=$name;
 		$this->push();
+		end($this->variable_stack);
+		$oldVariables=&$this->variable_stack[key($this->variable_stack)];
 		$function=$this->functions[$name];
 		// if (count($function['params'])!=count($args))
 			// $this->error("{$name} expects ".count($function['params'])." arguments but received ".count($args));
@@ -79,21 +81,23 @@ class Emulator
 		$index=0;
 		foreach ($function['params'] as $param)
 		{
-			$this->variables[$param->name]=current($args);
 			if ($index>=$count) //all args consumed, either defaults or error
 			{
 				if (isset($param->default))
 					$this->variables[$param->name]=$this->evaluate_expression($param->default);
 				else
 				{
-
-					$this->warning("Missing argument ".($index+1)." for {$name}()");
+					$this->warning("Missing argument ".($index)." for {$name}()");
 					return null;
 				}
 
 			}
-			else
+			else //args still exist, copy to current symbol table
 			{
+				if ($param->byRef)	// byref handle
+					$this->variables[$this->name($param)]=&$oldVariables[$this->name(current($args)->value)];
+				else //byval
+					$this->variables[$this->name($param)]=$this->evaluate_expression(current($args)->value);
 				next($args);
 			}
 			$index++;
@@ -125,17 +129,18 @@ class Emulator
 			die("array node!");
 		elseif ($node instanceof Node\Expr\FuncCall)
 		{
+			// $arg->byRef
 			$name=$this->name($node->name);
-			$args=[];
-			foreach ($node->args as $arg)
-				$args[]=$this->evaluate_expression($arg->value);
 			if (isset($this->functions[$name]))
-				return $this->run_function($name,$args); //user function
+				return $this->run_function($name,$node->args); //user function
 			else
 			{
+				$argValues=[];
+				foreach ($node->args as $arg)
+					$argValues[]=$this->evaluate_expression($arg->value);
 				#FIXME: handle critical internal functions (e.g function_exists, ob_start, etc.)
 				ob_start();	
-				$ret=call_user_func_array($name,$args); //core function
+				$ret=call_user_func_array($name,$argValues); //core function
 				$output=ob_get_clean();
 				$this->output($output);
 				return $ret;
@@ -516,6 +521,8 @@ class Emulator
 		elseif ($ast instanceof Node\Scalar)
 			return $ast->value;
 		elseif ($ast instanceof Node\Expr\Variable)
+			return $ast->name;
+		elseif ($ast instanceof Node\Param)
 			return $ast->name;
 		elseif ($ast instanceof Node\Name)
 		{
