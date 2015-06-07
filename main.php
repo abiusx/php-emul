@@ -2,26 +2,28 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
+#FIXME: all $this->name instances should be fixed, create a sample file and include everything there
 class Emulator
 {	
-	static $infinite_loop=20; #1000000;
+	static $infinite_loop=1000; #1000000;
 	protected $current_node,$current_file;
 	protected $current_function;
 	protected $current_class,$current_method,$current_trait;
 	protected $current_namespace;
-	protected $included_files=[];
+	public $included_files=[];
 	public $output;
 	public $variables=[]; #TODO: make this a object, so that it can lookup magic variables, and retain them on push/pop
 	public $functions=[];
 	public $parser;
 	public $variable_stack=[];
+	public $terminated=false;
 
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
 		$file=$errfile;
 		$line=$errline;;
-		// if (isset($this->current_file)) $file=$this->current_file;
-		// if (isset($this->current_node)) $line=$this->current_node->getLine();
+		if (isset($this->current_file)) $file=$this->current_file;
+		if (isset($this->current_node)) $line=$this->current_node->getLine();
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
@@ -42,6 +44,8 @@ class Emulator
 	function error($msg)
 	{
 		trigger_error($msg);
+		// debug_print_backtrace();
+		$this->terminated=true;
 	}
 	function warning($msg)
 	{
@@ -128,8 +132,11 @@ class Emulator
 			die("array node!");
 		elseif ($node instanceof Node\Expr\FuncCall)
 		{
+			// print_r($node);
 			// $arg->byRef
 			$name=$this->name($node->name);
+			print_r($node);
+			// $name=$this->evaluate_expression($node->name);
 			if (isset($this->functions[$name]))
 				return $this->run_function($name,$node->args); //user function
 			else
@@ -194,7 +201,7 @@ class Emulator
 			}
 			else
 			{
-				echo "Unknown assign: ";
+				$this->error("Unknown assign: ");
 				print_r($node);
 			}
 		}
@@ -218,7 +225,7 @@ class Emulator
 			foreach ($indexes as $index)
 			{
 				if (!isset($base[$index]))	
-					$this->warning("Undefined array index {$index} in '\$$varName'");
+					$this->warning("Undefined index {$index} for '\$$varName'");
 				$base=&$base[$index];
 			}
 			return $base;
@@ -252,7 +259,7 @@ class Emulator
 				return (object)$this->evaluate_expression($node->expr);
 			else
 			{
-				echo "Unknown cast: ";
+				$this->error("Unknown cast: ");
 				print_r($node);
 			}
 		}
@@ -366,7 +373,7 @@ class Emulator
 
 			else
 			{
-				echo "Unknown binary op: ";
+				$this->error("Unknown binary op: ");
 				print_r($node);
 			}
 		}
@@ -410,7 +417,7 @@ class Emulator
 			}
 			else
 			{
-				echo "Unknown scalar node: ";
+				$this->error("Unknown scalar node: ");
 				print_r($node);
 			}
 		}
@@ -423,8 +430,8 @@ class Emulator
 			else
 			{
 
-				print_r($this->variables);
 				$this->error("Undefined variable {$node->name}");
+				print_r($this->variables);
 			}
 		}
 		elseif ($node instanceof Node\Expr\ConstFetch)
@@ -508,10 +515,14 @@ class Emulator
 		}
 		else
 		{
-			echo "Unknown expression node: ",
+			$this->error("Unknown expression node: ");
 			print_r($node);
 		}
 		return null;
+	}
+	protected function variable_name($node)
+	{
+
 	}
 	protected function name($ast)
 	{
@@ -538,7 +549,7 @@ class Emulator
 		}
 		else
 		{
-			echo "Can not determine name: ";
+			$this->error("Can not determine name: ");
 			print_r($ast);
 		}
 		return $res;		
@@ -574,8 +585,11 @@ class Emulator
 		// $this->variables['_POST']=isset($_POST)?$_POST:array();
 
 	}
-	function start($file)
+	function start($file,$chdir=true)
 	{
+		chdir(dirname($file));
+		$file=basename($file);
+		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
 		$res=$this->run_file($file);
 		restore_error_handler();
@@ -586,6 +600,7 @@ class Emulator
 	{
 		foreach ($ast as $node)
 		{
+			if ($this->terminated) return null;
 			// echo get_class($node),PHP_EOL;
 			if ($node instanceof Node\Stmt\Echo_)
 				$this->output_array($this->evaluate_expression_array($node->exprs));
@@ -616,7 +631,7 @@ class Emulator
 			elseif ($node instanceof Node\Stmt\Function_)
 			{
 				$name=$this->name($node->name);
-				$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts);
+				$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts); #FIXME: name
 				// print_r($node);
 			}
 			elseif ($node instanceof Node\Stmt\Return_)
@@ -696,7 +711,7 @@ class Emulator
 				$this->evaluate_expression($node);
 			else
 			{
-				echo "Unknown node type: ";	
+				$this->error("Unknown node type: ");	
 				print_r($node);
 			}
 
@@ -727,6 +742,7 @@ class Emulator
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
 $x->start("sample4.php");
+// $x->start("phpnuke/html/index.php");
 var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);

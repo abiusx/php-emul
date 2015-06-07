@@ -1,5 +1,9 @@
 <?php
 //references sample
+$x=[];
+$x['hello']=1;
+// echo isset($x['hello']);
+// exit(0);
 $s="echo 'hi';";
 eval($s);
 
@@ -21,7 +25,7 @@ $c=3;
 swap ($b,$c);
 
 echo $b;
-exit(0);
+// exit(0);
 $f="swap";
 $f($b,$c);
 echo $b;
