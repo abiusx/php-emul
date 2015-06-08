@@ -133,9 +133,7 @@ class Emulator
 		elseif ($node instanceof Node\Expr\FuncCall)
 		{
 			// print_r($node);
-			// $arg->byRef
-			$name=$this->name($node->name);
-			print_r($node);
+			$name=$this->name($node);
 			// $name=$this->evaluate_expression($node->name);
 			if (isset($this->functions[$name]))
 				return $this->run_function($name,$node->args); //user function
@@ -425,8 +423,10 @@ class Emulator
 		
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			if (array_key_exists($this->name($node), $this->variables))
-				return $this->variables[$node->name];
+			// print_r($node);
+			$name=$this->name($node);
+			if (array_key_exists($name, $this->variables))
+				return $this->variables[$name];
 			else
 			{
 
@@ -513,6 +513,11 @@ class Emulator
 				}
 			$this->run_file($realfile);
 		}
+		elseif ($node instanceof Node\Expr\Ternary)
+		{
+			if ($this->evaluate_expression($node->cond)) return $this->evaluate_expression($node->if);
+			else return $this->evaluate_expression($node->else);
+		}
 		else
 		{
 			$this->error("Unknown expression node: ");
@@ -527,11 +532,28 @@ class Emulator
 	protected function name($ast)
 	{
 		if (is_string($ast))
+
 			return $ast;
+		elseif ($ast instanceof Node\Expr\FuncCall)
+		{
+
+			if (is_string($ast->name) or $ast->name instanceof Node\Name)
+				return $this->name($ast->name);
+			else 
+				return $this->evaluate_expression($ast->name);
+		}
+		elseif ($ast instanceof Node\Expr\ArrayDimFetch)
+			return $this->evaluate_expression($ast);
 		elseif ($ast instanceof Node\Scalar)
 			return $ast->value;
 		elseif ($ast instanceof Node\Expr\Variable)
-			return $ast->name;
+		{
+
+			if (is_string($ast->name))
+				return $ast->name;
+			else
+				return $this->evaluate_expression($ast->name);
+		}
 		elseif ($ast instanceof Node\Param)
 			return $ast->name;
 		elseif ($ast instanceof Node\Name)
@@ -558,6 +580,9 @@ class Emulator
 	{
 		$last_file=$this->current_file;
 		$this->current_file=realpath($file);
+
+		echo "Now running {$this->current_file}...",PHP_EOL;
+		
 		$this->included_files[$this->current_file]=true;
 		
 		$code=file_get_contents($file);
@@ -741,8 +766,8 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-$x->start("sample4.php");
-// $x->start("phpnuke/html/index.php");
+// $x->start("sample4.php");
+$x->start("phpnuke/html/index.php");
 var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
