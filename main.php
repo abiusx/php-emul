@@ -14,6 +14,7 @@ class Emulator
 	public $output;
 	public $variables=[]; #TODO: make this a object, so that it can lookup magic variables, and retain them on push/pop
 	public $functions=[];
+	public $classes=[];
 	public $parser;
 	public $variable_stack=[];
 	public $terminated=false;
@@ -518,12 +519,35 @@ class Emulator
 			if ($this->evaluate_expression($node->cond)) return $this->evaluate_expression($node->if);
 			else return $this->evaluate_expression($node->else);
 		}
+		elseif ($node instanceof Node\Expr\New_)
+		{
+			$classname=$this->name($node->class);
+			if (isset($this->classes[$classname]))
+				return $this->new_object($classname,$node->args); //user function
+			else
+			{
+				$argValues=[];
+				foreach ($node->args as $arg)
+					$argValues[]=$this->evaluate_expression($arg->value);
+				#FIXME: handle critical internal classes (if any)
+				ob_start();	
+				$ret=new $classname($argValues); //core class
+				$output=ob_get_clean();
+				$this->output($output);
+				return $ret;
+			}
+		}
 		else
 		{
 			$this->error("Unknown expression node: ");
 			print_r($node);
 		}
 		return null;
+	}
+	protected function new_object($name,array $args)
+	{
+		echo "Not implemented.";
+		print_r($args);
 	}
 	protected function variable_name($node)
 	{
@@ -621,6 +645,7 @@ class Emulator
 
 		return $res;
 	}
+	protected $break=0;
 	protected function run_code($ast)
 	{
 		foreach ($ast as $node)
@@ -668,6 +693,11 @@ class Emulator
 				{
 					$i++;	
 					$this->run_code($node->stmts);
+					if ($this->break)
+					{
+						$this->break--;
+						break;
+					}
 					if ($i>self::$infinite_loop)
 					{
 						$this->error("Infinite loop");
@@ -683,6 +713,11 @@ class Emulator
 				{
 					$this->run_code($node->stmts);
 					$i++;
+					if ($this->break)
+					{
+						$this->break--;
+						break;
+					}
 					if ($i>self::$infinite_loop)
 					{
 						$this->error("Infinite loop");
@@ -697,6 +732,11 @@ class Emulator
 				{
 					$this->run_code($node->stmts);
 					$i++;
+					if ($this->break)
+					{
+						$this->break--;
+						break;
+					}
 					if ($i>self::$infinite_loop)
 					{
 						$this->error("Infinite loop");
@@ -724,12 +764,32 @@ class Emulator
 						$this->variables[$keyVar]=$k;
 					$this->variables[$valueVar]=$v;
 					$this->run_code($node->stmts);
+					if ($this->break)
+					{
+						$this->break--;
+						break;
+					}
+
 				}
 				// if (!$valueVarExists)
 				// 	unset($this->variables[$valueVar]);
 				// if (!$keyVarExists)
 				// 	unset($this->variables[$keyVar]);
 			}
+			elseif ($node instanceof Node\Stmt\Switch_)
+			{
+				$arg=$this->evaluate_expression($node->cond);
+				foreach ($node->cases as $case)
+				{
+					if ($this->evaluate_expression($case->cond)==$arg)
+						$this->run_code($node->stmts);
+					if ($this->break)
+					{
+						$this->break--;
+						break;
+					}
+				}
+			} #TODO: default case on switch test
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node);
 			elseif ($node instanceof Node\Expr)
@@ -767,7 +827,7 @@ class Emulator
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
 // $x->start("sample4.php");
-$x->start("phpnuke/html/index.php");
+// $x->start("phpnuke/html/index.php");
 var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
