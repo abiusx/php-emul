@@ -74,21 +74,25 @@ class Emulator
 	{
 		$last_function=$this->current_function;
 		$this->current_function=$name;
+		$variables=$this->variables;
 		$this->push();
+		$this->variables=$variables;
+
 		end($this->variable_stack);
-		$oldVariables=&$this->variable_stack[key($this->variable_stack)];
+		$reference=&$this->variable_stack[key($this->variable_stack)];
 		$function=$this->functions[$name];
 		// if (count($function['params'])!=count($args))
 			// $this->error("{$name} expects ".count($function['params'])." arguments but received ".count($args));
 		reset($args);
 		$count=count($args);
 		$index=0;
+		$function_variables=[];
 		foreach ($function['params'] as $param)
 		{
 			if ($index>=$count) //all args consumed, either defaults or error
 			{
 				if (isset($param->default))
-					$this->variables[$param->name]=$this->evaluate_expression($param->default);
+					$function_variables[$param->name]=$this->evaluate_expression($param->default);
 				else
 				{
 					$this->warning("Missing argument ".($index)." for {$name}()");
@@ -99,15 +103,17 @@ class Emulator
 			else //args still exist, copy to current symbol table
 			{
 				if ($param->byRef)	// byref handle
-					$this->variables[$this->name($param)]=&$oldVariables[$this->name(current($args)->value)];
+					$function_variables[$this->name($param)]=&$reference[$this->name(current($args)->value)];
 				else //byval
-					$this->variables[$this->name($param)]=$this->evaluate_expression(current($args)->value);
+				{
+					$function_variables[$this->name($param)]=$this->evaluate_expression(current($args)->value);
+				}
 				next($args);
 			}
 			$index++;
 		}
+		$this->variables=$function_variables;
 		$res=$this->run_code($function['code']);
-
 		$this->pop();
 		$this->current_function=$last_function;
 		return $res;
@@ -161,7 +167,11 @@ class Emulator
 		{
 			// print_r($node);
 			if ($node->var instanceof Node\Expr\Variable)	
-				return $this->variables[$this->name($node->var->name)]=$this->evaluate_expression($node->expr);	
+			{
+				$name=$this->name($node->var);
+				$this->variables[$name]=$this->evaluate_expression($node->expr);	
+				return $this->variables[$name];
+			}
 			elseif ($node->var instanceof Node\Expr\List_) //list(x,y)=f()
 			{
 				$resArray=$this->evaluate_expression($node->expr);
@@ -572,7 +582,6 @@ class Emulator
 			return $ast->value;
 		elseif ($ast instanceof Node\Expr\Variable)
 		{
-
 			if (is_string($ast->name))
 				return $ast->name;
 			else
@@ -776,6 +785,18 @@ class Emulator
 				// if (!$keyVarExists)
 				// 	unset($this->variables[$keyVar]);
 			}
+			elseif ($node instanceof Node\Stmt\Declare_)
+			{
+				$data=[];
+				$code="declare(";
+				foreach ($node->declares as $declare)
+				{
+					$data[$declare->key]=$this->evaluate_expression($declare->value);
+					$code.="{$declare->key}='".$this->evaluate_expression($declare->value)."',";
+				}
+				$code=substr($code,0,-1).");"; #FIXME: everything is strings atm
+				eval($code);
+			}
 			elseif ($node instanceof Node\Stmt\Switch_)
 			{
 				$arg=$this->evaluate_expression($node->cond);
@@ -826,8 +847,8 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-// $x->start("sample4.php");
-// $x->start("phpnuke/html/index.php");
+// $x->start("sample-stmts.php");
+$x->start("yapig-0.95b/index.php");
 var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);

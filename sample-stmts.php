@@ -1,5 +1,7 @@
 <?php
 declare(ticks=500);
+   //if (($LANG=use_accept_language($localedir))===false) //getting errors on this
+
 function f($x)
 {
 
