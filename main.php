@@ -18,7 +18,14 @@ class Emulator
 	public $parser;
 	public $variable_stack=[];
 	public $terminated=false;
-
+	protected function &globals()
+	{
+		#FIXME: this should return byref! otherwise changes don't propagate
+		if (count($this->variable_stack))
+			return $this->variable_stack[0];
+		else
+			return $this->variables;
+	}
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
 		$file=$errfile;
@@ -72,6 +79,9 @@ class Emulator
 	}
 	protected function run_function($name,$args)
 	{
+		#FIXME: should push after every parameter expression is evaluated, as they may have side effects on symbol table
+		#currently we push a copy, and modifications are not preserved. We do it this way for now because references are hard to handle.
+		$last_file=$this->current_file;
 		$last_function=$this->current_function;
 		$this->current_function=$name;
 		$variables=$this->variables;
@@ -79,10 +89,11 @@ class Emulator
 		$this->variables=$variables;
 
 		end($this->variable_stack);
-		$reference=&$this->variable_stack[key($this->variable_stack)];
+		$current_symbol_table=&$this->variable_stack[key($this->variable_stack)];
 		$function=$this->functions[$name];
 		// if (count($function['params'])!=count($args))
 			// $this->error("{$name} expects ".count($function['params'])." arguments but received ".count($args));
+		$this->current_file=$this->functions[$name]['file'];
 		reset($args);
 		$count=count($args);
 		$index=0;
@@ -103,7 +114,7 @@ class Emulator
 			else //args still exist, copy to current symbol table
 			{
 				if ($param->byRef)	// byref handle
-					$function_variables[$this->name($param)]=&$reference[$this->name(current($args)->value)];
+					$function_variables[$this->name($param)]=&$current_symbol_table[$this->name(current($args)->value)];
 				else //byval
 				{
 					$function_variables[$this->name($param)]=$this->evaluate_expression(current($args)->value);
@@ -116,6 +127,7 @@ class Emulator
 		$res=$this->run_code($function['code']);
 		$this->pop();
 		$this->current_function=$last_function;
+		$this->current_file=$last_file;
 		return $res;
 	}
 	protected function evaluate_expression_array(array $ast)
@@ -132,6 +144,7 @@ class Emulator
 	 */
 	protected function evaluate_expression($ast)
 	{
+		print_r($ast);
 		$node=$ast;
 		$this->current_node=$node;
 		if (false);
@@ -147,9 +160,13 @@ class Emulator
 			else
 			{
 				$argValues=[];
+				#FIXME: add byref support, send references to actual variables when arguments are just variable names and not expressions
+				#  e.g  preg_match("/charset=([a-zA-Z0-9\-]+)/",$transarray,$match)) $match should be byref
+
 				foreach ($node->args as $arg)
 					$argValues[]=$this->evaluate_expression($arg->value);
 				#FIXME: handle critical internal functions (e.g function_exists, ob_start, etc.)
+
 				ob_start();	
 				$ret=call_user_func_array($name,$argValues); //core function
 				$output=ob_get_clean();
@@ -466,10 +483,45 @@ class Emulator
 			return empty($this->variables[$this->name($node->expr)]);
 		elseif ($node instanceof Node\Expr\Isset_)
 		{
+			#FIXME: if the name expression is multipart, and one part of it also doesn't exist this warns. Does PHP too?
 			foreach ($node->vars as $var)
 			{
-				if (!isset($this->variables[$this->name($var)]))
-					return false;
+				if ($var instanceof Node\Expr\Variable)
+				{
+
+					if (!isset($this->variables[$this->name($var)]))
+						return false;
+				}
+				elseif ($var instanceof Node\Expr\ArrayDimFetch)
+				{
+					$t=$var;
+					$dim=0;
+					$indexes=[];
+					//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
+					while ($t instanceof Node\Expr\ArrayDimFetch)
+					{
+						$dim++;
+						$indexes[]=$this->evaluate_expression($t->dim);
+						$t=$t->var;
+					}
+					$indexes=array_reverse($indexes);
+					$varName=$this->name($t);
+					if (!isset($this->variables[$varName]))
+						return false;
+					$base=&$this->variables[$varName];
+					foreach ($indexes as $index)
+					{
+						if (!isset($base[$index]))	
+							return false;
+						$base=&$base[$index];
+					}
+					return true;
+				}
+				else
+				{
+					$this->error("Unknown node for isset");
+					print_r($var);
+				}
 			}
 			return true;
 		}
@@ -577,7 +629,25 @@ class Emulator
 				return $this->evaluate_expression($ast->name);
 		}
 		elseif ($ast instanceof Node\Expr\ArrayDimFetch)
+		{
+			#FIXME: this should return the actual variable $x[..][...][...] and not the value!
+			// $t=$ast;
+			// $dim=0;
+			// $indexes=[];
+			// //each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
+			// while ($t instanceof Node\Expr\ArrayDimFetch)
+			// {
+			// 	$dim++;
+			// 	$indexes[]=$this->evaluate_expression($t->dim);
+			// 	$t=$t->var;
+			// }
+			// $indexes=array_reverse($indexes);
+			// $varName=$this->name($t);
+			// $name=$varName.'['.implode("][",$indexes)."]";
+			// print_r($name);
+			// return $name;
 			return $this->evaluate_expression($ast);
+		}
 		elseif ($ast instanceof Node\Scalar)
 			return $ast->value;
 		elseif ($ast instanceof Node\Expr\Variable)
@@ -657,6 +727,21 @@ class Emulator
 	protected $break=0;
 	protected function run_code($ast)
 	{
+		//first pass, get all definitions
+		foreach ($ast as $node)
+		{
+			if (0);
+			elseif ($node instanceof Node\Stmt\Function_)
+			{
+				// print_r($node->name);
+				// echo PHP_EOL;
+				$name=$this->name($node->name);
+				$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
+				// print_r($node);
+			}
+
+		}		
+		//second pass, execute
 		foreach ($ast as $node)
 		{
 			if ($this->terminated) return null;
@@ -690,8 +775,8 @@ class Emulator
 			elseif ($node instanceof Node\Stmt\Function_)
 			{
 				$name=$this->name($node->name);
-				$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts); #FIXME: name
-				// print_r($node);
+				if (!isset($this->functions[$name])) 
+					$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
 			}
 			elseif ($node instanceof Node\Stmt\Return_)
 				return $this->evaluate_expression($node->expr);
@@ -813,6 +898,14 @@ class Emulator
 			} #TODO: default case on switch test
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node);
+			elseif ($node instanceof Node\Stmt\Global_)
+			{
+				foreach ($node->vars as $var)
+				{
+					$name=$this->name($var);
+					$this->variables[$name]=$this->globals()[$name];
+				}
+			}
 			elseif ($node instanceof Node\Expr)
 				$this->evaluate_expression($node);
 			else
@@ -847,8 +940,8 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-// $x->start("sample-stmts.php");
-$x->start("yapig-0.95b/index.php");
+$x->start("sample-stmts.php");
+// $x->start("yapig-0.95b/index.php");
 var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);

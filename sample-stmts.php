@@ -1,7 +1,9 @@
 <?php
+    $dirlist=array();
+    die();
 declare(ticks=500);
-   //if (($LANG=use_accept_language($localedir))===false) //getting errors on this
-
+    // if (!preg_match("/charset=([a-zA-Z0-9\-]+)/",$transarray,$match)) //$match is byref here, it shouldn't work in emulator
+var_dump(function_exists("f"));
 function f($x)
 {
 

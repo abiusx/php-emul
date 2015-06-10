@@ -1,6 +1,6 @@
 <?php
-$x="strlen";
 
+$x="strlen";
 $s="abc";
 echo $x($s);
 
