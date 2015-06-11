@@ -2,13 +2,14 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
+#TODO: error handling is very vague, and makes fixing bugs very hard.
 #FIXME: all $this->name instances should be fixed, create a sample file and include everything there
 class Emulator
 {	
 	public $infinite_loop=1000; #1000000;
 	public $direct_output=true;
 
-	protected $current_node,$current_file;
+	protected $current_node,$current_file,$current_line;
 	protected $current_function;
 	protected $current_class,$current_method,$current_trait;
 	protected $current_namespace;
@@ -22,6 +23,7 @@ class Emulator
 	public $variable_stack=[];
 	public $terminated=false;
 
+	public $verbose=true;
 
 	protected function &globals()
 	{
@@ -34,7 +36,7 @@ class Emulator
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
 		$file=$errfile;
-		$line=$errline;;
+		$line=$errline;
 		if (isset($this->current_file)) $file=$this->current_file;
 		if (isset($this->current_node)) $line=$this->current_node->getLine();
 		$fatal=false;
@@ -83,6 +85,8 @@ class Emulator
 	}
 	protected function run_function($name,$args)
 	{
+		if ($this->verbose)
+			echo "\tRunning {$name}()...",PHP_EOL;
 		#FIXME: should push after every parameter expression is evaluated, as they may have side effects on symbol table
 		#currently we push a copy, and modifications are not preserved. We do it this way for now because references are hard to handle.
 		$last_file=$this->current_file;
@@ -148,7 +152,6 @@ class Emulator
 			die("array node!");
 		elseif ($node instanceof Node\Expr\FuncCall)
 		{
-			// print_r($node);
 			$name=$this->name($node);
 			// $name=$this->evaluate_expression($node->name);
 			if (isset($this->functions[$name]))
@@ -178,7 +181,6 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\Assign)
 		{
-			// print_r($node);
 			if ($node->var instanceof Node\Expr\Variable)	
 			{
 				$name=$this->name($node->var);
@@ -209,7 +211,10 @@ class Emulator
 				while ($t instanceof Node\Expr\ArrayDimFetch)
 				{
 					$dim++;
-					$indexes[]=$this->evaluate_expression($t->dim);
+					if ($t->dim)
+						$indexes[]=$this->evaluate_expression($t->dim);
+					else
+						$indexes[]=NULL;
 					$t=$t->var;
 				}
 				$indexes=array_reverse($indexes);
@@ -217,7 +222,17 @@ class Emulator
 
 				$base=&$this->variables[$varName];
 				foreach ($indexes as $index)
+				{
+					if (!$index)
+					{
+						//it might be $a[]=
+						$base[]=NULL;
+						end($base);
+						$index=key($base);
+					}
 					$base=&$base[$index];
+					#TODO: this ArrayDimFetch should be used everywhere. #FIXME the rest should not work fine
+				}
 				$base=$this->evaluate_expression($node->expr);
 				// $this->variables[$this->name($node->var->var->name)][$this->name($node->var->dim)]=$this->evaluate_expression($node->expr);
 			}
@@ -759,6 +774,13 @@ class Emulator
 		//second pass, execute
 		foreach ($ast as $node)
 		{
+			$this->current_node=$node;
+			if ($node->getLine()!=$this->current_line)
+			{
+				$this->current_line=$node->getLine();
+				if ($this->verbose) 
+					echo "\t\tLine {$this->current_line}",PHP_EOL;
+			}
 			if ($this->terminated) return null;
 			// echo get_class($node),PHP_EOL;
 			if ($node instanceof Node\Stmt\Echo_)
