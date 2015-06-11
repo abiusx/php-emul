@@ -59,10 +59,6 @@ class Emulator
 	{
 		trigger_error($msg);
 	}
-	function output_array(array $args)
-	{
-		$this->output.=implode("",$args);
-	}
 	function output()
 	{
 		$args=func_get_args();
@@ -129,13 +125,6 @@ class Emulator
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
 		return $res;
-	}
-	protected function evaluate_expression_array(array $ast)
-	{
-		$out=[];
-		foreach ($ast as $element)
-			$out[]=$this->evaluate_expression($element);
-		return $out;
 	}
 	/**
 	 * Evaluate all nodes of type Node\Expr and return appropriate value
@@ -749,7 +738,9 @@ class Emulator
 			if ($this->terminated) return null;
 			// echo get_class($node),PHP_EOL;
 			if ($node instanceof Node\Stmt\Echo_)
-				$this->output_array($this->evaluate_expression_array($node->exprs));
+				foreach ($node->exprs as $expr)
+					$this->output($this->evaluate_expression($expr));
+				// $this->output_array($this->evaluate_expression_array($node->exprs));
 			elseif ($node instanceof Node\Stmt\If_)
 			{
 				$done=false;
@@ -888,6 +879,7 @@ class Emulator
 			{
 				// print_r($node);
 				$arg=$this->evaluate_expression($node->cond);
+				print_r($arg);
 				foreach ($node->cases as $case)
 				{
 					if ($case->cond===NULL /* default case*/ or $this->evaluate_expression($case->cond)==$arg)
@@ -898,7 +890,16 @@ class Emulator
 						break;
 					}
 				}
-			} #TODO: default case on switch test
+			} 
+			elseif ($node instanceof Node\Stmt\Break_)
+			{
+				// print_r($node);
+				if (isset($node->num))
+					$this->break+=$this->evaluate_expression($node->num);
+				else
+					$this->break++;
+				// die();
+			}
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node);
 			elseif ($node instanceof Node\Stmt\Global_)

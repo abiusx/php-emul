@@ -16,23 +16,24 @@ function f($x)
 		echo "Default",PHP_EOL;
 	}
 }
-f(5);
+echo "Match=",f(5);
 
-f(3);
+echo "Default=",f(3);
 
-f(7);
+echo "No Match,Default=",f(7);
 
 
 for ($i=0;$i<100;++$i)
 {
 	if ($i>5) break;
 }
-echo $i,PHP_EOL;
+echo "6=",$i,PHP_EOL;
 
 for ($j=0;$j<100;++$j)
 for ($i=0;$i<100;++$i)
 	if ($i>10 and $j>2) break 2;
-echo $i,",",$j,PHP_EOL;
+echo "11,3=",$i,",",$j,PHP_EOL;
+echo "fine=";
 try {
 	echo "fine",PHP_EOL;
 }
@@ -40,7 +41,7 @@ catch (Exception $e)
 {
 	echo "No catch",PHP_EOL;
 }
-
+echo "proper catch=";
 try {
 	throw new Exception("just an exception");
 }
@@ -48,7 +49,7 @@ catch (Exception $e)
 {
 	echo "proper catch",PHP_EOL;
 }
-
+echo "HTML=";
 ?>some inline html
 <?php
 $t=1;
