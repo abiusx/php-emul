@@ -799,15 +799,12 @@ class Emulator
 			{
 				$i=0;
 				$this->loop++;
-				// echo "New Loop",PHP_EOL;
-				// print_r($node->stmts[0]);
 				for ($this->run_code($node->init);$this->evaluate_expression($node->cond[0]);$this->run_code($node->loop))
 				{
 					$i++;	
 					$this->run_code($node->stmts);
 					if ($this->break)
 					{
-						// echo "Break:{$this->break}",PHP_EOL;
 						$this->break--;
 						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
 							break 2;
@@ -819,10 +816,7 @@ class Emulator
 						$this->continue--;
 						if ($this->continue)
 							break 2;
-						// else
-							// continue;
 					}
-					// echo "Iteration {$i}",PHP_EOL;
 					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
@@ -841,12 +835,16 @@ class Emulator
 					if ($this->break)
 					{
 						$this->break--;
-						break;
+						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
+							break 2;
+						else
+							break ;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
-						continue;
+						if ($this->continue)
+							break 2;
 					}
 					if ($i>$this->infinite_loop)
 					{
@@ -865,13 +863,17 @@ class Emulator
 					if ($this->break)
 					{
 						$this->break--;
-						break;
+						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
+							break 2;
+						else
+							break ;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
-						continue;
-					}
+						if ($this->continue)
+							break 2;
+					}					
 					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
@@ -902,12 +904,16 @@ class Emulator
 					if ($this->break)
 					{
 						$this->break--;
-						break ;
+						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
+							break 2;
+						else
+							break ;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
-						continue;
+						if ($this->continue)
+							break 2;
 					}
 
 				}
@@ -939,12 +945,16 @@ class Emulator
 					if ($this->break)
 					{
 						$this->break--;
-						break;
+						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
+							break 2;
+						else
+							break ;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
-						continue;
+						if ($this->continue)
+							break 2;
 					}
 				}
 			} 
