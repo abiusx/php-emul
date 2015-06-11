@@ -15,6 +15,7 @@ class Emulator
 	public $variables=[]; #TODO: make this a object, so that it can lookup magic variables, and retain them on push/pop
 	public $functions=[];
 	public $classes=[];
+	public $constants=[];
 	public $parser;
 	public $variable_stack=[];
 	public $terminated=false;
@@ -453,7 +454,9 @@ class Emulator
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
 			$name=$this->name($node->name);
-			if (defined($name))
+			if (isset($this->constants[$name]))
+				return $this->constants[$name];
+			elseif (defined($name))
 				return constant($name);
 			else
 				$this->error("Undefined constant {$name}");
@@ -584,7 +587,9 @@ class Emulator
 					$argValues[]=$this->evaluate_expression($arg->value);
 				#FIXME: handle critical internal classes (if any)
 				ob_start();	
-				$ret=new $classname($argValues); //core class
+				$r = new ReflectionClass($classname);
+				$ret = $r->newInstanceArgs($argValues); #TODO: byref?
+				// $ret=new $classname($argValues); //core class
 				$output=ob_get_clean();
 				$this->output($output);
 				return $ret;
@@ -715,7 +720,8 @@ class Emulator
 
 		return $res;
 	}
-	protected $break=0;
+	protected $break=0,$continue=0;
+	protected $try=0;
 	protected function run_code($ast)
 	{
 		//first pass, get all definitions
@@ -730,17 +736,38 @@ class Emulator
 				$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
 				// print_r($node);
 			}
+			elseif ($node instanceof Node\Stmt\Const_)
+			{
+				// print_r($node);
+				foreach ($node->consts as $const)
+				{
+					if (isset($this->constants[$const->name]))
+						$this->warning("Constant {$node->name} already defined");
+					else
+						$this->constants[($const->name)]=$this->evaluate_expression($const->value);
+				}
+			}
 
 		}		
 		//second pass, execute
 		foreach ($ast as $node)
 		{
+			// if ($this->break)
+			// {
+			// 	echo "break:{$this->break}",PHP_EOL;
+			// 	$this->break--;
+			// 	break ;
+			// }
 			if ($this->terminated) return null;
 			// echo get_class($node),PHP_EOL;
 			if ($node instanceof Node\Stmt\Echo_)
 				foreach ($node->exprs as $expr)
 					$this->output($this->evaluate_expression($expr));
 				// $this->output_array($this->evaluate_expression_array($node->exprs));
+			elseif ($node instanceof Node\Stmt\Const_)
+				continue;
+			elseif ($node instanceof Node\Stmt\Function_)
+				continue;
 			elseif ($node instanceof Node\Stmt\If_)
 			{
 				$done=false;
@@ -765,12 +792,6 @@ class Emulator
 						$this->run_code($node->else->stmts);
 				}
 			}
-			elseif ($node instanceof Node\Stmt\Function_)
-			{
-				$name=$this->name($node->name);
-				if (!isset($this->functions[$name])) 
-					$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
-			}
 			elseif ($node instanceof Node\Stmt\Return_)
 				return $this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Stmt\For_)
@@ -779,11 +800,16 @@ class Emulator
 				for ($this->run_code($node->init);$this->evaluate_expression($node->cond[0]);$this->run_code($node->loop))
 				{
 					$i++;	
-					$this->run_code($node->stmts);
 					if ($this->break)
 					{
 						$this->break--;
-						break;
+						break ;
+					}
+					$this->run_code($node->stmts);
+					if ($this->continue)
+					{
+						$this->continue--;
+						continue;
 					}
 					if ($i>self::$infinite_loop)
 					{
@@ -805,6 +831,11 @@ class Emulator
 						$this->break--;
 						break;
 					}
+					if ($this->continue)
+					{
+						$this->continue--;
+						continue;
+					}
 					if ($i>self::$infinite_loop)
 					{
 						$this->error("Infinite loop");
@@ -823,6 +854,11 @@ class Emulator
 					{
 						$this->break--;
 						break;
+					}
+					if ($this->continue)
+					{
+						$this->continue--;
+						continue;
 					}
 					if ($i>self::$infinite_loop)
 					{
@@ -854,7 +890,12 @@ class Emulator
 					if ($this->break)
 					{
 						$this->break--;
-						break;
+						break ;
+					}
+					if ($this->continue)
+					{
+						$this->continue--;
+						continue;
 					}
 
 				}
@@ -879,7 +920,6 @@ class Emulator
 			{
 				// print_r($node);
 				$arg=$this->evaluate_expression($node->cond);
-				print_r($arg);
 				foreach ($node->cases as $case)
 				{
 					if ($case->cond===NULL /* default case*/ or $this->evaluate_expression($case->cond)==$arg)
@@ -888,6 +928,11 @@ class Emulator
 					{
 						$this->break--;
 						break;
+					}
+					if ($this->continue)
+					{
+						$this->continue--;
+						continue;
 					}
 				}
 			} 
@@ -898,10 +943,58 @@ class Emulator
 					$this->break+=$this->evaluate_expression($node->num);
 				else
 					$this->break++;
+
+				// $this->break--;
+				break; //break this loop of run_code
 				// die();
+			}
+			elseif ($node instanceof Node\Stmt\Continue_)
+			{
+				if (isset($node->num))
+					$num=$this->evaluate_expression($node->num);
+				else
+					$num=1;
+				$this->continue+=$num;
+				// $this->continue--; 
+				break ;//break out of this instance of run_code, and it will loop over the next.
+			}
+			elseif ($node instanceof Node\Stmt\Throw_)
+			{
+				if ($this->try>0)
+					throw $this->evaluate_expression($node->expr);
+				//TODO: do something on else, uncatched throw, fatal error
+
+			}
+			elseif ($node instanceof Node\Stmt\TryCatch)
+			{
+				$this->try++;
+				try {
+					$this->run_code($node->stmts);
+				}
+				catch (Exception $e)
+				{
+					$this->try--; //no longer in the try
+					foreach ($node->catches as $catch)
+					{
+						//each has type, the exception type, var, the exception variable, and stmts
+						$type=$this->name($catch->type);
+						$varName=$catch->var;
+						if ($e instanceof $type)
+						{
+							$var=$e;
+							$this->variables[$varName]=$var;
+							$this->run_code($catch->stmts);
+							break;
+						}
+					}
+					$this->try++; //balance off with the one below
+				}
+				$this->try--;
 			}
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node);
+			elseif ($node instanceof Node\Stmt\InlineHTML)
+				$this->output($node->value); //FIXME: u sure this is the only way inline is? just strings?
 			elseif ($node instanceof Node\Stmt\Global_)
 			{
 				foreach ($node->vars as $var)

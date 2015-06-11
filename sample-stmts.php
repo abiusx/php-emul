@@ -22,6 +22,26 @@ echo "Default=",f(3);
 
 echo "No Match,Default=",f(7);
 
+for ($i=0;$i<1;++$i)
+{
+	echo "you should see this and",PHP_EOL;
+
+	echo "this",PHP_EOL;
+
+	break;
+
+	echo "But not this",PHP_EOL;
+
+}
+
+for ($i=0;$i<2;++$i)
+{
+	echo "you should see me twice",PHP_EOL;
+	continue;
+	echo "but definitely not me",PHP_EOL;
+}
+
+
 
 for ($i=0;$i<100;++$i)
 {
@@ -43,7 +63,7 @@ catch (Exception $e)
 }
 echo "proper catch=";
 try {
-	throw new Exception("just an exception");
+	throw new Exception("just an exception. you shouldn't see this.");
 }
 catch (Exception $e)
 {
@@ -72,3 +92,34 @@ echo $s," should be 50",PHP_EOL;
 
 const ABC="abc";
 echo ABC, " should be abc",PHP_EOL;
+
+
+
+echo "you should see j,i,j,i:",PHP_EOL;
+for ($j=0;$j<2;++$j)
+{
+
+	echo "\tj loop",PHP_EOL;
+	for ($i=0;$i<2;++$i)
+	{
+		echo "\ti loop",PHP_EOL;
+		continue 2;
+		echo "nada i loop",PHP_EOL;
+	}
+	echo "nada j loop",PHP_EOL;
+
+}
+
+for ($j=0;$j<2;++$j)
+{
+
+	echo "should see this, and one more",PHP_EOL;
+	for ($i=0;$i<2;++$i)
+	{
+		echo "which is this",PHP_EOL;
+		break 2;
+		echo "but definitely not this.",PHP_EOL;
+	}
+	echo "and of course not this",PHP_EOL;
+
+}
