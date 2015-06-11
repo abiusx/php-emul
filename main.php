@@ -886,11 +886,12 @@ class Emulator
 			}
 			elseif ($node instanceof Node\Stmt\Switch_)
 			{
+				// print_r($node);
 				$arg=$this->evaluate_expression($node->cond);
 				foreach ($node->cases as $case)
 				{
-					if ($this->evaluate_expression($case->cond)==$arg)
-						$this->run_code($node->stmts);
+					if ($case->cond===NULL /* default case*/ or $this->evaluate_expression($case->cond)==$arg)
+						$this->run_code($case->stmts);
 					if ($this->break)
 					{
 						$this->break--;
