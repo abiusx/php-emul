@@ -94,21 +94,6 @@ for ($i=0;$i<100;++$i)
 echo "11,3=",$i,",",$j,PHP_EOL;
 
 
-// echo "you should see j,i,j,i:",PHP_EOL;
-// for ($j=0;$j<2;++$j)
-// {
-
-// 	echo "\tj loop",PHP_EOL;
-// 	for ($i=0;$i<2;++$i)
-// 	{
-// 		echo "\ti loop",PHP_EOL;
-// 		continue 2;
-// 		echo "nada i loop",PHP_EOL;
-// 	}
-// 	echo "nada j loop",PHP_EOL;
-
-// }
-
 for ($j=0;$j<2;++$j)
 {
 
@@ -123,7 +108,7 @@ for ($j=0;$j<2;++$j)
 
 }
 
-echo "only 123.",PHP_EOL;
+echo "123=";
 for ($k=0;$k<5;++$k)
 {
 	echo "1";
@@ -141,4 +126,21 @@ for ($k=0;$k<5;++$k)
 
 	}
 	echo "&";
+}
+echo PHP_EOL;
+
+
+echo "you should see j,i,j,i:",PHP_EOL;
+for ($j=0;$j<2;++$j)
+{
+
+	echo "\tj loop",PHP_EOL;
+	for ($i=0;$i<2;++$i)
+	{
+		echo "\ti loop",PHP_EOL;
+		continue 2;
+		echo "nada i loop",PHP_EOL;
+	}
+	echo "nada j loop",PHP_EOL;
+
 }

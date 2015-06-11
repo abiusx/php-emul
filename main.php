@@ -5,7 +5,9 @@ use PhpParser\Node;
 #FIXME: all $this->name instances should be fixed, create a sample file and include everything there
 class Emulator
 {	
-	static $infinite_loop=1000; #1000000;
+	public $infinite_loop=1000; #1000000;
+	public $direct_output=true;
+
 	protected $current_node,$current_file;
 	protected $current_function;
 	protected $current_class,$current_method,$current_trait;
@@ -19,6 +21,8 @@ class Emulator
 	public $parser;
 	public $variable_stack=[];
 	public $terminated=false;
+
+
 	protected function &globals()
 	{
 		#FIXME: this should return byref! otherwise changes don't propagate
@@ -63,7 +67,10 @@ class Emulator
 	function output()
 	{
 		$args=func_get_args();
-		$this->output.=implode("",$args);
+		$data=implode("",$args);
+		$this->output.=$data;
+		if ($this->direct_output)
+			echo $data;
 	}
 	protected function push()
 	{
@@ -792,27 +799,37 @@ class Emulator
 			{
 				$i=0;
 				$this->loop++;
+				// echo "New Loop",PHP_EOL;
+				// print_r($node->stmts[0]);
 				for ($this->run_code($node->init);$this->evaluate_expression($node->cond[0]);$this->run_code($node->loop))
 				{
 					$i++;	
+					$this->run_code($node->stmts);
 					if ($this->break)
 					{
+						echo "Break:{$this->break}",PHP_EOL;
 						$this->break--;
-						// echo "Break:{$this->break}",PHP_EOL;
-						if ($this->break)
+						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
 							break 2;
 						else
 							break ;
 					}
-					$this->run_code($node->stmts);
-					if ($i>self::$infinite_loop)
+					if ($this->continue)
+					{
+						$this->continue--;
+						// if ($this->continue)
+						// 	continue 2;
+						// else
+							// continue;
+					}
+					// echo "Iteration {$i}",PHP_EOL;
+					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
 						break;
 					}
 				}
 				$this->loop--;
-
 			}
 			elseif ($node instanceof Node\Stmt\While_)
 			{
@@ -831,7 +848,7 @@ class Emulator
 						$this->continue--;
 						continue;
 					}
-					if ($i>self::$infinite_loop)
+					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
 						break;
@@ -855,7 +872,7 @@ class Emulator
 						$this->continue--;
 						continue;
 					}
-					if ($i>self::$infinite_loop)
+					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
 						break;
@@ -933,14 +950,11 @@ class Emulator
 			} 
 			elseif ($node instanceof Node\Stmt\Break_)
 			{
-				// print_r($node);
 				if (isset($node->num))
 					$this->break+=$this->evaluate_expression($node->num);
 				else
 					$this->break++;
-
-				// $this->break--;
-				break; //break this loop of run_code, and have the other loop break because $this->break > 0
+				break; //break this loop of run_code, and have the real loop break because $this->break > 0
 			}
 			elseif ($node instanceof Node\Stmt\Continue_)
 			{
@@ -950,8 +964,9 @@ class Emulator
 				else
 					$num=1;
 				$this->continue+=$num;
+				// $this->continue=1;
 
-				break ;//break out of this instance of run_code, and it will loop over the next.
+				break ;
 			}
 			elseif ($node instanceof Node\Stmt\Throw_)
 			{
@@ -1009,6 +1024,10 @@ class Emulator
 
 		}
 	}	
+	function __destruct()
+	{
+		var_dump($this->break);
+	}
 }
 
 
@@ -1034,6 +1053,6 @@ $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
 $x->start("sample-stmts.php");
 // $x->start("yapig-0.95b/index.php");
-var_dump($x->output);
+// var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
