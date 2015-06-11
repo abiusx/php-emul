@@ -144,3 +144,21 @@ for ($j=0;$j<2;++$j)
 	echo "nada j loop",PHP_EOL;
 
 }
+echo "you should see kjikji: ";
+for ($k=0;$k<2;++$k)
+{
+	echo "k";
+	for ($j=0;$j<2;++$j)
+	{
+		echo "j";
+		for ($i=0;$i<2;++$i)
+		{
+			echo "i";
+			continue 3;
+			echo "#";
+		}
+		echo "@";
+
+	}
+	echo "!";
+}

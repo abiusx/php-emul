@@ -807,7 +807,7 @@ class Emulator
 					$this->run_code($node->stmts);
 					if ($this->break)
 					{
-						echo "Break:{$this->break}",PHP_EOL;
+						// echo "Break:{$this->break}",PHP_EOL;
 						$this->break--;
 						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
 							break 2;
@@ -817,8 +817,8 @@ class Emulator
 					if ($this->continue)
 					{
 						$this->continue--;
-						// if ($this->continue)
-						// 	continue 2;
+						if ($this->continue)
+							break 2;
 						// else
 							// continue;
 					}
@@ -963,8 +963,9 @@ class Emulator
 					$num=$this->evaluate_expression($node->num);
 				else
 					$num=1;
+				// $this->continue++;
+				// $this->break+=$num-1;
 				$this->continue+=$num;
-				// $this->continue=1;
 
 				break ;
 			}
@@ -1026,7 +1027,6 @@ class Emulator
 	}	
 	function __destruct()
 	{
-		var_dump($this->break);
 	}
 }
 
