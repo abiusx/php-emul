@@ -144,7 +144,6 @@ class Emulator
 	 */
 	protected function evaluate_expression($ast)
 	{
-		print_r($ast);
 		$node=$ast;
 		$this->current_node=$node;
 		if (false);
@@ -388,7 +387,7 @@ class Emulator
 			elseif ($node instanceof Node\Expr\BinaryOp\ShiftLeft)
 				return $this->evaluate_expression($node->left)<<$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\ShiftRight)
-				return $this->evaluate_expression($node->left)<<$this->evaluate_expression($node->right);
+				return $this->evaluate_expression($node->left)>> $this->evaluate_expression($node->right);
 
 			elseif ($node instanceof Node\Expr\BinaryOp\Concat)
 				return $this->evaluate_expression($node->left).$this->evaluate_expression($node->right);
@@ -478,7 +477,10 @@ class Emulator
 			// print_r($node);
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
-			return $this->evaluate_expression($node->expr);
+			if (isset($node->expr))
+				return $this->evaluate_expression($node->expr);
+			else
+				return NULL;
 		elseif ($node instanceof Node\Expr\Empty_)
 			return empty($this->variables[$this->name($node->expr)]);
 		elseif ($node instanceof Node\Expr\Isset_)

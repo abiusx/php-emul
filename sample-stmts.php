@@ -1,6 +1,4 @@
 <?php
-    $dirlist=array();
-    die();
 declare(ticks=500);
     // if (!preg_match("/charset=([a-zA-Z0-9\-]+)/",$transarray,$match)) //$match is byref here, it shouldn't work in emulator
 var_dump(function_exists("f"));
@@ -9,7 +7,6 @@ function f($x)
 
 	switch ($x)
 	{
-
 		case 5:
 		echo "Match",PHP_EOL;
 		break;
