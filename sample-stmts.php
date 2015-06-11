@@ -33,7 +33,6 @@ for ($i=0;$i<1;++$i)
 	echo "But not this",PHP_EOL;
 
 }
-
 for ($i=0;$i<2;++$i)
 {
 	echo "you should see me twice",PHP_EOL;
@@ -49,10 +48,6 @@ for ($i=0;$i<100;++$i)
 }
 echo "6=",$i,PHP_EOL;
 
-for ($j=0;$j<100;++$j)
-for ($i=0;$i<100;++$i)
-	if ($i>10 and $j>2) break 2;
-echo "11,3=",$i,",",$j,PHP_EOL;
 echo "fine=";
 try {
 	echo "fine",PHP_EOL;
@@ -93,22 +88,26 @@ echo $s," should be 50",PHP_EOL;
 const ABC="abc";
 echo ABC, " should be abc",PHP_EOL;
 
+for ($j=0;$j<100;++$j)
+for ($i=0;$i<100;++$i)
+	if ($i>10 and $j>2) break 2;
+echo "11,3=",$i,",",$j,PHP_EOL;
 
 
-echo "you should see j,i,j,i:",PHP_EOL;
-for ($j=0;$j<2;++$j)
-{
+// echo "you should see j,i,j,i:",PHP_EOL;
+// for ($j=0;$j<2;++$j)
+// {
 
-	echo "\tj loop",PHP_EOL;
-	for ($i=0;$i<2;++$i)
-	{
-		echo "\ti loop",PHP_EOL;
-		continue 2;
-		echo "nada i loop",PHP_EOL;
-	}
-	echo "nada j loop",PHP_EOL;
+// 	echo "\tj loop",PHP_EOL;
+// 	for ($i=0;$i<2;++$i)
+// 	{
+// 		echo "\ti loop",PHP_EOL;
+// 		continue 2;
+// 		echo "nada i loop",PHP_EOL;
+// 	}
+// 	echo "nada j loop",PHP_EOL;
 
-}
+// }
 
 for ($j=0;$j<2;++$j)
 {
@@ -122,4 +121,24 @@ for ($j=0;$j<2;++$j)
 	}
 	echo "and of course not this",PHP_EOL;
 
+}
+
+echo "only 123.",PHP_EOL;
+for ($k=0;$k<5;++$k)
+{
+	echo "1";
+	for ($j=0;$j<5;++$j)
+	{
+
+		echo "2";
+		for ($i=0;$i<5;++$i)
+		{
+			echo "3";
+			break 3;
+			echo "*";
+		}
+		echo "^";
+
+	}
+	echo "&";
 }

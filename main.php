@@ -721,7 +721,7 @@ class Emulator
 		return $res;
 	}
 	protected $break=0,$continue=0;
-	protected $try=0;
+	protected $try=0,$loop=0;
 	protected function run_code($ast)
 	{
 		//first pass, get all definitions
@@ -752,12 +752,6 @@ class Emulator
 		//second pass, execute
 		foreach ($ast as $node)
 		{
-			// if ($this->break)
-			// {
-			// 	echo "break:{$this->break}",PHP_EOL;
-			// 	$this->break--;
-			// 	break ;
-			// }
 			if ($this->terminated) return null;
 			// echo get_class($node),PHP_EOL;
 			if ($node instanceof Node\Stmt\Echo_)
@@ -797,26 +791,27 @@ class Emulator
 			elseif ($node instanceof Node\Stmt\For_)
 			{
 				$i=0;
+				$this->loop++;
 				for ($this->run_code($node->init);$this->evaluate_expression($node->cond[0]);$this->run_code($node->loop))
 				{
 					$i++;	
 					if ($this->break)
 					{
 						$this->break--;
-						break ;
+						// echo "Break:{$this->break}",PHP_EOL;
+						if ($this->break)
+							break 2;
+						else
+							break ;
 					}
 					$this->run_code($node->stmts);
-					if ($this->continue)
-					{
-						$this->continue--;
-						continue;
-					}
 					if ($i>self::$infinite_loop)
 					{
 						$this->error("Infinite loop");
 						break;
 					}
 				}
+				$this->loop--;
 
 			}
 			elseif ($node instanceof Node\Stmt\While_)
@@ -945,17 +940,17 @@ class Emulator
 					$this->break++;
 
 				// $this->break--;
-				break; //break this loop of run_code
-				// die();
+				break; //break this loop of run_code, and have the other loop break because $this->break > 0
 			}
 			elseif ($node instanceof Node\Stmt\Continue_)
 			{
+				//basically, continue 3 means break 2 inner loops and continue on the outer loop
 				if (isset($node->num))
 					$num=$this->evaluate_expression($node->num);
 				else
 					$num=1;
 				$this->continue+=$num;
-				// $this->continue--; 
+
 				break ;//break out of this instance of run_code, and it will loop over the next.
 			}
 			elseif ($node instanceof Node\Stmt\Throw_)
