@@ -307,9 +307,9 @@ class Emulator
 			return ~$this->evaluate_expression($node->expr);
 		
 		elseif ($node instanceof Node\Expr\UnaryMinus)
-			return -$this->variables[$this->name($node->expr)];
+			return -$this->evaluate_expression($node->expr);
 		elseif ($node instanceof Node\Expr\UnaryPlus)
-			return +$this->variables[$this->name($node->expr)];
+			return +$this->evaluate_expression($node->expr);
 
 		elseif ($node instanceof Node\Expr\PreInc)
 			return ++$this->variables[$this->name($node->var)];
@@ -1083,7 +1083,7 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-$x->start("sample-stmts.php");
+$x->start("test.php");
 // $x->start("yapig-0.95b/index.php");
 // var_dump($x->output);
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
