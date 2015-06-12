@@ -307,9 +307,9 @@ class Emulator
 			return ~$this->evaluate_expression($node->expr);
 		
 		elseif ($node instanceof Node\Expr\UnaryMinus)
-			return -$this->variables[$this->name($node->var)];
+			return -$this->evaluate_expression($node->expr);
 		elseif ($node instanceof Node\Expr\UnaryPlus)
-			return +$this->variables[$this->name($node->var)];
+			return +$this->evaluate_expression($node->expr);
 
 		elseif ($node instanceof Node\Expr\PreInc)
 			return ++$this->variables[$this->name($node->var)];

@@ -1,6 +1,6 @@
 <?php
 declare(ticks=500);
-
+$a=-3;
     // if (!preg_match("/charset=([a-zA-Z0-9\-]+)/",$transarray,$match)) //$match is byref here, it shouldn't work in emulator
 var_dump(function_exists("f"));
 function f($x)
