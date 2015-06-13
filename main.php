@@ -306,8 +306,8 @@ class Emulator
 				return (int)$this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\Cast\Array_)
 				return (array)$this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\Cast\Double_)
-				return (float)$this->evaluate_expression($node->expr);
+			elseif ($node instanceof Node\Expr\Cast\Double)
+				return (double)$this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\Cast\Bool_)
 				return (bool)$this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\Cast\String_)
