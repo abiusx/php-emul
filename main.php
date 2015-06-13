@@ -594,12 +594,12 @@ class Emulator
 			if (!file_exists($realfile) or !is_file($realfile))
 				if ($type<=2) //include
 				{
-					$this->warning("include({$realfile}): failed to open stream: No such file or directory");
+					$this->warning("include({$file}): failed to open stream: No such file or directory");
 					return false;
 				}
 				else
 				{
-					$this->error("require({$realfile}): failed to open stream: No such file or directory");
+					$this->error("require({$file}): failed to open stream: No such file or directory");
 					return false;
 				}
 			$this->run_file($realfile);
@@ -817,7 +817,10 @@ class Emulator
 				}
 			}
 			elseif ($node instanceof Node\Stmt\Return_)
+			{
+				print_r($node);	
 				return $this->evaluate_expression($node->expr);
+			}
 			elseif ($node instanceof Node\Stmt\For_)
 			{
 				$i=0;
@@ -1084,6 +1087,6 @@ $x=new Emulator;
 // $x->start("sample-stmts.php");
 $x->start("yapig-0.95b/index.php");
 echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
-// var_dump($x->output);
+var_dump(substr($x->output,-100));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
