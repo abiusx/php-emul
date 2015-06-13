@@ -66,13 +66,21 @@ class Emulator
 		$this->_error($msg,$node);
 		$this->terminated=true;
 	}
-	private function _error($msg,$node=null)
+	private function _error($msg,$node=null,$details=true)
 	{
 
 		echo $msg," in ",$this->current_file," on line ",$this->current_line,PHP_EOL;
-		print_r($node);
-		if ($this->verbose)
-			debug_print_backtrace();
+		if ($details)
+		{
+			print_r($node);
+			if ($this->verbose)
+				debug_print_backtrace();
+		}
+	}
+	protected function notice($msg,$node=null)
+	{
+		echo "Emulation Notice: ";
+		$this->_error($msg,$node,false);
 	}
 
 	protected function warning($msg,$node=null)
@@ -282,7 +290,7 @@ class Emulator
 			foreach ($indexes as $index)
 			{
 				if (!isset($base[$index]))	
-					$this->warning("Undefined index {$index} for '\$$varName'");
+					$this->notice("Undefined index {$index} for '\$$varName'");
 				$base=&$base[$index];
 			}
 			return $base;
@@ -374,6 +382,8 @@ class Emulator
 				return $this->evaluate_expression($node->left)-$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Mul)
 				return $this->evaluate_expression($node->left)*$this->evaluate_expression($node->right);
+			elseif ($node instanceof Node\Expr\BinaryOp\Mod)
+				return $this->evaluate_expression($node->left)%$this->evaluate_expression($node->right);
 			// elseif ($node instanceof Node\Expr\BinaryOp\Pow)
 			// 	return $this->evaluate_expression($node->left)**$this->evaluate_expression($node->right);
 			
