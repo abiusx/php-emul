@@ -2,6 +2,7 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
+#FIXME: Return_ statement just returning from this instance is not enough. have to return from this run_file (not just run_code)	
 #TODO: error handling is very vague, and makes fixing bugs very hard.
 #FIXME: all $this->name instances should be fixed, create a sample file and include everything there
 class Emulator
@@ -159,6 +160,8 @@ class Emulator
 		$this->pop();
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
+		if ($this->return)
+			$this->return=false;	
 		return $res;
 	}
 	/**
@@ -714,6 +717,8 @@ class Emulator
 		$ast=$this->parser->parse($code);
 
 		$res=$this->run_code($ast);
+		if ($this->return)
+			$this->return=false;
 		$this->current_file=$last_file;
 		return $res;
 	}
@@ -748,6 +753,9 @@ class Emulator
 	}
 	protected $break=0,$continue=0;
 	protected $try=0,$loop=0;
+
+	protected $return=false;
+	protected $return_value=null;
 	protected function run_code($ast)
 	{
 		//first pass, get all definitions
@@ -783,6 +791,7 @@ class Emulator
 					echo "\t\tLine {$this->current_line}",PHP_EOL;
 			}
 			if ($this->terminated) return null;
+			if ($this->return) return $this->return_value;
 			// echo get_class($node),PHP_EOL;
 			if ($node instanceof Node\Stmt\Echo_)
 				foreach ($node->exprs as $expr)
@@ -818,8 +827,10 @@ class Emulator
 			}
 			elseif ($node instanceof Node\Stmt\Return_)
 			{
-				print_r($node);	
-				return $this->evaluate_expression($node->expr);
+				// print_r($node);
+				#FIXME: just returning from this instance is not enough. have to return from this run_file (not just run_code)	
+				$this->return=true;
+				return $this->return_value=$this->evaluate_expression($node->expr);
 			}
 			elseif ($node instanceof Node\Stmt\For_)
 			{
@@ -1084,8 +1095,8 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-// $x->start("sample-stmts.php");
-$x->start("yapig-0.95b/index.php");
+$x->start("sample-stmts.php");
+// $x->start("yapig-0.95b/index.php");
 echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
 var_dump(substr($x->output,-100));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;

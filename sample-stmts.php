@@ -1,5 +1,17 @@
 <?php
 
+function a()
+{
+	if (1)
+		if (!2)
+		return 2;
+	else 
+		return 3;
+
+	return 1;
+}
+echo a(),"=3",PHP_EOL;
+
 declare(ticks=500);
 $a=-3;
     // if (!preg_match("/charset=([a-zA-Z0-9\-]+)/",$transarray,$match)) //$match is byref here, it shouldn't work in emulator
