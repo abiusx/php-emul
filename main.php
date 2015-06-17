@@ -829,8 +829,9 @@ class Emulator
 			{
 				// print_r($node);
 				#FIXME: just returning from this instance is not enough. have to return from this run_file (not just run_code)	
+				$this->return_value=$this->evaluate_expression($node->expr);
 				$this->return=true;
-				return $this->return_value=$this->evaluate_expression($node->expr);
+				return $this->return_value;
 			}
 			elseif ($node instanceof Node\Stmt\For_)
 			{
