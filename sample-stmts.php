@@ -10,7 +10,13 @@ function a()
 
 	return 1;
 }
+function fibo($n)
+{
+	if ($n<2) return 1;
+	return fibo($n-1)+fibo($n-2);
+}
 echo a(),"=3",PHP_EOL;
+echo fibo(10),"=89",PHP_EOL;
 
 declare(ticks=500);
 $a=-3;

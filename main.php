@@ -1098,6 +1098,7 @@ $x=new Emulator;
 $x->start("sample-stmts.php");
 // $x->start("yapig-0.95b/index.php");
 echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
-var_dump(substr($x->output,-100));
+// var_dump(substr($x->output,-100));
+var_dump(($x->output));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
