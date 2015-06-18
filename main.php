@@ -2,9 +2,6 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
-#FIXME: Return_ statement just returning from this instance is not enough. have to return from this run_file (not just run_code)	
-#TODO: error handling is very vague, and makes fixing bugs very hard.
-#FIXME: all $this->name instances should be fixed, create a sample file and include everything there
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
@@ -756,51 +753,17 @@ class Emulator
 
 	protected $return=false;
 	protected $return_value=null;
-	protected function run_code($ast)
-	{
-		//first pass, get all definitions
-		foreach ($ast as $node)
-		{
-			if (0);
-			elseif ($node instanceof Node\Stmt\Function_)
-			{
-				// echo PHP_EOL;
-				$name=$this->name($node->name);
-				$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
-			}
-			elseif ($node instanceof Node\Stmt\Const_)
-			{
-				foreach ($node->consts as $const)
-				{
-					if (isset($this->constants[$const->name]))
-						$this->warning("Constant {$node->name} already defined");
-					else
-						$this->constants[($const->name)]=$this->evaluate_expression($const->value);
-				}
-			}
 
-		}		
-		//second pass, execute
-		foreach ($ast as $node)
-		{
-			$this->current_node=$node;
-			if ($node->getLine()!=$this->current_line)
-			{
-				$this->current_line=$node->getLine();
-				if ($this->verbose) 
-					echo "\t\tLine {$this->current_line}",PHP_EOL;
-			}
-			if ($this->terminated) return null;
-			if ($this->return) return $this->return_value;
-			// echo get_class($node),PHP_EOL;
+	protected function run_statement($node)
+	{
 			if ($node instanceof Node\Stmt\Echo_)
 				foreach ($node->exprs as $expr)
 					$this->output($this->evaluate_expression($expr));
 				// $this->output_array($this->evaluate_expression_array($node->exprs));
 			elseif ($node instanceof Node\Stmt\Const_)
-				continue;
+				return;
 			elseif ($node instanceof Node\Stmt\Function_)
-				continue;
+				return;
 			elseif ($node instanceof Node\Stmt\If_)
 			{
 				$done=false;
@@ -828,7 +791,6 @@ class Emulator
 			elseif ($node instanceof Node\Stmt\Return_)
 			{
 				// print_r($node);
-				#FIXME: just returning from this instance is not enough. have to return from this run_file (not just run_code)	
 				if ($node->expr)
 					$this->return_value=$this->evaluate_expression($node->expr);
 				else
@@ -848,20 +810,20 @@ class Emulator
 					{
 						$this->break--;
 						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							break 2;
+							return;
 						else
-							break ;
+							return;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
 						if ($this->continue)
-							break 2;
+							return; 
 					}
 					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
-						break;
+						return; 
 					}
 				}
 				$this->loop--;
@@ -871,26 +833,26 @@ class Emulator
 				$i=0;
 				while ($this->evaluate_expression($node->cond))
 				{
-					$this->run_code($node->stmts);
 					$i++;
+					$this->run_code($node->stmts);
 					if ($this->break)
 					{
 						$this->break--;
 						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							break 2;
+							return;
 						else
-							break ;
+							return;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
 						if ($this->continue)
-							break 2;
+							return; 
 					}
 					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
-						break;
+						return; 
 					}
 				}
 			}
@@ -905,20 +867,20 @@ class Emulator
 					{
 						$this->break--;
 						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							break 2;
+							return;
 						else
-							break ;
+							return;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
 						if ($this->continue)
-							break 2;
-					}					
+							return; 
+					}
 					if ($i>$this->infinite_loop)
 					{
 						$this->error("Infinite loop");
-						break;
+						return; 
 					}
 				}
 				while ($this->evaluate_expression($node->cond));
@@ -945,15 +907,15 @@ class Emulator
 					{
 						$this->break--;
 						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							break 2;
+							return;
 						else
-							break ;
+							return;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
 						if ($this->continue)
-							break 2;
+							return; 
 					}
 
 				}
@@ -985,15 +947,15 @@ class Emulator
 					{
 						$this->break--;
 						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							break 2;
+							return;
 						else
-							break ;
+							return;
 					}
 					if ($this->continue)
 					{
 						$this->continue--;
 						if ($this->continue)
-							break 2;
+							return; 
 					}
 				}
 			} 
@@ -1003,7 +965,7 @@ class Emulator
 					$this->break+=$this->evaluate_expression($node->num);
 				else
 					$this->break++;
-				break; //break this loop of run_code, and have the real loop break because $this->break > 0
+				return; //break this loop of run_code, and have the real loop break because $this->break > 0
 			}
 			elseif ($node instanceof Node\Stmt\Continue_)
 			{
@@ -1016,7 +978,7 @@ class Emulator
 				// $this->break+=$num-1;
 				$this->continue+=$num;
 
-				break ;
+				return ;
 			}
 			elseif ($node instanceof Node\Stmt\Throw_)
 			{
@@ -1072,8 +1034,48 @@ class Emulator
 			{
 				$this->error("Unknown node type: ",$node);	
 			}
+	}
+	protected function get_declarations($node)
+	{
+		if (0);
+		elseif ($node instanceof Node\Stmt\Function_)
+		{
+			// echo PHP_EOL;
+			$name=$this->name($node->name);
+			$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
+		}
+		elseif ($node instanceof Node\Stmt\Const_)
+		{
+			foreach ($node->consts as $const)
+			{
+				if (isset($this->constants[$const->name]))
+					$this->warning("Constant {$node->name} already defined");
+				else
+					$this->constants[($const->name)]=$this->evaluate_expression($const->value);
+			}
+		}
+	}
+	protected function run_code($ast)
+	{
+		//first pass, get all definitions
+		foreach ($ast as $node)
+			$this->get_declarations($node);
 
-
+		//second pass, execute
+		foreach ($ast as $node)
+		{
+			$this->current_node=$node;
+			if ($node->getLine()!=$this->current_line)
+			{
+				$this->current_line=$node->getLine();
+				if ($this->verbose) 
+					echo "\t\tLine {$this->current_line}",PHP_EOL;
+			}
+			$this->run_statement($node);
+			if ($this->terminated) return null;
+			if ($this->return) return $this->return_value;
+			if ($this->break) break;
+			if ($this->continue) break;
 		}
 	}	
 	function __destruct()
@@ -1100,12 +1102,12 @@ class Emulator
 
 
 
-$_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
+// $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-// $x->start("sample-stmts.php");
-$x->start("yapig-0.95b/index.php");
-echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
-var_dump(substr($x->output,-100));
-// var_dump(($x->output));
+$x->start("sample-stmts.php");
+// $x->start("yapig-0.95b/index.php");
+// echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
+// var_dump(substr($x->output,-100));
+echo(($x->output));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);

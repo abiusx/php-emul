@@ -6,7 +6,7 @@ function a()
 		if (!2)
 		return 2;
 	else 
-		return ;
+		return 3;
 
 	return 1;
 }
