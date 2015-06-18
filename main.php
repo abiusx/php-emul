@@ -1060,7 +1060,10 @@ class Emulator
 				foreach ($node->vars as $var)
 				{
 					$name=$this->name($var);
-					$this->variables[$name]=$this->globals()[$name];
+					if (array_key_exists($name,$this->globals()))
+						$this->variables[$name]=$this->globals()[$name];
+					else
+						$this->notice("Undefined index '{$name}' in globals",$this->globals());
 				}
 			}
 			elseif ($node instanceof Node\Expr)
@@ -1099,10 +1102,10 @@ class Emulator
 
 $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 $x=new Emulator;
-$x->start("sample-stmts.php");
-// $x->start("yapig-0.95b/index.php");
+// $x->start("sample-stmts.php");
+$x->start("yapig-0.95b/index.php");
 echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
-// var_dump(substr($x->output,-100));
-var_dump(($x->output));
+var_dump(substr($x->output,-100));
+// var_dump(($x->output));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
