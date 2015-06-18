@@ -829,7 +829,10 @@ class Emulator
 			{
 				// print_r($node);
 				#FIXME: just returning from this instance is not enough. have to return from this run_file (not just run_code)	
-				$this->return_value=$this->evaluate_expression($node->expr);
+				if ($node->expr)
+					$this->return_value=$this->evaluate_expression($node->expr);
+				else
+					$this->return_value=null;
 				$this->return=true;
 				return $this->return_value;
 			}
