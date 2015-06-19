@@ -16,7 +16,6 @@ class Emulator
 	public $output;
 	public $variables=[]; #TODO: make this a object, so that it can lookup magic variables, and retain them on push/pop
 	public $functions=[];
-	public $classes=[];
 	public $constants=[];
 	public $parser;
 	public $variable_stack=[];
@@ -696,10 +695,10 @@ class Emulator
 				else
 					$res.=$this->evaluate_expression($part);
 			}
+			return $res;
 		}
 		else
 			$this->error("Can not determine name: ",$ast);
-		return $res;		
 	}
 	public function run_file($file)
 	{
@@ -1103,11 +1102,11 @@ class Emulator
 
 
 // $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
-$x=new Emulator;
-$x->start("sample-stmts.php");
+// $x=new Emulator;
+// $x->start("sample-stmts.php");
 // $x->start("yapig-0.95b/index.php");
 // echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
 // var_dump(substr($x->output,-100));
-echo(($x->output));
+// echo(($x->output));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);
