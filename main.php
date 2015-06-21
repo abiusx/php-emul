@@ -10,8 +10,6 @@ class Emulator
 
 	protected $current_node,$current_file,$current_line;
 	protected $current_function;
-	protected $current_class,$current_method,$current_trait;
-	protected $current_namespace;
 	public $included_files=[];
 	public $output;
 	public $variables=[]; #TODO: make this a object, so that it can lookup magic variables, and retain them on push/pop
@@ -103,30 +101,27 @@ class Emulator
 	{
 		$this->variables=array_pop($this->variable_stack);
 	}
-	protected function run_function($name,$args)
+	/**
+	 * Runs a subcode, used by run_function and run_method
+	 * @param  [type] $function the parsed declaration of function
+	 * @param  [type] $args          [description]
+	 * @return [type]                [description]
+	 */
+	protected function run_sub($function,$args)
 	{
-		if ($this->verbose)
-			echo "\tRunning {$name}()...",PHP_EOL;
-		#FIXME: should push after every parameter expression is evaluated, as they may have side effects on symbol table
-		#currently we push a copy, and modifications are not preserved. We do it this way for now because references are hard to handle.
-		$last_file=$this->current_file;
-		$last_function=$this->current_function;
-		$this->current_function=$name;
 		$variables=$this->variables;
 		$this->push();
 		$this->variables=$variables;
+		#FIXME: should push after every parameter expression is evaluated, as they may have side effects on symbol table
+		#currently we push a copy, and modifications are not preserved. We do it this way for now because references are hard to handle.
 
 		end($this->variable_stack);
 		$current_symbol_table=&$this->variable_stack[key($this->variable_stack)];
-		$function=$this->functions[$name];
-		// if (count($function['params'])!=count($args))
-			// $this->error("{$name} expects ".count($function['params'])." arguments but received ".count($args));
-		$this->current_file=$this->functions[$name]['file'];
 		reset($args);
 		$count=count($args);
 		$index=0;
 		$function_variables=[];
-		foreach ($function['params'] as $param)
+		foreach ($function->params as $param)
 		{
 			if ($index>=$count) //all args consumed, either defaults or error
 			{
@@ -152,8 +147,28 @@ class Emulator
 			$index++;
 		}
 		$this->variables=$function_variables;
-		$res=$this->run_code($function['code']);
+		$res=$this->run_code($function->code);
 		$this->pop();
+		return $res;
+	}
+	/**
+	 * Runs a function from user-defined functions
+	 * @param  [type] $name [description]
+	 * @param  [type] $args [description]
+	 * @return [type]       [description]
+	 */
+	protected function run_function($name,$args)
+	{
+		if ($this->verbose)
+			echo "\tRunning {$name}()...",PHP_EOL;
+		#FIXME: function does not exist?
+		$last_file=$this->current_file;
+		$last_function=$this->current_function;
+		$this->current_function=$name;
+		$this->current_file=$this->functions[$name]->file;
+
+		$res=$this->run_sub($this->functions[$name],$args);
+
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
 		if ($this->return)
@@ -505,10 +520,13 @@ class Emulator
 			return $this->evaluate_expression($node->expr);
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
+		{
+			$this->terminated=true;	
 			if (isset($node->expr))
 				return $this->evaluate_expression($node->expr);
 			else
 				return NULL;
+		}
 		elseif ($node instanceof Node\Expr\Empty_)
 			return empty($this->variables[$this->name($node->expr)]);
 		elseif ($node instanceof Node\Expr\Isset_)
@@ -612,7 +630,9 @@ class Emulator
 		{
 			$classname=$this->name($node->class);
 			if (isset($this->classes[$classname]))
+			{
 				return $this->new_object($classname,$node->args); //user function
+			}
 			else
 			{
 				$argValues=[];
@@ -1041,7 +1061,7 @@ class Emulator
 		{
 			// echo PHP_EOL;
 			$name=$this->name($node->name);
-			$this->functions[$name]=array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
+			$this->functions[$name]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
 		}
 		elseif ($node instanceof Node\Stmt\Const_)
 		{
@@ -1102,8 +1122,11 @@ class Emulator
 
 
 // $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
-// $x=new Emulator;
-// $x->start("sample-stmts.php");
+if (isset($argc) and $argv[0]==__FILE__)
+{
+	$x=new Emulator;
+	$x->start("sample-stmts.php");
+}
 // $x->start("yapig-0.95b/index.php");
 // echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
 // var_dump(substr($x->output,-100));
