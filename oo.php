@@ -5,10 +5,20 @@ use PhpParser\Node;
 class EmulatorObject
 {
 	public $properties;
+	public $classname;
+	public function __construct($classname,$properties)
+	{
+		$this->classname=$classname;
+		$this->properties=$properties;
+	}
+
 }
 class OOEmulator extends Emulator
 {
 	public $classes=[];
+	protected $current_class,$current_method,$current_trait;
+	protected $current_namespace;
+	protected $this=null;
 	protected function get_declarations($node)
 	{
 		if ($node instanceof Node\Stmt\ClassLike)
@@ -75,7 +85,7 @@ class OOEmulator extends Emulator
 			if (isset($node->implements))
 			foreach ($node->implements as $interface)
 				$interfaces[]=$this->name($interface);
-			$class=(object)["properties"=>$properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype];
+			$class=(object)["properties"=>$properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
 			$this->classes[$classname]=$class;
 			// echo $classname,":";print_r($class);
 		}
@@ -83,26 +93,19 @@ class OOEmulator extends Emulator
 			parent::get_declarations($node);
 
 	}
-	protected function evaluate_expression($node)
-	{
-		$this->current_node=$node;
-		if (false)
-			;
-		else
-			return parent::evaluate_expression($node);
 
-	}
-	protected function new_object($name,array $args)
+	protected function new_object($classname,array $args)
 	{
-		if (array_key_exists($name, $this->classes))
+		if (array_key_exists($classname, $this->classes))
 		{
-			$this->variables[$name]=new EmulatorObject();
-			$this->variables[$name]->properties=$this->classes[$name]->properties;
-			if ($this->method_exists($name, "__construct"))
-				$this->run_method($name,"__construct",$args);
-			elseif ($this->method_exists($name,$name))
-				$this->run_method($name,$name,$args);
+			$obj=new EmulatorObject($classname,$this->classes[$classname]->properties);
+			if ($this->method_exists($classname, "__construct"))
+				$this->run_method($obj,"__construct",$args);
+			elseif ($this->method_exists($classname,$classname))
+				$this->run_method($obj,$classname,$args);
+			return $obj;
 		}
+		$this->error("Class '{$classname}' not found ");
 	}
 	protected function method_exists($class_name,$method_name)
 	{
@@ -112,9 +115,110 @@ class OOEmulator extends Emulator
 				return true;
 		return false;
 	}
-	protected function run_method($object_name,$method_name,$args)
+	protected function run_static_method($class_name,$method_name,$args)
 	{
+		//FIXME: apply inheritance to find the actual method
+		if (!$this->method_exists($class_name,$method_name))
+			$this->error("Call to undefined method {$class_name}::{$method_name}()");
 
+		if ($this->verbose)
+			echo "\tRunning {$object->classname}::{$name}()...",PHP_EOL;
+		$last_file=$this->current_file;
+		$last_method=$this->current_method;
+		$last_class=$this->current_class;
+		$this->current_method=$method_name;
+		$this->current_file=$this->classes[$class_name]->file;
+		$this->current_class=$class_name;
+
+		$res=$this->run_sub($this->classes[$class_name]->methods[$method_name],$args);
+
+		$this->current_method=$last_method;
+		$this->current_file=$last_file;
+		$this->current_class=$last_class;
+
+		if ($this->return)
+			$this->return=false;	
+		return $res;
+	}
+	protected function run_method(&$object,$method_name,$args)
+	{
+		$class_name=$object->classname;
+		$old_this=$this->this;
+		$this->this=&$object;
+
+		$res=$this->run_static_method($class_name,$method_name,$args);
+
+		$this->this=&$old_this;
+		return $res;
+	}
+
+	protected function evaluate_expression($node)
+	{
+		$this->current_node=$node;
+		if (false)
+			;
+		elseif ($node instanceof Node\Expr\MethodCall)
+		{
+			$object=&$this->variables[$this->name($node->var)];
+			$method_name=$this->name($node->name);
+			$args=$node->args;
+			return $this->run_method($object,$method_name,$args);
+		}
+		elseif ($node instanceof Node\Expr\StaticCall)
+		{
+			$method_name=$this->name($node->name);
+			if ($node->class instanceof Node\Expr\Variable)
+				$class=$this->evaluate_expression($node->class)->classname;
+			elseif ($node->class instanceof Node\Name)
+				$class=$this->name($node->class);
+			else
+				$this->error("Unknown class when calling static function {$method_name}",$node);
+			$args=$node->args;
+			return $this->run_static_method($class,$method_name,$args);
+		}
+		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
+		{
+			// print_r($node);
+			$classname=$this->name($node->class);
+			$property_name=$this->name($node->name);
+			if ($this->ancestry($classname))
+			{
+				foreach($this->ancestry($classname)  as $class)
+				{
+					if (isset($this->classes[$class]->properties->static->public->$property_name))
+						return $this->classes[$class]->properties->static->public->$property_name;
+				}
+				$this->error("Access to undeclared static property: {$classname}::${$property_name}");
+			}
+			else
+				$this->error("Class '{$classname}' not found");
+
+		}
+		else
+			return parent::evaluate_expression($node);
+
+	}	
+	/**
+	 * Returns all parents, including self, of a class, ordered from youngest
+	 * Looks up self and static keywords
+	 * @param  [type] $classname [description]
+	 * @return [type]            [description]
+	 */
+	protected function ancestry($classname)
+	{
+		if ($classname==="self")
+			$classname=$this->current_class;
+		elseif ($classname==="static")
+			$classname=$this->current_class;
+		
+		if (!isset($this->classes[$classname])) return null;
+		$res=[$classname];
+		while ($this->classes[$classname]->parent)
+		{
+			$classname=$this->classes[$classname]->parent;
+			$res[]=$classname;
+		}
+		return array_reverse($res);
 	}
 	protected function run_statement($node)
 	{
