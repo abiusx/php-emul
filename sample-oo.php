@@ -27,6 +27,10 @@ class Something
 	{
 		echo "hi";
 	}
+	static function sta()
+	{
+		echo self::$s;
+	}
 }
 
 class SomethingElse extends Something implements ia,ib
@@ -34,4 +38,4 @@ class SomethingElse extends Something implements ia,ib
 
 }
 
-// $x=new Something();
+$x=new Something();
