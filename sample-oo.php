@@ -49,6 +49,5 @@ $x::sta();
 Something::sta();
 
 echo SomethingElse::$s,PHP_EOL;
-die();
 $y=new SomethingDeep();
 $y->f();

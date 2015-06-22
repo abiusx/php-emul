@@ -99,10 +99,19 @@ class OOEmulator extends Emulator
 		if (array_key_exists($classname, $this->classes))
 		{
 			$obj=new EmulatorObject($classname,$this->classes[$classname]->properties);
-			if ($this->method_exists($classname, "__construct"))
-				$this->run_method($obj,"__construct",$args);
-			elseif ($this->method_exists($classname,$classname))
-				$this->run_method($obj,$classname,$args);
+			foreach ($this->ancestry($classname) as $class)
+			{
+				if ($this->method_exists($class, "__construct"))
+				{
+					$this->run_method($obj,"__construct",$args);
+					break;
+				}
+				elseif ($this->method_exists($class,$class))
+				{
+					$this->run_method($obj,$class,$args);
+					break;
+				}
+			}
 			return $obj;
 		}
 		$this->error("Class '{$classname}' not found ");
@@ -110,17 +119,10 @@ class OOEmulator extends Emulator
 	protected function method_exists($class_name,$method_name)
 	{
 		if (!isset($this->classes[$class_name])) return false;
-		foreach ($this->classes[$class_name]->methods as $method)
-			if ($method->name===$method_name)
-				return true;
-		return false;
+		return array_key_exists($method_name, $this->classes[$class_name]->methods);
 	}
 	protected function run_static_method($class_name,$method_name,$args)
 	{
-		//FIXME: apply inheritance to find the actual method
-		if (!$this->method_exists($class_name,$method_name))
-			$this->error("Call to undefined method {$class_name}::{$method_name}()");
-
 		if ($this->verbose)
 			echo "\tRunning {$object->classname}::{$name}()...",PHP_EOL;
 		$last_file=$this->current_file;
@@ -129,9 +131,19 @@ class OOEmulator extends Emulator
 		$this->current_method=$method_name;
 		$this->current_file=$this->classes[$class_name]->file;
 		$this->current_class=$class_name;
+		$flag=false;
+		foreach ($this->ancestry($class_name) as $class)
+		{
+			if ($this->method_exists($class,$method_name))
+			{
+				$res=$this->run_sub($this->classes[$class]->methods[$method_name],$args);
+				$flag=true;
+				break;	
+			}
 
-		$res=$this->run_sub($this->classes[$class_name]->methods[$method_name],$args);
-
+		}
+		if (!$flag)
+				$this->error("Call to undefined method {$class_name}::{$method_name}()");
 		$this->current_method=$last_method;
 		$this->current_file=$last_file;
 		$this->current_class=$last_class;
