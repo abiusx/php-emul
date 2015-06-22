@@ -2,6 +2,22 @@
 require_once __DIR__."/main.php";
 use PhpParser\Node;
 //trait_, instanceof, methodcall,new_,propertyfetch,staticcall,staticpropertyfetch,clone_,staticvar, static_,traituse,namespace,use
+class EmulatorObjectProperty
+{
+	public $name;
+	public $value;
+	public $visibility;
+	function __construct($name,$value,$visibility=Visibility_Public)
+	{
+		$this->name=$name;
+		$this->value=$value;
+		$this->visibility=$visibility;
+	}
+
+	const Visibility_Public=1;
+	const Visibility_Protected=2;
+	const Visibility_Private=4;
+}
 class EmulatorObject
 {
 	public $properties;
@@ -36,8 +52,8 @@ class OOEmulator extends Emulator
 			$interfaces=[];
 			$consts=[];
 			$methods=[];
-			$properties=(object)["public"=>new stdClass,"private"=>new stdClass,"protected"=>new stdClass];
-			$properties->static=clone $properties;
+			$properties=[];
+			$static_properties=[];
 			foreach ($node->stmts as $part)
 			{
 				if ($part instanceof Node\Stmt\Property)
@@ -51,16 +67,16 @@ class OOEmulator extends Emulator
 						else
 							$val=NULL;
 						if ($type & 4)
-							$visibility="private";
+							$visibility=Visibility_Private;
 						elseif ($type &2)
-							$visibility="protected";
+							$visibility=Visibility_Protected;
 						else
-							$visibility="public";
+							$visibility=Visibility_Public;
 
 						if ($type & 8 ) //static
-							$properties->static->$visibility->$propname=$val;
+							$static_properties[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
 						else
-							$properties->$visibility->$propname=$val;
+							$properties[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
 					}
 				}
 				elseif ($part instanceof Node\Stmt\ClassMethod)
@@ -85,7 +101,7 @@ class OOEmulator extends Emulator
 			if (isset($node->implements))
 			foreach ($node->implements as $interface)
 				$interfaces[]=$this->name($interface);
-			$class=(object)["properties"=>$properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
+			$class=(object)["properties"=>$properties,"static"=>$static_properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
 			$this->classes[$classname]=$class;
 			// echo $classname,":";print_r($class);
 		}
@@ -98,7 +114,9 @@ class OOEmulator extends Emulator
 	{
 		if (array_key_exists($classname, $this->classes))
 		{
+			#TODO: bring properties of all parents too
 			$obj=new EmulatorObject($classname,$this->classes[$classname]->properties);
+
 			foreach ($this->ancestry($classname) as $class)
 			{
 				if ($this->method_exists($class, "__construct"))
@@ -188,6 +206,12 @@ class OOEmulator extends Emulator
 			$args=$node->args;
 			return $this->run_static_method($class,$method_name,$args);
 		}
+		elseif ($node instanceof Node\Expr\PropertyFetch)
+		{
+			$var=&$this->variables[$this->name($node->var)];
+			$property_name=$this->name($node->name);
+			#FIXME: redo properties
+		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
 		{
 			// print_r($node);
@@ -197,8 +221,8 @@ class OOEmulator extends Emulator
 			{
 				foreach($this->ancestry($classname)  as $class)
 				{
-					if (isset($this->classes[$class]->properties->static->public->$property_name))
-						return $this->classes[$class]->properties->static->public->$property_name;
+					if (isset($this->classes[$class]->static[$property_name]))
+						return $this->classes[$class]->static[$property_name]; #TODO: check for visibility
 				}
 				$this->error("Access to undeclared static property: {$classname}::${$property_name}");
 			}
@@ -222,6 +246,8 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="static")
 			$classname=$this->current_class;
+		elseif ($classname==="parent")
+			$classname=$this->current_class->parent;
 		
 		if (!isset($this->classes[$classname])) return null;
 		$res=[$classname];
@@ -247,5 +273,5 @@ class OOEmulator extends Emulator
 $x=new OOEmulator;
 // $x->start("yapig-0.95b/index.php");
 $x->start("sample-oo.php");
-echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
+echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 var_dump(substr($x->output,-100));

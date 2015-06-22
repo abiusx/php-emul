@@ -36,7 +36,7 @@ abstract class SomethingElse extends Something implements ia,ib
 }
 class SomethingDeep extends Something
 {
-	function z__construct()
+	function __construct()
 	{
 		echo 3,PHP_EOL;
 	}
@@ -51,3 +51,7 @@ Something::sta();
 echo SomethingElse::$s,PHP_EOL;
 $y=new SomethingDeep();
 $y->f();
+
+echo $x->y,PHP_EOL;
+$x->y++;
+echo $x->y,PHP_EOL;
