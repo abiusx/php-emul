@@ -149,7 +149,7 @@ class OOEmulator extends Emulator
 	protected function run_static_method($class_name,$method_name,$args)
 	{
 		if ($this->verbose)
-			echo "\tRunning {$object->classname}::{$name}()...",PHP_EOL;
+			echo "\tRunning {$class_name}::{$method_name}()...",PHP_EOL;
 		$last_file=$this->current_file;
 		$last_method=$this->current_method;
 		$last_class=$this->current_class;
@@ -196,7 +196,7 @@ class OOEmulator extends Emulator
 			;
 		elseif ($node instanceof Node\Expr\MethodCall)
 		{
-			$object=&$this->variable($node->var);
+			$object=&$this->reference($node->var);
 			$method_name=$this->name($node->name);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
@@ -215,26 +215,13 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\PropertyFetch)
 		{
-			$var=&$this->variable($node->var);
-			$property_name=$this->name($node->name);
-			#FIXME: redo properties
+			$var=&$this->reference($node);
+			return $var;
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
 		{
-			// print_r($node);
-			$classname=$this->name($node->class);
-			$property_name=$this->name($node->name);
-			if ($this->ancestry($classname))
-			{
-				foreach($this->ancestry($classname)  as $class)
-				{
-					if (isset($this->classes[$class]->static[$property_name]))
-						return $this->classes[$class]->static[$property_name]->value; #TODO: check for visibility
-				}
-				$this->error("Access to undeclared static property: {$classname}::${$property_name}");
-			}
-			else
-				$this->error("Class '{$classname}' not found");
+			$var=&$this->reference($node);
+			return $var;
 
 		}
 		else
@@ -255,7 +242,6 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
 			$classname=$this->current_class->parent;
-		
 		if (!isset($this->classes[$classname])) return null;
 		$res=[$classname];
 		while ($this->classes[$classname]->parent)
@@ -275,17 +261,38 @@ class OOEmulator extends Emulator
 		else
 			parent::run_statement($node);
 	}
-	protected function name($node)
+	protected function &reference($node,$create=true)
 	{
 		if ($node instanceof Node\Expr\PropertyFetch)
 		{
-			$var=$this->name($node->var);
-			$property=$this->name($node->name);
-			#FIXME: instead of name, have this return an instance.
-			print_r($node);
+			// print_r($node);
+			$var=&$this->reference($node->var);
+			$property_name=$this->name($node->name);
+			if (!array_key_exists($property_name, $var->properties))
+				$this->notice("Undefined property: {$var->classname}::\${$property_name}");
+			return $var->properties[$property_name]->value;
+		}
+		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
+		{
+			$classname=$this->name($node->class);
+			if ($classname instanceof EmulatorObject) //support for $object::static_method
+				$classname=$classname->classname;
+			$property_name=$this->name($node->name);
+			if ($this->ancestry($classname))
+			{
+				foreach($this->ancestry($classname)  as $class)
+				{
+					if (array_key_exists($property_name,$this->classes[$class]->static))
+						return $this->classes[$class]->static[$property_name]->value; #TODO: check for visibility
+				}
+				$this->error("Access to undeclared static property: {$classname}::\${$property_name}");
+			}
+			else
+				$this->error("Class '{$classname}' not found");
+			return $classname; //just to prevent errors
 		}
 		else
-			return parent::name($node);
+			return parent::reference($node,$create);
 	}
 }
 
@@ -293,4 +300,5 @@ $x=new OOEmulator;
 // $x->start("yapig-0.95b/index.php");
 $x->start("sample-oo.php");
 echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
-var_dump(substr($x->output,-100));
+// var_dump(substr($x->output,-100));
+// var_dump(($x->output));

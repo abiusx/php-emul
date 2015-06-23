@@ -5,7 +5,7 @@ use PhpParser\Node;
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
-	public $direct_output	=	false;
+	public $direct_output	=	true;
 	public $verbose			=	false;
 
 	protected $current_node,$current_file,$current_line;
@@ -673,6 +673,8 @@ class Emulator
 			}
 			return $res;
 		}
+		elseif ($ast instanceof Node\Expr\Variable)
+			return $this->evaluate_expression($ast);
 		else
 			$this->error("Can not determine name: ",$ast);
 	}
