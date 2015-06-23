@@ -199,7 +199,7 @@ class Emulator
 				foreach ($node->args as $arg)
 				{
 					if ($arg->value instanceof Node\Expr\Variable) //byref probably?
-						$argValues[]=&$this->variable($argName);
+						$argValues[]=&$this->reference($argName);
 					else
 						$argValues[]=$this->evaluate_expression($arg->value);
 				}
@@ -218,8 +218,8 @@ class Emulator
 		elseif ($node instanceof Node\Expr\AssignRef)
 		{
 			// $originalVar=$this->name($node->expr);
-			$originalVar=&$this->variable($node->expr);
-			$var=&$this->variable($node->var);
+			$originalVar=&$this->reference($node->expr);
+			$var=&$this->reference($node->var);
 			$var=$originalVar;
 		}
 		elseif ($node instanceof Node\Expr\Assign)
@@ -234,7 +234,7 @@ class Emulator
 				{
 					if ($var instanceof Node\Expr\Variable)
 					{
-						$var=&$this->variable($var);
+						$var=&$this->reference($var);
 						$var=current($resArray);
 						next($resArray);
 					}
@@ -242,13 +242,13 @@ class Emulator
 			}
 			else
 			{
-				$var=&$this->variable($node->var);
+				$var=&$this->reference($node->var);
 				return $var=$this->evaluate_expression($node->expr);
 			}
 				// $this->error("Unknown assign: ",$node);
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch) //access multidimensional arrays $x[...][..][...]
-			return $this->variable($node);
+			return $this->reference($node);
 		elseif ($node instanceof Node\Expr\Array_)
 		{
 			$out=[];
@@ -289,27 +289,27 @@ class Emulator
 
 		elseif ($node instanceof Node\Expr\PreInc)
 		{
-			$var=&$this->variable($node->var);	
+			$var=&$this->reference($node->var);	
 			return ++$var;
 		}
 		elseif ($node instanceof Node\Expr\PostInc)
 		{
-			$var=&$this->variable($node->var);	
+			$var=&$this->reference($node->var);	
 			return $var++;
 		}
 		elseif ($node instanceof Node\Expr\PreDec)
 		{
-			$var=&$this->variable($node->var);	
+			$var=&$this->reference($node->var);	
 			return --$var;
 		}
 		elseif ($node instanceof Node\Expr\PostDec)
 		{
-			$var=&$this->variable($node->var);	
+			$var=&$this->reference($node->var);	
 			return $var--;
 		}
 		elseif ($node instanceof Node\Expr\AssignOp)
 		{
-			$var=&$this->variable($node->var);
+			$var=&$this->reference($node->var);
 			$val=$this->evaluate_expression($node->expr);
 			if ($node instanceof Node\Expr\AssignOp\Plus)
 				return $var+=$val;
@@ -446,7 +446,7 @@ class Emulator
 		
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			return $this->variable($node);
+			return $this->reference($node);
 		}
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
@@ -474,7 +474,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\Empty_)
 		{
-			$var=&$this->variable($node,true);
+			$var=&$this->reference($node,true);
 			return empty($var);
 		}
 		elseif ($node instanceof Node\Expr\Isset_)
@@ -482,7 +482,7 @@ class Emulator
 			#FIXME: if the name expression is multipart, and one part of it also doesn't exist this warns. Does PHP too?
 			foreach ($node->vars as $var)
 			{
-				$temp=&$this->variable($var,false);
+				$temp=&$this->reference($var,false);
 				if (!isset($temp))
 					return false;
 			}
@@ -580,7 +580,7 @@ class Emulator
 	 * @param  [type] $node [description]
 	 * @return [type]       [description]
 	 */
-	protected function &variable($node,$create=true)
+	protected function &reference($node,$create=true)
 	{
 		if (is_string($node))
 		{
@@ -616,7 +616,7 @@ class Emulator
 
 			// $varName=$this->name($t);
 			// $base=&$this->variables[$varName];
-			$base=&$this->variable($t);
+			$base=&$this->reference($t);
 			foreach ($indexes as $index)
 			{
 				if ($index===NULL)
@@ -633,9 +633,9 @@ class Emulator
 		elseif ($node instanceof Node\Expr\Variable)
 		{
 			if (is_string($node->name))
-				return $this->variable($node->name);
+				return $this->reference($node->name);
 			else
-				return $this->variable($this->evaluate_expression($node->name));
+				return $this->reference($this->evaluate_expression($node->name));
 		}
 		else
 			$this->error("Can not find variable reference of this node type.",$node);
@@ -861,8 +861,8 @@ class Emulator
 			{
 				$list=$this->evaluate_expression($node->expr);
 				if (isset($node->keyVar))
-					$keyVar=&$this->variable($node->keyVar);
-				$valueVar=&$this->variable($node->valueVar);
+					$keyVar=&$this->reference($node->keyVar);
+				$valueVar=&$this->reference($node->valueVar);
 				foreach ($list as $k=>$v)
 				{
 					if (isset($keyVar))
@@ -966,7 +966,7 @@ class Emulator
 					{
 						//each has type, the exception type, var, the exception variable, and stmts
 						$type=$this->name($catch->type);
-						$var=&$this->variable($catch->var);
+						$var=&$this->reference($catch->var);
 						if ($e instanceof $type)
 						{
 							$var=$e;
@@ -1072,10 +1072,10 @@ if (isset($argc) and $argv[0]==__FILE__)
 {
 	$x=new Emulator;
 	$x->start("sample-stmts.php");
+	echo(($x->output));
 }
 // $x->start("yapig-0.95b/index.php");
 // echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
 // var_dump(substr($x->output,-100));
-echo(($x->output));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);

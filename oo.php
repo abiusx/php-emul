@@ -196,7 +196,7 @@ class OOEmulator extends Emulator
 			;
 		elseif ($node instanceof Node\Expr\MethodCall)
 		{
-			$object=&$this->variables[$this->name($node->var)];
+			$object=&$this->variable($node->var);
 			$method_name=$this->name($node->name);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
@@ -215,7 +215,7 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\PropertyFetch)
 		{
-			$var=&$this->variables[$this->name($node->var)];
+			$var=&$this->variable($node->var);
 			$property_name=$this->name($node->name);
 			#FIXME: redo properties
 		}
