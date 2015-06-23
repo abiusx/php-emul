@@ -199,10 +199,7 @@ class Emulator
 				foreach ($node->args as $arg)
 				{
 					if ($arg->value instanceof Node\Expr\Variable) //byref probably?
-					{
-						$argName=$this->name($arg->value);
-						$argValues[]=&$this->variables[$argName];
-					}	
+						$argValues[]=&$this->variable($argName);
 					else
 						$argValues[]=$this->evaluate_expression($arg->value);
 				}
@@ -220,19 +217,14 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\AssignRef)
 		{
-			$originalVar=$this->name($node->expr);
-			$var=$this->name($node->var);
-			$this->variables[$var]=&$this->variables[$originalVar];
+			// $originalVar=$this->name($node->expr);
+			$originalVar=&$this->variable($node->expr);
+			$var=&$this->variable($node->var);
+			$var=$originalVar;
 		}
 		elseif ($node instanceof Node\Expr\Assign)
 		{
-			if ($node->var instanceof Node\Expr\Variable)	
-			{
-				$name=$this->name($node->var);
-				$this->variables[$name]=$this->evaluate_expression($node->expr);	
-				return $this->variables[$name];
-			}
-			elseif ($node->var instanceof Node\Expr\List_) //list(x,y)=f()
+			if ($node->var instanceof Node\Expr\List_) //list(x,y)=f()
 			{
 				$resArray=$this->evaluate_expression($node->expr);
 				if (count($resArray)!=count($node->var->vars))
@@ -242,75 +234,22 @@ class Emulator
 				{
 					if ($var instanceof Node\Expr\Variable)
 					{
-						$this->variables[$this->name($var->name)]=current($resArray);
+						$var=&$this->variable($var);
+						$var=current($resArray);
 						next($resArray);
 					}
 				}
 			}
-			elseif ($node->var instanceof Node\Expr\ArrayDimFetch) //$x[...][...]=...
-			{
-				$t=$node->var;
-				$dim=0;
-				$indexes=[];
-				//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
-				while ($t instanceof Node\Expr\ArrayDimFetch)
-				{
-					$dim++;
-					if ($t->dim)
-						$indexes[]=$this->evaluate_expression($t->dim);
-					else
-						$indexes[]=NULL;
-					$t=$t->var;
-				}
-				$indexes=array_reverse($indexes);
-				$varName=$this->name($t);
-
-				$base=&$this->variables[$varName];
-				foreach ($indexes as $index)
-				{
-					if (!$index)
-					{
-						//it might be $a[]=
-						$base[]=NULL;
-						end($base);
-						$index=key($base);
-					}
-					$base=&$base[$index];
-					#TODO: this ArrayDimFetch should be used everywhere. #FIXME the rest should not work fine
-				}
-				$base=$this->evaluate_expression($node->expr);
-				// $this->variables[$this->name($node->var->var->name)][$this->name($node->var->dim)]=$this->evaluate_expression($node->expr);
-			}
 			else
-				$this->error("Unknown assign: ",$node);
+			{
+				$var=&$this->variable($node->var);
+				return $var=$this->evaluate_expression($node->expr);
+			}
+				// $this->error("Unknown assign: ",$node);
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch) //access multidimensional arrays $x[...][..][...]
 		{
-			$t=$node;
-			$dim=0;
-			$indexes=[];
-			//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
-			while ($t instanceof Node\Expr\ArrayDimFetch)
-			{
-				$dim++;
-				$indexes[]=$this->evaluate_expression($t->dim);
-				$t=$t->var;
-			}
-			$indexes=array_reverse($indexes);
-			$varName=$this->name($t);
-			if (!isset($this->variables[$varName]))
-				$this->warning("Variable '\$$varName' not defined");
-			$base=&$this->variables[$varName];
-			foreach ($indexes as $index)
-			{
-				if (!isset($base[$index]))	
-					$this->notice("Undefined index {$index} for '\$$varName'");
-				$base=&$base[$index];
-			}
-			return $base;
-			// $base=$this->evaluate_expression($node->expr);
-
-
+			return $this->variable($node);
 		}
 		elseif ($node instanceof Node\Expr\Array_)
 		{
@@ -351,100 +290,112 @@ class Emulator
 			return +$this->evaluate_expression($node->expr);
 
 		elseif ($node instanceof Node\Expr\PreInc)
-			return ++$this->variables[$this->name($node->var)];
+		{
+			$var=&$this->variable($node->var);	
+			return ++$var;
+		}
 		elseif ($node instanceof Node\Expr\PostInc)
-			return $this->variables[$this->name($node->var)]++;
+		{
+			$var=&$this->variable($node->var);	
+			return $var++;
+		}
 		elseif ($node instanceof Node\Expr\PreDec)
-			return --$this->variables[$this->name($node->var)];
+		{
+			$var=&$this->variable($node->var);	
+			return --$var;
+		}
 		elseif ($node instanceof Node\Expr\PostDec)
-			return $this->variables[$this->name($node->var)]--;
-
+		{
+			$var=&$this->variable($node->var);	
+			return $var--;
+		}
 		elseif ($node instanceof Node\Expr\AssignOp)
 		{
+			$var=&$this->variable($node->var);
+			$val=$this->evaluate_expression($node->expr);
 			if ($node instanceof Node\Expr\AssignOp\Plus)
-				return $this->variables[$this->name($node->var)]+=$this->evaluate_expression($node->expr);
+				return $var+=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\Minus)
-				return $this->variables[$this->name($node->var)]=$this->evaluate_expression($node->expr);
+				return $var-=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\Mod)
-				return $this->variables[$this->name($node->var)]*=$this->evaluate_expression($node->expr);
+				return $var%=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\Mul)
-				return $this->variables[$this->name($node->var)]*=$this->evaluate_expression($node->expr);
+				return $var*=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\Div)
-				return $this->variables[$this->name($node->var)]/=$this->evaluate_expression($node->expr);
+				return $var/=$val;
 			// elseif ($node instanceof Node\Expr\AssignOp\Pow)
 			// 	return $this->variables[$this->name($node->var)]**=$this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\AssignOp\ShiftLeft)
-				return $this->variables[$this->name($node->var)]<<=$this->evaluate_expression($node->expr);
+				return $var<<=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\ShiftRight)
-				return $this->variables[$this->name($node->var)]>>=$this->evaluate_expression($node->expr);
+				return $var>>=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\Concat)
-				return $this->variables[$this->name($node->var)].=$this->evaluate_expression($node->expr);
+				return $var.=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\BitwiseAnd)
-				return $this->variables[$this->name($node->var)]&=$this->evaluate_expression($node->expr);
+				return $var&=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\BitwiseOr)
-				return $this->variables[$this->name($node->var)]|=$this->evaluate_expression($node->expr);
+				return $var|=$val;
 			elseif ($node instanceof Node\Expr\AssignOp\BitwiseXor)
-				return $this->variables[$this->name($node->var)]^=$this->evaluate_expression($node->expr);
+				return $var^=$val;
 		}
 		elseif ($node instanceof Node\Expr\BinaryOp)
 		{
+			$l=$this->evaluate_expression($node->left);
+			$r=$this->evaluate_expression($node->right);
 			if ($node instanceof Node\Expr\BinaryOp\Plus)
-				return $this->evaluate_expression($node->left)+$this->evaluate_expression($node->right);
+				return $l+$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\Div)
-				return $this->evaluate_expression($node->left)/$this->evaluate_expression($node->right);
+				return $l/$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\Minus)
-				return $this->evaluate_expression($node->left)-$this->evaluate_expression($node->right);
+				return $l-$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\Mul)
-				return $this->evaluate_expression($node->left)*$this->evaluate_expression($node->right);
+				return $l*$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\Mod)
-				return $this->evaluate_expression($node->left)%$this->evaluate_expression($node->right);
+				return $l%$r;
 			// elseif ($node instanceof Node\Expr\BinaryOp\Pow)
 			// 	return $this->evaluate_expression($node->left)**$this->evaluate_expression($node->right);
 			
 			elseif ($node instanceof Node\Expr\BinaryOp\Identical)
-				return $this->evaluate_expression($node->left)===$this->evaluate_expression($node->right);
+				return $l===$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\NotIdentical)
-				return $this->evaluate_expression($node->left)!==$this->evaluate_expression($node->right);
+				return $l!==$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\Equal)
-				return $this->evaluate_expression($node->left)==$this->evaluate_expression($node->right);
+				return $l==$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\NotEqual)
-				return $this->evaluate_expression($node->left)!=$this->evaluate_expression($node->right);
+				return $l!=$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\Smaller)
-				return $this->evaluate_expression($node->left)<$this->evaluate_expression($node->right);
+				return $l<$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\SmallerOrEqual)
-				return $this->evaluate_expression($node->left)<=$this->evaluate_expression($node->right);
+				return $l<=$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\Greater)
-				return $this->evaluate_expression($node->left)>$this->evaluate_expression($node->right);
+				return $l>$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\GreaterOrEqual)
-				return $this->evaluate_expression($node->left)>=$this->evaluate_expression($node->right);
-			
+				return $l>=$r;
 			elseif ($node instanceof Node\Expr\BinaryOp\LogicalAnd)
-				return $this->evaluate_expression($node->left) and $this->evaluate_expression($node->right);
+				return $l and $r;
 			elseif ($node instanceof Node\Expr\BinaryOp\LogicalOr)
-				return $this->evaluate_expression($node->left) or $this->evaluate_expression($node->right);
+				return $l or $r;
 			elseif ($node instanceof Node\Expr\BinaryOp\LogicalXor)
-				return $this->evaluate_expression($node->left) xor $this->evaluate_expression($node->right);
+				return $l xor $r;
 
 			elseif ($node instanceof Node\Expr\BinaryOp\BooleanOr)
-				return $this->evaluate_expression($node->left) || $this->evaluate_expression($node->right);
+				return $l || $r;
 			elseif ($node instanceof Node\Expr\BinaryOp\BooleanAnd)
-				return $this->evaluate_expression($node->left) && $this->evaluate_expression($node->right);
-
+				return $l && $r;
 			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseAnd)
-				return $this->evaluate_expression($node->left) & $this->evaluate_expression($node->right);
+				return $l & $r;
 			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseOr)
-				return $this->evaluate_expression($node->left) | $this->evaluate_expression($node->right);
+				return $l | $r;
 			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseXor)
-				return $this->evaluate_expression($node->left) ^ $this->evaluate_expression($node->right);
+				return $l ^ $r;
 
 			elseif ($node instanceof Node\Expr\BinaryOp\ShiftLeft)
-				return $this->evaluate_expression($node->left)<<$this->evaluate_expression($node->right);
+				return $l << $r;
 			elseif ($node instanceof Node\Expr\BinaryOp\ShiftRight)
-				return $this->evaluate_expression($node->left)>> $this->evaluate_expression($node->right);
+				return $l >> $r;
 
 			elseif ($node instanceof Node\Expr\BinaryOp\Concat)
-				return $this->evaluate_expression($node->left).$this->evaluate_expression($node->right);
-
+				return $l . $r;
 			// elseif ($node instanceof Node\Expr\BinaryOp\Spaceship)
 			// 	return $this->evaluate_expression($node->left)<=>$this->evaluate_expression($node->right);
 
@@ -497,11 +448,7 @@ class Emulator
 		
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			$name=$this->name($node);
-			if (array_key_exists($name, $this->variables))
-				return $this->variables[$name];
-			else
-				$this->error("Undefined variable {$node->name}",$this->variables);
+			return $this->variable($node);
 		}
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
@@ -528,45 +475,18 @@ class Emulator
 				return NULL;
 		}
 		elseif ($node instanceof Node\Expr\Empty_)
-			return empty($this->variables[$this->name($node->expr)]);
+		{
+			$var=&$this->variable($node,true);
+			return empty($var);
+		}
 		elseif ($node instanceof Node\Expr\Isset_)
 		{
 			#FIXME: if the name expression is multipart, and one part of it also doesn't exist this warns. Does PHP too?
 			foreach ($node->vars as $var)
 			{
-				if ($var instanceof Node\Expr\Variable)
-				{
-
-					if (!isset($this->variables[$this->name($var)]))
-						return false;
-				}
-				elseif ($var instanceof Node\Expr\ArrayDimFetch)
-				{
-					$t=$var;
-					$dim=0;
-					$indexes=[];
-					//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
-					while ($t instanceof Node\Expr\ArrayDimFetch)
-					{
-						$dim++;
-						$indexes[]=$this->evaluate_expression($t->dim);
-						$t=$t->var;
-					}
-					$indexes=array_reverse($indexes);
-					$varName=$this->name($t);
-					if (!isset($this->variables[$varName]))
-						return false;
-					$base=&$this->variables[$varName];
-					foreach ($indexes as $index)
-					{
-						if (!isset($base[$index]))	
-							return false;
-						$base=&$base[$index];
-					}
-					return true;
-				}
-				else
-					$this->error("Unknown node for isset",$var);
+				$temp=&$this->variable($var,false);
+				if (!isset($temp))
+					return false;
 			}
 			return true;
 		}
@@ -661,6 +581,70 @@ class Emulator
 	{
 
 	}
+	/**
+	 * Returns a reference to a variable, so that it can be modified.
+	 * @param  [type] $node [description]
+	 * @return [type]       [description]
+	 */
+	protected function &variable($node,$create=true)
+	{
+		if (is_string($node))
+		{
+			if (array_key_exists($node, $this->variables))
+			{
+				// echo $node,"=",$this->variables[$node],PHP_EOL;
+				return $this->variables[$node];
+			}
+			elseif ($create)
+			{
+				$this->variables[$node]=null;
+				return $this->variables[$node];
+			}
+			else
+				return null; //variable not exists
+		}
+		elseif ($node instanceof Node\Expr\ArrayDimFetch)
+		{
+			$t=$node->var;
+			$dim=0;
+			$indexes=[];
+			//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
+			while ($t instanceof Node\Expr\ArrayDimFetch)
+			{
+				$dim++;
+				if ($t->dim)
+					$indexes[]=$this->evaluate_expression($t->dim);
+				else
+					$indexes[]=NULL;
+				$t=$t->var;
+			}
+			$indexes=array_reverse($indexes);
+			$varName=$this->name($t);
+
+			$base=&$this->variables[$varName];
+			foreach ($indexes as $index)
+			{
+				if (!$index)
+				{
+					//it might be $a[]=
+					$base[]=NULL;
+					end($base);
+					$index=key($base);
+				}
+				$base=&$base[$index];
+			}
+			return $base;
+		}
+		elseif ($node instanceof Node\Expr\Variable)
+		{
+			if (is_string($node->name))
+				return $this->variable($node->name);
+			else
+				return $this->variable($this->evaluate_expression($node->name));
+		}
+		else
+			$this->error("Can not find variable reference of this node type.",$node);
+	}
 	protected function name($ast)
 	{
 		if (is_string($ast))
@@ -674,34 +658,8 @@ class Emulator
 			else 
 				return $this->evaluate_expression($ast->name);
 		}
-		elseif ($ast instanceof Node\Expr\ArrayDimFetch)
-		{
-			#FIXME: this should return the actual variable $x[..][...][...] and not the value!
-			// $t=$ast;
-			// $dim=0;
-			// $indexes=[];
-			// //each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
-			// while ($t instanceof Node\Expr\ArrayDimFetch)
-			// {
-			// 	$dim++;
-			// 	$indexes[]=$this->evaluate_expression($t->dim);
-			// 	$t=$t->var;
-			// }
-			// $indexes=array_reverse($indexes);
-			// $varName=$this->name($t);
-			// $name=$varName.'['.implode("][",$indexes)."]";
-			// return $name;
-			return $this->evaluate_expression($ast);
-		}
 		elseif ($ast instanceof Node\Scalar)
 			return $ast->value;
-		elseif ($ast instanceof Node\Expr\Variable)
-		{
-			if (is_string($ast->name))
-				return $ast->name;
-			else
-				return $this->evaluate_expression($ast->name);
-		}
 		elseif ($ast instanceof Node\Param)
 			return $ast->name;
 		elseif ($ast instanceof Node\Name)
@@ -908,19 +866,13 @@ class Emulator
 			{
 				$list=$this->evaluate_expression($node->expr);
 				if (isset($node->keyVar))
-					$keyVar=$this->name($node->keyVar->name);
-				$valueVar=$this->name($node->valueVar->name);
-				// $keyVarExists=false;
-				// $valueVarExists=false;
-				// if (isset($this->variables[$keyVar]))
-				// 	$keyVarExists=true;
-				// if (isset($this->variables[$valueVar]))
-				// 	$valueVarExists=true;
+					$keyVar=&$this->variable($node->keyVar);
+				$valueVar=&$this->variable($node->valueVar);
 				foreach ($list as $k=>$v)
 				{
 					if (isset($keyVar))
-						$this->variables[$keyVar]=$k;
-					$this->variables[$valueVar]=$v;
+						$keyVar=$k;
+					$valueVar=$v;
 					$this->run_code($node->stmts);
 					if ($this->break)
 					{
@@ -1019,11 +971,10 @@ class Emulator
 					{
 						//each has type, the exception type, var, the exception variable, and stmts
 						$type=$this->name($catch->type);
-						$varName=$catch->var;
+						$var=&$this->variable($catch->var);
 						if ($e instanceof $type)
 						{
 							$var=$e;
-							$this->variables[$varName]=$var;
 							$this->run_code($catch->stmts);
 							break;
 						}
@@ -1040,7 +991,7 @@ class Emulator
 			{
 				foreach ($node->vars as $var)
 				{
-					$name=$this->name($var);
+					$name=$this->name($var->name);
 					if (array_key_exists($name,$this->globals()))
 						$this->variables[$name]=$this->globals()[$name];
 					else
@@ -1130,6 +1081,6 @@ if (isset($argc) and $argv[0]==__FILE__)
 // $x->start("yapig-0.95b/index.php");
 // echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
 // var_dump(substr($x->output,-100));
-// echo(($x->output));
+echo(($x->output));
 // echo PHP_EOL,"### Variables ###",PHP_EOL;
 // var_dump($x->variables);

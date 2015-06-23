@@ -7,8 +7,8 @@ interface ib{}
 class Something
 {
 	const ABC="abc",DEF=0;
-	protected $x;
-	public $y;
+	protected $x="protected";
+	public $y="public";
 	private $z="abc",$u=1;
 	static public $s="01234";
 	function __construct()
@@ -36,6 +36,7 @@ abstract class SomethingElse extends Something implements ia,ib
 }
 class SomethingDeep extends Something
 {
+	public $x="override"; //simply overwrites $x from parent.
 	function __construct()
 	{
 		echo 3,PHP_EOL;
@@ -51,7 +52,7 @@ Something::sta();
 echo SomethingElse::$s,PHP_EOL;
 $y=new SomethingDeep();
 $y->f();
-
+echo $y->x,PHP_EOL;
 echo $x->y,PHP_EOL;
 $x->y++;
 echo $x->y,PHP_EOL;

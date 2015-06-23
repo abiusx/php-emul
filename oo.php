@@ -67,11 +67,11 @@ class OOEmulator extends Emulator
 						else
 							$val=NULL;
 						if ($type & 4)
-							$visibility=Visibility_Private;
+							$visibility=EmulatorObjectProperty::Visibility_Private;
 						elseif ($type &2)
-							$visibility=Visibility_Protected;
+							$visibility=EmulatorObjectProperty::Visibility_Protected;
 						else
-							$visibility=Visibility_Public;
+							$visibility=EmulatorObjectProperty::Visibility_Public;
 
 						if ($type & 8 ) //static
 							$static_properties[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
@@ -116,7 +116,14 @@ class OOEmulator extends Emulator
 		{
 			#TODO: bring properties of all parents too
 			$obj=new EmulatorObject($classname,$this->classes[$classname]->properties);
-
+			foreach ($this->ancestry($classname,true) as $class)
+			{
+				foreach ($this->classes[$class]->properties as $property_name=>$property)
+					// echo "Setting property {$property_name} from {$class}...",PHP_EOL;	
+					$obj->properties[$property_name]=$property;
+			}
+			// echo $classname,":";
+			// print_r($obj->properties);
 			foreach ($this->ancestry($classname) as $class)
 			{
 				if ($this->method_exists($class, "__construct"))
@@ -222,7 +229,7 @@ class OOEmulator extends Emulator
 				foreach($this->ancestry($classname)  as $class)
 				{
 					if (isset($this->classes[$class]->static[$property_name]))
-						return $this->classes[$class]->static[$property_name]; #TODO: check for visibility
+						return $this->classes[$class]->static[$property_name]->value; #TODO: check for visibility
 				}
 				$this->error("Access to undeclared static property: {$classname}::${$property_name}");
 			}
@@ -240,7 +247,7 @@ class OOEmulator extends Emulator
 	 * @param  [type] $classname [description]
 	 * @return [type]            [description]
 	 */
-	protected function ancestry($classname)
+	protected function ancestry($classname,$top_to_bottom=false)
 	{
 		if ($classname==="self")
 			$classname=$this->current_class;
@@ -256,7 +263,8 @@ class OOEmulator extends Emulator
 			$classname=$this->classes[$classname]->parent;
 			$res[]=$classname;
 		}
-		return array_reverse($res);
+		if ($top_to_bottom) $res=array_reverse($res);
+		return $res;
 	}
 	protected function run_statement($node)
 	{
@@ -267,7 +275,18 @@ class OOEmulator extends Emulator
 		else
 			parent::run_statement($node);
 	}
-
+	protected function name($node)
+	{
+		if ($node instanceof Node\Expr\PropertyFetch)
+		{
+			$var=$this->name($node->var);
+			$property=$this->name($node->name);
+			#FIXME: instead of name, have this return an instance.
+			print_r($node);
+		}
+		else
+			return parent::name($node);
+	}
 }
 
 $x=new OOEmulator;

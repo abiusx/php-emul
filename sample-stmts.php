@@ -19,6 +19,7 @@ echo a(),"=3",PHP_EOL;
 echo fibo(10),"=89",PHP_EOL;
 declare(ticks=500);
 $a=-3;
+echo isset($a),"=1",PHP_EOL;
     // if (!preg_match("/charset=([a-zA-Z0-9\-]+)/",$transarray,$match)) //$match is byref here, it shouldn't work in emulator
 var_dump(function_exists("f"));
 function f($x)
