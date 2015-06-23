@@ -577,8 +577,11 @@ class Emulator
 	}
 	/**
 	 * Returns a reference to a variable, so that it can be modified.
-	 * @param  [type] $node [description]
-	 * @return [type]       [description]
+	 * 
+	 * It should be used like this: $var=&$this->reference(...);
+	 * @param  Node 	$node [description]
+	 * @param  bool 	$create whether to create the variable if it does not exist, or not.
+	 * @return reference       reference to variable
 	 */
 	protected function &reference($node,$create=true)
 	{
