@@ -248,9 +248,7 @@ class Emulator
 				// $this->error("Unknown assign: ",$node);
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch) //access multidimensional arrays $x[...][..][...]
-		{
 			return $this->variable($node);
-		}
 		elseif ($node instanceof Node\Expr\Array_)
 		{
 			$out=[];
@@ -577,10 +575,6 @@ class Emulator
 		echo "Not implemented.";
 		print_r($args);
 	}
-	protected function variable_name($node)
-	{
-
-	}
 	/**
 	 * Returns a reference to a variable, so that it can be modified.
 	 * @param  [type] $node [description]
@@ -605,7 +599,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch)
 		{
-			$t=$node->var;
+			$t=$node;
 			$dim=0;
 			$indexes=[];
 			//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
@@ -619,12 +613,13 @@ class Emulator
 				$t=$t->var;
 			}
 			$indexes=array_reverse($indexes);
-			$varName=$this->name($t);
 
-			$base=&$this->variables[$varName];
+			// $varName=$this->name($t);
+			// $base=&$this->variables[$varName];
+			$base=&$this->variable($t);
 			foreach ($indexes as $index)
 			{
-				if (!$index)
+				if ($index===NULL)
 				{
 					//it might be $a[]=
 					$base[]=NULL;
