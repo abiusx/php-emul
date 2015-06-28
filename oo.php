@@ -236,6 +236,19 @@ class OOEmulator extends Emulator
 				$var2->properties[$k]=clone $property;
 			return $var2;
 		}
+		elseif ($node instanceof Node\Expr\Instanceof_)
+		{
+			$var=$this->evaluate_expression($node->expr);
+			$classname=$this->name($node->class);
+			if ($var instanceof EmulatorObject)
+			{
+				foreach ($this->ancestry($var->classname) as $class)
+					if ($class===$classname) return true;
+				return false;
+			}
+			else
+				return $var instanceof $classname;
+		}		
 		else
 			return parent::evaluate_expression($node);
 
