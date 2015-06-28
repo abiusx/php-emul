@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__."/main.php";
 use PhpParser\Node;
-//trait_, instanceof, methodcall,new_,propertyfetch,staticcall,staticpropertyfetch,clone_,staticvar, static_,traituse,namespace,use
+//trait_, instanceof,clone_,traituse,namespace,use
 class EmulatorObjectProperty
 {
 	public $name;
@@ -146,8 +146,9 @@ class OOEmulator extends Emulator
 		if (!isset($this->classes[$class_name])) return false;
 		return array_key_exists($method_name, $this->classes[$class_name]->methods);
 	}
-	protected function run_static_method($class_name,$method_name,$args)
+	protected function run_static_method($original_class_name,$method_name,$args)
 	{
+		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
 			echo "\tRunning {$class_name}::{$method_name}()...",PHP_EOL;
 		$last_file=$this->current_file;
@@ -185,7 +186,6 @@ class OOEmulator extends Emulator
 		$class_name=$object->classname;
 		$old_this=$this->this;
 		$this->this=&$object;
-
 		$res=$this->run_static_method($class_name,$method_name,$args);
 
 		$this->this=&$old_this;
@@ -231,6 +231,17 @@ class OOEmulator extends Emulator
 			return parent::evaluate_expression($node);
 
 	}	
+	protected function real_class($classname)
+	{
+		if ($classname==="self")
+			$classname=$this->self;
+		elseif ($classname==="static")
+			$classname=$this->current_class;
+		elseif ($classname==="parent")
+			$classname=$this->classes[$this->current_class]->parent;	
+
+		return $classname;
+	}
 	/**
 	 * Returns all parents, including self, of a class, ordered from youngest
 	 * Looks up self and static keywords
@@ -239,12 +250,7 @@ class OOEmulator extends Emulator
 	 */
 	protected function ancestry($classname,$top_to_bottom=false)
 	{
-		if ($classname==="self")
-			$classname=$this->self;
-		elseif ($classname==="static")
-			$classname=$this->current_class;
-		elseif ($classname==="parent")
-			$classname=$this->current_class->parent;
+		$classname=$this->real_class($classname);
 		if (!isset($this->classes[$classname])) return null;
 		$res=[$classname];
 		while ($this->classes[$classname]->parent)

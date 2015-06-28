@@ -77,12 +77,24 @@ class Parent_
 		echo self::$static_var,"=1",PHP_EOL;
 		echo static::$static_var,"=2",PHP_EOL;
 	}
+	function __construct()
+	{
+		echo "parent construct",PHP_EOL;
+	}
 }
 class Child extends Parent_
 {
 	static $static_var=2;
+	function parent2()
+	{
+		parent::__construct();
+		echo "Child construct",PHP_EOL;	
+	}
 }
 $child=new Child();
 $child->what();
 Child::swhat();
-#TODO: late static binding sample, parent sample
+
+echo 'Testing parenthood...',PHP_EOL;
+
+$child->parent2();
