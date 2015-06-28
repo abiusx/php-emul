@@ -63,5 +63,26 @@ echo "public=",$x->y,PHP_EOL;
 $x->y++;
 echo "publid=",$x->y,PHP_EOL;
 
-
+echo 'Testing late static binding...',PHP_EOL;
+class Parent_
+{
+	static $static_var=1;
+	function what()
+	{
+		echo self::$static_var,"=1",PHP_EOL;
+		echo static::$static_var,"=2",PHP_EOL;
+	}
+	static function swhat()
+	{
+		echo self::$static_var,"=1",PHP_EOL;
+		echo static::$static_var,"=2",PHP_EOL;
+	}
+}
+class Child extends Parent_
+{
+	static $static_var=2;
+}
+$child=new Child();
+$child->what();
+Child::swhat();
 #TODO: late static binding sample, parent sample

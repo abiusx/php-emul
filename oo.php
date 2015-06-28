@@ -34,7 +34,7 @@ class OOEmulator extends Emulator
 	public $classes=[];
 	protected $current_class,$current_method,$current_trait;
 	protected $current_namespace;
-	protected $this=null;
+	protected $this=null,$self=null;
 	protected function get_declarations($node)
 	{
 		if ($node instanceof Node\Stmt\ClassLike)
@@ -161,7 +161,10 @@ class OOEmulator extends Emulator
 		{
 			if ($this->method_exists($class,$method_name))
 			{
+				$last_self=$this->self;
+				$this->self=$class;
 				$res=$this->run_sub($this->classes[$class]->methods[$method_name],$args);
+				$this->self=$last_self;
 				$flag=true;
 				break;	
 			}
@@ -237,7 +240,7 @@ class OOEmulator extends Emulator
 	protected function ancestry($classname,$top_to_bottom=false)
 	{
 		if ($classname==="self")
-			$classname=$this->current_class;
+			$classname=$this->self;
 		elseif ($classname==="static")
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
@@ -299,6 +302,6 @@ class OOEmulator extends Emulator
 $x=new OOEmulator;
 // $x->start("yapig-0.95b/index.php");
 $x->start("sample-oo.php");
-echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
+// echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-100));
 // var_dump(($x->output));
