@@ -84,6 +84,7 @@ class Parent_
 }
 class Child extends Parent_
 {
+	public $var=0;
 	static $static_var=2;
 	function parent2()
 	{
@@ -98,3 +99,18 @@ Child::swhat();
 echo 'Testing parenthood...',PHP_EOL;
 
 $child->parent2();
+
+echo 'Testing instanceof...',PHP_EOL;
+echo "1=",$child instanceof Child,PHP_EOL;
+echo "1=",$child instanceof Parent_,PHP_EOL;
+echo "false=",$child instanceof Something;
+var_dump($child instanceof Something);
+echo PHP_EOL;
+
+echo 'Testing clone...',PHP_EOL;
+$child2= $child;
+$child->var++;
+echo $child2->var,"=1",PHP_EOL;
+$child2=clone $child;
+$child->var++;
+echo $child2->var,"=1",PHP_EOL;

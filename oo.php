@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__."/main.php";
 use PhpParser\Node;
-//trait_, instanceof,clone_,traituse,namespace,use
+//trait_,traituse,namespace,use
+//TODO: magic methods
 class EmulatorObjectProperty
 {
 	public $name;
@@ -225,7 +226,15 @@ class OOEmulator extends Emulator
 		{
 			$var=&$this->reference($node);
 			return $var;
-
+		}
+		elseif ($node instanceof Node\Expr\Clone_)
+		{
+			$var=&$this->reference($node->expr);
+			$var2=clone $var;
+			// $var2->properties=[];
+			foreach ($var->properties as $k=>$property)
+				$var2->properties[$k]=clone $property;
+			return $var2;
 		}
 		else
 			return parent::evaluate_expression($node);
