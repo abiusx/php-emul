@@ -42,6 +42,9 @@ class SomethingDeep extends Something
 		echo "SomethingDeep::construct",PHP_EOL;
 	}
 }
+echo Something::ABC,"=abc",PHP_EOL;
+echo SomethingElse::ABC,"=abc",PHP_EOL;
+
 echo "01234=",Something::$s,PHP_EOL;
 echo "Something::Construct=";
 $x=new Something();

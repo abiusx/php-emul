@@ -227,6 +227,17 @@ class OOEmulator extends Emulator
 			$var=&$this->reference($node);
 			return $var;
 		}
+		elseif ($node instanceof Node\Expr\ClassConstFetch)
+		{
+			$class=$this->name($node->class);
+			$constant=$this->name($node->name);
+			foreach ($this->ancestry($class) as $cls)
+			{
+				if (array_key_exists($constant, $this->classes[$cls]->consts))
+					return $this->classes[$cls]->consts[$constant];
+			}
+			$this->error("Undefined class constant '{$constant}'",$node);
+		}
 		elseif ($node instanceof Node\Expr\Clone_)
 		{
 			$var=&$this->reference($node->expr);
@@ -328,7 +339,7 @@ class OOEmulator extends Emulator
 }
 
 $x=new OOEmulator;
-// $x->start("yapig-0.95b/index.php");
+// $x->start("phpMyAdmin/index.php");
 $x->start("sample-oo.php");
 // echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-100));
