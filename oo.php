@@ -305,7 +305,11 @@ class OOEmulator extends Emulator
 	}
 	protected function &reference($node,$create=true)
 	{
-		if ($node instanceof Node\Expr\PropertyFetch)
+		if ($node instanceof Node\Expr\Variable and is_string($node->name) and $node->name=="this") //$this
+		{
+			return $this->this;
+		}
+		elseif ($node instanceof Node\Expr\PropertyFetch)
 		{
 			// print_r($node);
 			$var=&$this->reference($node->var);

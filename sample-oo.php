@@ -117,3 +117,23 @@ echo $child2->var,"=1",PHP_EOL;
 $child2=clone $child;
 $child->var++;
 echo $child2->var,"=1",PHP_EOL;
+
+
+echo 'Testing $this...',PHP_EOL;
+
+class ABC 
+{
+	private $x=1;
+	function __construct()
+	{
+		echo "1=",$this->x++,PHP_EOL;
+	}
+	function a()
+	{
+		echo "2=",$this->x,PHP_EOL;
+	}
+}
+
+$abc=new ABC;
+$abc->a();
+
