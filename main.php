@@ -199,7 +199,7 @@ class Emulator
 				foreach ($node->args as $arg)
 				{
 					if ($arg->value instanceof Node\Expr\Variable) //byref probably?
-						$argValues[]=&$this->reference($argName);
+						$argValues[]=&$this->reference(($arg->value));
 					else
 						$argValues[]=$this->evaluate_expression($arg->value);
 				}

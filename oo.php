@@ -43,18 +43,26 @@ class OOEmulator extends Emulator
 			//has type, implements (array), stmts (Array), name, extends
 			//type=0 is normal, type=16 is abstract
 			// print_r($node);
+			
+			#FIXME: if a class self-references, i.e uses its own constants after they are defined in body, our extraction fails
+			#		because we get everything and then make the definition. change it to be iterative.
 			$classtype=null;
 			if (isset($node->type))
 				$classtype=$node->type;
 			$classname=$this->name($node->name);
+			$this->classes[$classname]=new stdClass;
+			$class=&$this->classes[$classname];
+
 			$extends=null;
 			if ($node->extends)
 				$extends=$this->name($node->extends);
-			$interfaces=[];
-			$consts=[];
-			$methods=[];
-			$properties=[];
-			$static_properties=[];
+			
+			$class->interfaces=[];
+			$class->consts=[];
+			$class->methods=[];
+			$class->properties=[];
+			$class->static=[];
+			$class->parent=$extends;
 			foreach ($node->stmts as $part)
 			{
 				if ($part instanceof Node\Stmt\Property)
@@ -75,16 +83,16 @@ class OOEmulator extends Emulator
 							$visibility=EmulatorObjectProperty::Visibility_Public;
 
 						if ($type & 8 ) //static
-							$static_properties[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
+							$class->static[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
 						else
-							$properties[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
+							$class->properties[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
 					}
 				}
 				elseif ($part instanceof Node\Stmt\ClassMethod)
 				{
 					$methodname=$this->name($part->name);
 					$type=$part->type;
-					$methods[$methodname]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,"file"=>$this->current_file,'type'=>$type); 
+					$class->methods[$methodname]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,"file"=>$this->current_file,'type'=>$type); 
 				}
 				elseif ($part instanceof Node\Stmt\ClassConst)
 				{
@@ -92,18 +100,22 @@ class OOEmulator extends Emulator
 					{
 						$constname=$this->name($const->name);
 						$val=$this->evaluate_expression($const->value);
-						$consts[$constname]=$val;
+						$class->consts[$constname]=$val;
 					}
 				}
 				else
 					$this->error("Unknown class part for class '{$classname}'",$part);
 
 			}
+			$interfaces=[];
 			if (isset($node->implements))
 			foreach ($node->implements as $interface)
 				$interfaces[]=$this->name($interface);
-			$class=(object)["properties"=>$properties,"static"=>$static_properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
-			$this->classes[$classname]=$class;
+			$class->type=$classtype;
+			$class->file=$this->current_file;
+			$class->interfaces=$interfaces;
+			// $class=(object)["properties"=>$properties,"static"=>$static_properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
+			// $this->classes[$classname]=$class;
 			// echo $classname,":";print_r($class);
 		}
 		else
@@ -343,8 +355,8 @@ class OOEmulator extends Emulator
 }
 
 $x=new OOEmulator;
-// $x->start("phpMyAdmin/index.php");
-$x->start("sample-oo.php");
+$x->start("phpMyAdmin/index.php");
+// $x->start("sample-oo.php");
 // echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-100));
 // var_dump(($x->output));
