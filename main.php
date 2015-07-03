@@ -2,11 +2,13 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
+#TODO: mocks
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
 	public $direct_output	=	true;
 	public $verbose			=	false;
+	public $auto_mock		=	true;
 
 	protected $current_node,$current_file,$current_line;
 	protected $current_function;
@@ -18,6 +20,28 @@ class Emulator
 	public $parser;
 	public $variable_stack=[];
 	public $terminated=false;
+
+	public $mock_functions=[];
+	function __construct()
+	{
+		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
+    	$this->init();
+	}
+	function init()
+	{
+		foreach ($GLOBALS as $k=>$v)
+		{
+			if ($k=="GLOBALS") continue;
+			$this->variables[$k]=$v;
+		}
+		// $this->variables['_POST']=isset($_POST)?$_POST:array();
+		if ($this->auto_mock)
+		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives internal and user subarrays.
+		{
+			if (function_exists($function."_mock"))
+				$this->mock_functions[$function]=$function."_mock";
+		}
+	}
 
 
 	protected function &globals()
@@ -204,10 +228,20 @@ class Emulator
 						$argValues[]=$this->evaluate_expression($arg->value);
 				}
 				#FIXME: handle critical internal functions (e.g function_exists, ob_start, etc.)
-				ob_start();	
-				$ret=call_user_func_array($name,$argValues); //core function
-				$output=ob_get_clean();
-				$this->output($output);
+				if (array_key_exists($name, $this->mock_functions)) //mocked
+				{
+					if (!function_exists($this->mock_functions[$name]))
+						$this->error("Mocked function '{$this->mock_functions[$name]}' does not exists to mock '{$name}'");
+					array_unshift($argValues, $this); //emulator is first argument in mock functions
+					$ret=call_user_func_array($this->mock_functions[$name],$argValues); //core function
+				}
+				else //original core function
+				{
+					ob_start();	
+					$ret=call_user_func_array($name,$argValues); //core function
+					$output=ob_get_clean();
+					$this->output($output);
+				}
 				return $ret;
 			}
 			else
@@ -474,8 +508,9 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\Empty_)
 		{
-			$var=&$this->reference($node,true);
-			return empty($var);
+			#FIXME: two modes, one variable, one expression=null
+			$expr=$this->evaluate_expression($node->expr);
+			return empty($expr);
 		}
 		elseif ($node instanceof Node\Expr\Isset_)
 		{
@@ -585,7 +620,12 @@ class Emulator
 	 */
 	protected function &reference($node,$create=true)
 	{
-		if (is_string($node))
+		if ($node===null)
+		{
+			$this->notice("Undefined variable: {$node}");	
+			return null;
+		}
+		elseif (is_string($node))
 		{
 			if (array_key_exists($node, $this->variables))
 			{
@@ -598,7 +638,10 @@ class Emulator
 				return $this->variables[$node];
 			}
 			else
+			{
+				$this->notice("Undefined variable: {$node}");	
 				return null; //variable not exists
+			}
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch)
 		{
@@ -635,10 +678,13 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			if (is_string($node->name))
+			// if (is_string($node->name))
 				return $this->reference($node->name);
-			else
-				return $this->reference($this->evaluate_expression($node->name));
+			// else
+			// {
+
+			// 	return $this->reference($this->evaluate_expression($node->name));
+			// }
 		}
 		else
 			$this->error("Can not find variable reference of this node type.",$node);
@@ -697,23 +743,6 @@ class Emulator
 		return $res;
 	}
 	
-	function __construct()
-	{
-		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
-		// $this->traverser     = new PhpParser\NodeTraverser;
-    	// $this->traverser->addVisitor(new LiteralExplodeDetector);
-    	$this->init();
-	}
-	function init()
-	{
-		foreach ($GLOBALS as $k=>$v)
-		{
-			if ($k=="GLOBALS") continue;
-			$this->variables[$k]=$v;
-		}
-		// $this->variables['_POST']=isset($_POST)?$_POST:array();
-
-	}
 	function start($file,$chdir=true)
 	{
 		chdir(dirname($file));
@@ -865,12 +894,16 @@ class Emulator
 			elseif ($node instanceof Node\Stmt\Foreach_)
 			{
 				$list=$this->evaluate_expression($node->expr);
+				$keyed=false;
 				if (isset($node->keyVar))
+				{
+					$keyed=true;	
 					$keyVar=&$this->reference($node->keyVar);
+				}
 				$valueVar=&$this->reference($node->valueVar);
 				foreach ($list as $k=>$v)
 				{
-					if (isset($keyVar))
+					if ($keyed)
 						$keyVar=$k;
 					$valueVar=$v;
 					$this->run_code($node->stmts);
@@ -890,10 +923,6 @@ class Emulator
 					}
 
 				}
-				// if (!$valueVarExists)
-				// 	unset($this->variables[$valueVar]);
-				// if (!$keyVarExists)
-				// 	unset($this->variables[$keyVar]);
 			}
 			elseif ($node instanceof Node\Stmt\Declare_)
 			{
@@ -950,6 +979,15 @@ class Emulator
 				$this->continue+=$num;
 
 				return ;
+			}
+			elseif ($node instanceof Node\Stmt\Unset_)
+			{
+				foreach ($node->vars as $var)
+				{
+					// print_r($var);
+					$temp=&$this->reference($var,false);
+					unset($temp); #TODO: make sure this works alright
+				}
 			}
 			elseif ($node instanceof Node\Stmt\Throw_)
 			{
@@ -1053,6 +1091,12 @@ class Emulator
 	}
 }
 
+
+function get_defined_vars_mock(Emulator $emul)
+{
+	echo "mocked get_defined_vars called!",PHP_EOL;
+	return $emul->variables;
+}
 
 
 

@@ -1,8 +1,13 @@
 <?php
 require_once __DIR__."/main.php";
 use PhpParser\Node;
+function apache_getenv()
+{
+	return "";
+}
 //trait_,traituse,namespace,use
 //TODO: magic methods
+//FIXME: common.inc.php on phpMyAdmin line 196, get_defined_variables returns an array but the unset does not work.
 class EmulatorObjectProperty
 {
 	public $name;
@@ -44,8 +49,6 @@ class OOEmulator extends Emulator
 			//type=0 is normal, type=16 is abstract
 			// print_r($node);
 			
-			#FIXME: if a class self-references, i.e uses its own constants after they are defined in body, our extraction fails
-			#		because we get everything and then make the definition. change it to be iterative.
 			$classtype=null;
 			if (isset($node->type))
 				$classtype=$node->type;
