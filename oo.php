@@ -7,7 +7,6 @@ function apache_getenv()
 }
 //trait_,traituse,namespace,use
 //TODO: magic methods
-//FIXME: common.inc.php on phpMyAdmin line 196, get_defined_variables returns an array but the unset does not work.
 class EmulatorObjectProperty
 {
 	public $name;

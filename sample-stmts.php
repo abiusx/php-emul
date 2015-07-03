@@ -1,6 +1,15 @@
 <?php
 $t[0][1][2][3]=4;
 echo $t[0][1][2][3],"=4",PHP_EOL;
+echo "Testing static variables...",PHP_EOL;
+function static_f()
+{
+	static $x=0;
+	echo $x++,PHP_EOL;
+}
+echo "0=",static_f();
+echo "1=",static_f();
+echo "2=",static_f();
 
 function a()
 {

@@ -2,7 +2,7 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
-#TODO: mocks
+#TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
@@ -525,6 +525,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\Eval_)
 		{
+			#FIXME: do not use eval!
 			ob_start();
 			$res=eval($this->evaluate_expression($node->expr));
 			$out=ob_get_clean();
@@ -1023,6 +1024,24 @@ class Emulator
 			}
 			elseif ($node instanceof Node\Expr\Exit_)
 				return $this->evaluate_expression($node);
+			elseif ($node instanceof Node\Stmt\Static_)
+			{
+				if (isset($this->functions[$this->current_function])) //statc inside a function
+				{
+					$statics=&$this->functions[$this->current_function]->statics;
+					foreach ($node->vars as $var)
+					{
+						$name=$this->name($var->name);
+						if (!array_key_exists($name,$statics))
+							$statics[$name]=$this->evaluate_expression($var->default);
+						$this->variables[$name]=&$statics[$name];
+					}
+				}
+				else
+				{
+					$this->error("Global statics not yet supported");
+				}
+			}
 			elseif ($node instanceof Node\Stmt\InlineHTML)
 				$this->output($node->value); //FIXME: u sure this is the only way inline is? just strings?
 			elseif ($node instanceof Node\Stmt\Global_)
@@ -1050,7 +1069,7 @@ class Emulator
 		{
 			// echo PHP_EOL;
 			$name=$this->name($node->name);
-			$this->functions[$name]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file); #FIXME: name
+			$this->functions[$name]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); #FIXME: name
 		}
 		elseif ($node instanceof Node\Stmt\Const_)
 		{
@@ -1121,7 +1140,7 @@ if (isset($argc) and $argv[0]==__FILE__)
 {
 	$x=new Emulator;
 	$x->start("sample-stmts.php");
-	echo(($x->output));
+	// echo(($x->output));
 }
 // $x->start("yapig-0.95b/index.php");
 // echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
