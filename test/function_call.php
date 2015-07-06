@@ -1,4 +1,5 @@
 <?php
+
 function in_file_func($a, &$b){
 	echo $a;
 	$b++;
