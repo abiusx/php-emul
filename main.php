@@ -161,7 +161,9 @@ class Emulator
 			else //args still exist, copy to current symbol table
 			{
 				if ($param->byRef)	// byref handle
-					$function_variables[$this->name($param)]=&$current_symbol_table[$this->name(current($args)->value)];
+				{
+					$function_variables[$this->name($param)]=&$current_symbol_table[$this->name(current($args)->value->name)];
+				}
 				else //byval
 				{
 					$function_variables[$this->name($param)]=$this->evaluate_expression(current($args)->value);
@@ -1040,6 +1042,7 @@ class Emulator
 				else
 				{
 					$this->error("Global statics not yet supported");
+
 				}
 			}
 			elseif ($node instanceof Node\Stmt\InlineHTML)

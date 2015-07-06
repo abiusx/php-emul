@@ -314,6 +314,24 @@ class OOEmulator extends Emulator
 			;
 		elseif ($node instanceof Node\Stmt\ClassLike)
 			return;
+		elseif ($node instanceof Node\Stmt\Static_)
+		{
+			//TODO: bind this static variable to the method being runned in the class it belongs to
+			if (isset($this->current_class))
+			{
+				//TODO
+				$statics=[];// &$this->functions[$this->current_function]->statics;
+				foreach ($node->vars as $var)
+				{
+					$name=$this->name($var->name);
+					if (!array_key_exists($name,$statics))
+						$statics[$name]=$this->evaluate_expression($var->default);
+					$this->variables[$name]=&$statics[$name];
+				}
+			}
+			else
+				parent::run_statement($node); //static variable in a function
+		}		
 		else
 			parent::run_statement($node);
 	}
