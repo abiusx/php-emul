@@ -22,6 +22,8 @@ class Emulator
 	public $terminated=false;
 
 	public $mock_functions=[];
+
+	public $trace=[];
 	function __construct()
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
@@ -193,7 +195,9 @@ class Emulator
 		$this->current_function=$name;
 		$this->current_file=$this->functions[$name]->file;
 
+		array_push($this->trace, (object)array("type"=>"function","name"=>$name));
 		$res=$this->run_sub($this->functions[$name],$args);
+		array_pop($this->trace);
 
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
@@ -1028,7 +1032,7 @@ class Emulator
 				return $this->evaluate_expression($node);
 			elseif ($node instanceof Node\Stmt\Static_)
 			{
-				if (isset($this->functions[$this->current_function])) //statc inside a function
+				if (end($this->trace)->type=="function" and  isset($this->functions[end($this->trace)->name])) //statc inside a function
 				{
 					$statics=&$this->functions[$this->current_function]->statics;
 					foreach ($node->vars as $var)
