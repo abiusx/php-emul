@@ -135,14 +135,6 @@ class Emulator
 	 */
 	protected function run_sub($function,$args)
 	{
-		$variables=$this->variables;
-		$this->push();
-		$this->variables=$variables;
-		#FIXME: should push after every parameter expression is evaluated, as they may have side effects on symbol table
-		#currently we push a copy, and modifications are not preserved. We do it this way for now because references are hard to handle.
-
-		end($this->variable_stack);
-		$current_symbol_table=&$this->variable_stack[key($this->variable_stack)];
 		reset($args);
 		$count=count($args);
 		$index=0;
@@ -164,7 +156,7 @@ class Emulator
 			{
 				if ($param->byRef)	// byref handle
 				{
-					$function_variables[$this->name($param)]=&$current_symbol_table[$this->name(current($args)->value->name)];
+					$function_variables[$this->name($param)]=&$this->reference(current($args)->value);
 				}
 				else //byval
 				{
@@ -174,6 +166,7 @@ class Emulator
 			}
 			$index++;
 		}
+		$this->push();
 		$this->variables=$function_variables;
 		$res=$this->run_code($function->code);
 		$this->pop();
