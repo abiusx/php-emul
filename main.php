@@ -2,11 +2,13 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
+#also callbacks, any function in PHP that accepts callbacks will fail because real callbacks do not exist. they all should be mocked
+#e.g set_error_handler, register_shutdown_function, preg_replace_callback
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
-	public $direct_output	=	true;
+	public $direct_output	=	false;
 	public $verbose			=	false;
 	public $auto_mock		=	true;
 
@@ -558,7 +560,10 @@ class Emulator
 		{
 			$type=$node->type; //1:include,2:include_once,3:require,4:require_once
 			$file=$this->evaluate_expression($node->expr);
-			$realfile=realpath($file);
+			#TODO: before all check include paths
+			$realfile =realpath(dirname($this->current_file)."/".$file); //first check the directory of the file using include (as per php)
+			if (!file_exists($realfile) or !is_file($realfile)) //second check current dir
+				$realfile=realpath($file);
 			if ($type%2==0) //once
 				if (isset($this->included_files[$realfile])) return true;
 			if (!file_exists($realfile) or !is_file($realfile))

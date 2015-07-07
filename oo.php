@@ -382,6 +382,6 @@ class OOEmulator extends Emulator
 $x=new OOEmulator;
 $x->start("phpMyAdmin/index.php");
 // $x->start("sample-oo.php");
-// echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
+echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-100));
 // var_dump(($x->output));
