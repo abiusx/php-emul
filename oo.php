@@ -380,7 +380,7 @@ class OOEmulator extends Emulator
 }
 
 $x=new OOEmulator;
-$x->start("phpMyAdmin/index.php");
+$x->start("PHP-Parser/lib/bootstrap.php");
 // $x->start("sample-oo.php");
 echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-100));
