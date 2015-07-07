@@ -94,7 +94,7 @@ class OOEmulator extends Emulator
 				{
 					$methodname=$this->name($part->name);
 					$type=$part->type;
-					$class->methods[$methodname]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,"file"=>$this->current_file,'type'=>$type); 
+					$class->methods[$methodname]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,"file"=>$this->current_file,'type'=>$type,'statics'=>[]); 
 				}
 				elseif ($part instanceof Node\Stmt\ClassConst)
 				{
@@ -179,7 +179,9 @@ class OOEmulator extends Emulator
 			{
 				$last_self=$this->self;
 				$this->self=$class;
+				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class));
 				$res=$this->run_sub($this->classes[$class]->methods[$method_name],$args);
+				array_pop($this->trace);
 				$this->self=$last_self;
 				$flag=true;
 				break;	
@@ -314,6 +316,27 @@ class OOEmulator extends Emulator
 			;
 		elseif ($node instanceof Node\Stmt\ClassLike)
 			return;
+		elseif ($node instanceof Node\Stmt\Static_)
+		{
+			//TODO: bind this static variable to the method being runned in the class it belongs to
+			if (end($this->trace)->type=="method" and  $this->method_exists(end($this->trace)->class,end($this->trace)->name)) //statc inside a method)
+			{
+				$class=end($this->trace)->class;
+				$method=end($this->trace)->name;
+
+				//TODO
+				$statics=&$this->classes[$class]->methods[$method]->statics;// &$this->functions[$this->current_function]->statics;
+				foreach ($node->vars as $var)
+				{
+					$name=$this->name($var->name);
+					if (!array_key_exists($name,$statics))
+						$statics[$name]=$this->evaluate_expression($var->default);
+					$this->variables[$name]=&$statics[$name];
+				}
+			}
+			else
+				parent::run_statement($node); //static variable in a function
+		}		
 		else
 			parent::run_statement($node);
 	}
@@ -359,6 +382,6 @@ class OOEmulator extends Emulator
 $x=new OOEmulator;
 $x->start("phpMyAdmin/index.php");
 // $x->start("sample-oo.php");
-// echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
+echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-100));
 // var_dump(($x->output));

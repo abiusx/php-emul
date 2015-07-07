@@ -2,11 +2,13 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
+#also callbacks, any function in PHP that accepts callbacks will fail because real callbacks do not exist. they all should be mocked
+#e.g set_error_handler, register_shutdown_function, preg_replace_callback
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
-	public $direct_output	=	true;
+	public $direct_output	=	false;
 	public $verbose			=	false;
 	public $auto_mock		=	true;
 
@@ -22,6 +24,8 @@ class Emulator
 	public $terminated=false;
 
 	public $mock_functions=[];
+
+	public $trace=[];
 	function __construct()
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
@@ -133,14 +137,6 @@ class Emulator
 	 */
 	protected function run_sub($function,$args)
 	{
-		$variables=$this->variables;
-		$this->push();
-		$this->variables=$variables;
-		#FIXME: should push after every parameter expression is evaluated, as they may have side effects on symbol table
-		#currently we push a copy, and modifications are not preserved. We do it this way for now because references are hard to handle.
-
-		end($this->variable_stack);
-		$current_symbol_table=&$this->variable_stack[key($this->variable_stack)];
 		reset($args);
 		$count=count($args);
 		$index=0;
@@ -161,7 +157,9 @@ class Emulator
 			else //args still exist, copy to current symbol table
 			{
 				if ($param->byRef)	// byref handle
-					$function_variables[$this->name($param)]=&$current_symbol_table[$this->name(current($args)->value)];
+				{
+					$function_variables[$this->name($param)]=&$this->reference(current($args)->value);
+				}
 				else //byval
 				{
 					$function_variables[$this->name($param)]=$this->evaluate_expression(current($args)->value);
@@ -170,6 +168,7 @@ class Emulator
 			}
 			$index++;
 		}
+		$this->push();
 		$this->variables=$function_variables;
 		$res=$this->run_code($function->code);
 		$this->pop();
@@ -191,7 +190,9 @@ class Emulator
 		$this->current_function=$name;
 		$this->current_file=$this->functions[$name]->file;
 
+		array_push($this->trace, (object)array("type"=>"function","name"=>$name));
 		$res=$this->run_sub($this->functions[$name],$args);
+		array_pop($this->trace);
 
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
@@ -559,7 +560,10 @@ class Emulator
 		{
 			$type=$node->type; //1:include,2:include_once,3:require,4:require_once
 			$file=$this->evaluate_expression($node->expr);
-			$realfile=realpath($file);
+			#TODO: before all check include paths
+			$realfile =realpath(dirname($this->current_file)."/".$file); //first check the directory of the file using include (as per php)
+			if (!file_exists($realfile) or !is_file($realfile)) //second check current dir
+				$realfile=realpath($file);
 			if ($type%2==0) //once
 				if (isset($this->included_files[$realfile])) return true;
 			if (!file_exists($realfile) or !is_file($realfile))
@@ -1026,7 +1030,7 @@ class Emulator
 				return $this->evaluate_expression($node);
 			elseif ($node instanceof Node\Stmt\Static_)
 			{
-				if (isset($this->functions[$this->current_function])) //statc inside a function
+				if (end($this->trace)->type=="function" and  isset($this->functions[end($this->trace)->name])) //statc inside a function
 				{
 					$statics=&$this->functions[$this->current_function]->statics;
 					foreach ($node->vars as $var)
@@ -1040,6 +1044,7 @@ class Emulator
 				else
 				{
 					$this->error("Global statics not yet supported");
+
 				}
 			}
 			elseif ($node instanceof Node\Stmt\InlineHTML)
