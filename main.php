@@ -5,6 +5,7 @@ use PhpParser\Node;
 #also callbacks, any function in PHP that accepts callbacks will fail because real callbacks do not exist. they all should be mocked
 #e.g set_error_handler, register_shutdown_function, preg_replace_callback
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
+#TODO: super globals
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
@@ -1055,10 +1056,12 @@ class Emulator
 				foreach ($node->vars as $var)
 				{
 					$name=$this->name($var->name);
-					if (array_key_exists($name,$this->globals()))
-						$this->variables[$name]=$this->globals()[$name];
-					else
-						$this->notice("Undefined index '{$name}' in globals",$this->globals());
+					if (!array_key_exists($name,$this->globals()))
+					{
+						$this->globals()[$name]=null;
+						// $this->notice("Undefined index '{$name}' in globals",$this->globals()); //no notice needed here
+					}
+					$this->variables[$name]=&$this->globals()[$name];
 				}
 			}
 			elseif ($node instanceof Node\Expr)

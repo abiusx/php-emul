@@ -7,6 +7,7 @@ function apache_getenv()
 }
 //trait_,traituse,namespace,use
 //TODO: magic methods
+
 class EmulatorObjectProperty
 {
 	public $name;
