@@ -8,7 +8,7 @@ use PhpParser\Node;
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
-	public $direct_output	=	false;
+	public $direct_output	=	true;
 	public $verbose			=	false;
 	public $auto_mock		=	true;
 
@@ -373,62 +373,63 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\BinaryOp)
 		{
+			#FIXME: this is not lazy evaluation!
 			$l=$this->evaluate_expression($node->left);
-			$r=$this->evaluate_expression($node->right);
+			// $r=$this->evaluate_expression($node->right);
 			if ($node instanceof Node\Expr\BinaryOp\Plus)
-				return $l+$r;
+				return $l+$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Div)
-				return $l/$r;
+				return $l/$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Minus)
-				return $l-$r;
+				return $l-$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Mul)
-				return $l*$r;
+				return $l*$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Mod)
-				return $l%$r;
+				return $l%$this->evaluate_expression($node->right);
 			// elseif ($node instanceof Node\Expr\BinaryOp\Pow)
 			// 	return $this->evaluate_expression($node->left)**$this->evaluate_expression($node->right);
 			
 			elseif ($node instanceof Node\Expr\BinaryOp\Identical)
-				return $l===$r;
+				return $l===$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\NotIdentical)
-				return $l!==$r;
+				return $l!==$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Equal)
-				return $l==$r;
+				return $l==$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\NotEqual)
-				return $l!=$r;
+				return $l!=$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Smaller)
-				return $l<$r;
+				return $l<$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\SmallerOrEqual)
-				return $l<=$r;
+				return $l<=$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\Greater)
-				return $l>$r;
+				return $l>$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\GreaterOrEqual)
-				return $l>=$r;
+				return $l>=$this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\LogicalAnd)
-				return $l and $r;
+				return $l and $this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\LogicalOr)
-				return $l or $r;
+				return $l or $this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\LogicalXor)
-				return $l xor $r;
+				return $l xor $this->evaluate_expression($node->right);
 
 			elseif ($node instanceof Node\Expr\BinaryOp\BooleanOr)
-				return $l || $r;
+				return $l || $this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\BooleanAnd)
-				return $l && $r;
+				return $l && $this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseAnd)
-				return $l & $r;
+				return $l & $this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseOr)
-				return $l | $r;
+				return $l | $this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseXor)
-				return $l ^ $r;
+				return $l ^ $this->evaluate_expression($node->right);
 
 			elseif ($node instanceof Node\Expr\BinaryOp\ShiftLeft)
-				return $l << $r;
+				return $l << $this->evaluate_expression($node->right);
 			elseif ($node instanceof Node\Expr\BinaryOp\ShiftRight)
-				return $l >> $r;
+				return $l >> $this->evaluate_expression($node->right);
 
 			elseif ($node instanceof Node\Expr\BinaryOp\Concat)
-				return $l . $r;
+				return $l . $this->evaluate_expression($node->right);
 			// elseif ($node instanceof Node\Expr\BinaryOp\Spaceship)
 			// 	return $this->evaluate_expression($node->left)<=>$this->evaluate_expression($node->right);
 
@@ -486,7 +487,7 @@ class Emulator
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
 			$name=$this->name($node->name);
-			if (isset($this->constants[$name]))
+			if (array_key_exists($name, $this->constants))
 				return $this->constants[$name];
 			elseif (defined($name))
 				return constant($name);

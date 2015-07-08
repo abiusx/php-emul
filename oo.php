@@ -189,7 +189,10 @@ class OOEmulator extends Emulator
 
 		}
 		if (!$flag)
-				$this->error("Call to undefined method {$class_name}::{$method_name}()");
+		{
+			$this->error("Call to undefined method {$class_name}::{$method_name}()");
+			$res=null;
+		}
 		$this->current_method=$last_method;
 		$this->current_file=$last_file;
 		$this->current_class=$last_class;
@@ -310,6 +313,10 @@ class OOEmulator extends Emulator
 		if ($top_to_bottom) $res=array_reverse($res);
 		return $res;
 	}
+	function name($node)
+	{
+		return parent::name($node);
+	}
 	protected function run_statement($node)
 	{
 		if (0)
@@ -380,7 +387,7 @@ class OOEmulator extends Emulator
 }
 
 $x=new OOEmulator;
-$x->start("PHP-Parser/lib/bootstrap.php");
+$x->start("wordpress/index.php");
 // $x->start("sample-oo.php");
 echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-100));
