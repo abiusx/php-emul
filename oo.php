@@ -412,5 +412,5 @@ $x=new OOEmulator;
 $x->start("wordpress/index.php");
 // $x->start("sample-oo.php");
 echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
-var_dump(substr($x->output,-200));
-// var_dump(($x->output));
+// var_dump(substr($x->output,-200));
+echo(($x->output));
