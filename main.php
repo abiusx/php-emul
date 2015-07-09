@@ -5,7 +5,6 @@ use PhpParser\Node;
 #also callbacks, any function in PHP that accepts callbacks will fail because real callbacks do not exist. they all should be mocked
 #e.g set_error_handler, register_shutdown_function, preg_replace_callback
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
-#TODO: super globals
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
@@ -17,10 +16,13 @@ class Emulator
 	protected $current_function;
 	public $included_files=[];
 	public $output;
-	public $variables=[]; #TODO: make this a object, so that it can lookup magic variables, and retain them on push/pop
+	public $variables=[]; 
+	public $super_globals=[];
+
 	public $functions=[];
 	public $constants=[];
 	public $parser;
+	
 	public $variable_stack=[];
 	public $terminated=false;
 
@@ -32,12 +34,17 @@ class Emulator
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
     	$this->init();
 	}
+	/**
+	 * Initialize the emulator by setting environment variables (super globals)
+	 * and mocking mock functions
+	 * @return [type] [description]
+	 */
 	function init()
 	{
 		foreach ($GLOBALS as $k=>$v)
 		{
 			if ($k=="GLOBALS") continue;
-			$this->variables[$k]=$v;
+			$this->super_globals[$k]=$v;
 		}
 		// $this->variables['_POST']=isset($_POST)?$_POST:array();
 		if ($this->auto_mock)
@@ -47,16 +54,26 @@ class Emulator
 				$this->mock_functions[$function]=$function."_mock";
 		}
 	}
-
-
+	/**
+	 * Returns global variables, i.e those that are defined in the global scope
+	 * either first set on the stack, or current variables if no stack
+	 * @return array byref
+	 */
 	protected function &globals()
 	{
-		#FIXME: this should return byref! otherwise changes don't propagate
 		if (count($this->variable_stack))
 			return $this->variable_stack[0];
 		else
 			return $this->variables;
 	}
+	/**
+	 * The emulator error handler (in case an error happens in the emulation, that is not handled)
+	 * @param  [type] $errno   [description]
+	 * @param  [type] $errstr  [description]
+	 * @param  [type] $errfile [description]
+	 * @param  [type] $errline [description]
+	 * @return [type]          [description]
+	 */
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
 		$file=$errfile;
@@ -635,10 +652,9 @@ class Emulator
 		elseif (is_string($node))
 		{
 			if (array_key_exists($node, $this->variables))
-			{
-				// echo $node,"=",$this->variables[$node],PHP_EOL;
 				return $this->variables[$node];
-			}
+			elseif (array_key_exists($node, $this->super_globals))
+				return $this->super_globals[$node];
 			elseif ($create)
 			{
 				$this->variables[$node]=null;
@@ -667,8 +683,6 @@ class Emulator
 			}
 			$indexes=array_reverse($indexes);
 
-			// $varName=$this->name($t);
-			// $base=&$this->variables[$varName];
 			$base=&$this->reference($t);
 			foreach ($indexes as $index)
 			{
@@ -684,15 +698,7 @@ class Emulator
 			return $base;
 		}
 		elseif ($node instanceof Node\Expr\Variable)
-		{
-			// if (is_string($node->name))
 				return $this->reference($node->name);
-			// else
-			// {
-
-			// 	return $this->reference($this->evaluate_expression($node->name));
-			// }
-		}
 		else
 			$this->error("Can not find variable reference of this node type.",$node);
 	}

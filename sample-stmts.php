@@ -1,12 +1,14 @@
 <?php
+echo "Testing global...",PHP_EOL;
 function f2()
 {
 	global $something;
 	$something=5;
 }
 f2();
-echo $something;
-die();
+echo "5=",$something,PHP_EOL;
+
+
 $t[0][1][2][3]=4;
 echo $t[0][1][2][3],"=4",PHP_EOL;
 echo "Testing static variables...",PHP_EOL;
