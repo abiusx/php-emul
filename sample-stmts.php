@@ -1,4 +1,7 @@
 <?php
+echo "Testing eval...",PHP_EOL;
+eval("echo 'hello there!',PHP_EOL;");
+
 echo "Testing global...",PHP_EOL;
 function f2()
 {

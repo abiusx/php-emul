@@ -23,6 +23,8 @@ class Emulator
 	public $constants=[];
 	public $parser;
 	
+	public $eval=0; //whether we are in eval or not
+
 	public $variable_stack=[];
 	public $terminated=false;
 
@@ -202,7 +204,7 @@ class Emulator
 	{
 		if ($this->verbose)
 			echo "\tRunning {$name}()...",PHP_EOL;
-		#FIXME: function does not exist?
+		
 		$last_file=$this->current_file;
 		$last_function=$this->current_function;
 		$this->current_function=$name;
@@ -391,7 +393,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\BinaryOp)
 		{
-			#FIXME: this is not lazy evaluation!
+			
 			$l=$this->evaluate_expression($node->left);
 			// $r=$this->evaluate_expression($node->right);
 			if ($node instanceof Node\Expr\BinaryOp\Plus)
@@ -546,10 +548,14 @@ class Emulator
 		elseif ($node instanceof Node\Expr\Eval_)
 		{
 			#FIXME: do not use eval!
-			ob_start();
-			$res=eval($this->evaluate_expression($node->expr));
-			$out=ob_get_clean();
-			$this->output($out);
+			$this->eval++;
+			echo "Now running Eval code...",PHP_EOL;
+			
+			$code=$this->evaluate_expression($node->expr);
+			$ast=$this->parser->parse('<?php '.$code);
+
+			$res=$this->run_code($ast);
+			$this->eval--;
 			return $res;
 		}
 		elseif ($node instanceof Node\Expr\ShellExec)
@@ -999,7 +1005,7 @@ class Emulator
 				{
 					// print_r($var);
 					$temp=&$this->reference($var,false);
-					unset($temp); #TODO: make sure this works alright
+					unset($temp); 
 				}
 			}
 			elseif ($node instanceof Node\Stmt\Throw_)
@@ -1056,7 +1062,7 @@ class Emulator
 				}
 			}
 			elseif ($node instanceof Node\Stmt\InlineHTML)
-				$this->output($node->value); //FIXME: u sure this is the only way inline is? just strings?
+				$this->output($node->value); 
 			elseif ($node instanceof Node\Stmt\Global_)
 			{
 				foreach ($node->vars as $var)
@@ -1084,7 +1090,7 @@ class Emulator
 		{
 			// echo PHP_EOL;
 			$name=$this->name($node->name);
-			$this->functions[$name]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); #FIXME: name
+			$this->functions[$name]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
 		}
 		elseif ($node instanceof Node\Stmt\Const_)
 		{
