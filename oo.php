@@ -223,6 +223,8 @@ class OOEmulator extends Emulator
 	}
 	protected function run_method(&$object,$method_name,$args)
 	{
+		if (!($object instanceof EmulatorObject))
+			$this->error("Inconsistency in object oriented emulation.",$object);
 		$class_name=$object->classname;
 		$old_this=$this->this;
 		$this->this=&$object;
@@ -410,5 +412,5 @@ $x=new OOEmulator;
 $x->start("wordpress/index.php");
 // $x->start("sample-oo.php");
 echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
-// var_dump(substr($x->output,-100));
+var_dump(substr($x->output,-200));
 // var_dump(($x->output));

@@ -3,8 +3,10 @@ require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #also callbacks, any function in PHP that accepts callbacks will fail because real callbacks do not exist. they all should be mocked
-#e.g set_error_handler, register_shutdown_function, preg_replace_callback
+#	e.g set_error_handler, register_shutdown_function, preg_replace_callback
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
+#FIXME: globals can be defined like this too: 	$GLOBALS['wp_object_cache'] = new WP_Object_Cache();
+#	handle properly
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
@@ -70,6 +72,7 @@ class Emulator
 	 */
 	protected function shutdown()
 	{
+		echo "Shutting down...",PHP_EOL;
 		foreach ($this->shutdown_functions as $shutdown_function)
 			$this->run_callback($shutdown_function->callback,$shutdown_function->args);
 	}
@@ -689,7 +692,9 @@ class Emulator
 		{
 			if (array_key_exists($node, $this->variables))
 				return $this->variables[$node];
-			elseif (array_key_exists($node, $this->super_globals))
+			elseif ($node == "GLOBALS")
+				return $this->globals();
+			elseif (array_key_exists($node, $this->super_globals)) //super globals
 				return $this->super_globals[$node];
 			elseif ($create)
 			{
@@ -705,6 +710,7 @@ class Emulator
 		elseif ($node instanceof Node\Expr\ArrayDimFetch)
 		{
 			$t=$node;
+
 			$dim=0;
 			$indexes=[];
 			//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
@@ -734,7 +740,9 @@ class Emulator
 			return $base;
 		}
 		elseif ($node instanceof Node\Expr\Variable)
+		{
 				return $this->reference($node->name);
+		}
 		else
 			$this->error("Can not find variable reference of this node type.",$node);
 	}
@@ -1072,7 +1080,12 @@ class Emulator
 				$this->try--;
 			}
 			elseif ($node instanceof Node\Expr\Exit_)
-				return $this->evaluate_expression($node);
+			{
+				$res=$this->evaluate_expression($node);
+				if (!is_numeric($res))	
+					$this->output($res);
+				return $res;
+			}
 			elseif ($node instanceof Node\Stmt\Static_)
 			{
 				if (end($this->trace)->type=="function" and  isset($this->functions[end($this->trace)->name])) //statc inside a function
