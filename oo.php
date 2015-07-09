@@ -6,7 +6,7 @@ function apache_getenv()
 	return "";
 }
 //trait_,traituse,namespace,use
-//TODO: magic methods
+//TODO: magic methods, destructor
 
 class EmulatorObjectProperty
 {
@@ -41,6 +41,25 @@ class OOEmulator extends Emulator
 	protected $current_class,$current_method,$current_trait;
 	protected $current_namespace;
 	protected $this=null,$self=null;
+
+	protected function run_callback($callback,$args)
+	{
+		if (is_array($callback)) //method call
+		{
+			$object=$callback[0];
+			$method_name=$callback[1];
+			$this->run_method($object,$method_name,$args);
+		}
+		elseif (is_string($callback) and strpos($callback,"::")!==false) //static call
+		{
+			list($class,$method)=explode("::",$callback);
+			$this->run_static_method($class,$method,$args);
+		}
+		else
+			parent::run_callback($callback,$args);
+
+	}
+
 	protected function get_declarations($node)
 	{
 		if ($node instanceof Node\Stmt\ClassLike)

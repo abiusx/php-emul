@@ -2,5 +2,5 @@
 
 function header_mock(Emulator $emul,$string, $replace=true,$http_respnse_code=null)
 {
-	echo "Header output: {$string}",PHP_EOL;
+	echo "\tHeader: {$string}",PHP_EOL;
 }

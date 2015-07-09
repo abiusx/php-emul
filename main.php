@@ -8,7 +8,7 @@ use PhpParser\Node;
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
-	public $direct_output	=	true;
+	public $direct_output	=	false;
 	public $verbose			=	false;
 	public $auto_mock		=	true;
 
@@ -31,6 +31,14 @@ class Emulator
 	public $mock_functions=[];
 
 	public $trace=[];
+
+	protected $break=0,$continue=0;
+	protected $try=0,$loop=0;
+
+	protected $return=false;
+	protected $return_value=null;
+
+	public $shutdown_functions=[]; //array of callback,args
 	function __construct()
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
@@ -56,6 +64,25 @@ class Emulator
 				$this->mock_functions[$function]=$function."_mock";
 		}
 	}
+	/**
+	 * Called after execution finished
+	 * @return [type] [description]
+	 */
+	protected function shutdown()
+	{
+		foreach ($this->shutdown_functions as $shutdown_function)
+			$this->run_callback($shutdown_function->callback,$shutdown_function->args);
+	}
+	protected function run_callback($callback,$args)
+	{
+		if (is_string($callback)) //function call
+			$this->run_function($callback,$args);
+		//TODO: handle closure
+		else
+			$this->warning("Unknown callback",$callback);
+
+	}
+
 	/**
 	 * Returns global variables, i.e those that are defined in the global scope
 	 * either first set on the stack, or current variables if no stack
@@ -773,15 +800,15 @@ class Emulator
 		set_error_handler(array($this,"error_handler"));
 		$res=$this->run_file($file);
 		restore_error_handler();
-
+		$this->shutdown();
 		return $res;
 	}
-	protected $break=0,$continue=0;
-	protected $try=0,$loop=0;
 
-	protected $return=false;
-	protected $return_value=null;
-
+	/**
+	 * Runs a single statement
+	 * @param  [type] $node [description]
+	 * @return [type]       [description]
+	 */
 	protected function run_statement($node)
 	{
 			if ($node instanceof Node\Stmt\Echo_)
