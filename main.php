@@ -517,7 +517,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\ErrorSuppress)
 		{
-			#TODO: error handling
+			$this->notice("Error suppression (not yet supported)",$node);
 			return $this->evaluate_expression($node->expr);
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
@@ -547,7 +547,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\Eval_)
 		{
-			#FIXME: do not use eval!
+			
 			$this->eval++;
 			echo "Now running Eval code...",PHP_EOL;
 			
@@ -585,7 +585,7 @@ class Emulator
 		{
 			$type=$node->type; //1:include,2:include_once,3:require,4:require_once
 			$file=$this->evaluate_expression($node->expr);
-			#TODO: before all check include paths
+			
 			$realfile =realpath(dirname($this->current_file)."/".$file); //first check the directory of the file using include (as per php)
 			if (!file_exists($realfile) or !is_file($realfile)) //second check current dir
 				$realfile=realpath($file);
@@ -621,7 +621,7 @@ class Emulator
 				$argValues=[];
 				foreach ($node->args as $arg)
 					$argValues[]=$this->evaluate_expression($arg->value);
-				#FIXME: handle critical internal classes (if any)
+				
 				ob_start();	
 				$r = new ReflectionClass($classname);
 				$ret = $r->newInstanceArgs($argValues); #TODO: byref?
@@ -952,7 +952,7 @@ class Emulator
 					$data[$declare->key]=$this->evaluate_expression($declare->value);
 					$code.="{$declare->key}='".$this->evaluate_expression($declare->value)."',";
 				}
-				$code=substr($code,0,-1).");"; #FIXME: everything is strings atm
+				$code=substr($code,0,-1).");"; 
 				eval($code);
 			}
 			elseif ($node instanceof Node\Stmt\Switch_)
@@ -1012,7 +1012,8 @@ class Emulator
 			{
 				if ($this->try>0)
 					throw $this->evaluate_expression($node->expr);
-				//TODO: do something on else, uncatched throw, fatal error
+				else
+					$this->error("Throw that is not catched");
 
 			}
 			elseif ($node instanceof Node\Stmt\TryCatch)
