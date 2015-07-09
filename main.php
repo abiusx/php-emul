@@ -45,7 +45,7 @@ class Emulator
 	{
 		foreach ($GLOBALS as $k=>$v)
 		{
-			if ($k=="GLOBALS") continue;
+			// if ($k=="GLOBALS") continue; 
 			$this->super_globals[$k]=$v;
 		}
 		// $this->variables['_POST']=isset($_POST)?$_POST:array();
@@ -517,8 +517,11 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\ErrorSuppress)
 		{
-			$this->notice("Error suppression (not yet supported)",$node);
-			return $this->evaluate_expression($node->expr);
+			$error_reporting=error_reporting();
+			error_reporting(0);
+			$res=$this->evaluate_expression($node->expr);
+			error_reporting($error_reporting);
+			return $res;
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
 		{
@@ -1133,19 +1136,9 @@ class Emulator
 }
 
 
-function get_defined_vars_mock(Emulator $emul)
-{
-	echo "mocked get_defined_vars called!",PHP_EOL;
-	return $emul->variables;
-}
 
-
-
-
-
-
-
-
+foreach (glob(__DIR__."/mocks/*.php") as $mock)
+	require_once $mock;
 
 
 
