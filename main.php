@@ -182,7 +182,7 @@ class Emulator
 	/**
 	 * Runs a subcode, used by run_function and run_method
 	 * @param  [type] $function the parsed declaration of function
-	 * @param  [type] $args          [description]
+	 * @param  Node|array $args          args can be either an array of values, or a parsed Node 
 	 * @return [type]                [description]
 	 */
 	protected function run_sub($function,$args)
@@ -206,14 +206,18 @@ class Emulator
 			}
 			else //args still exist, copy to current symbol table
 			{
-				if ($param->byRef)	// byref handle
+				if (is_object(current($args)))
 				{
-					$function_variables[$this->name($param)]=&$this->reference(current($args)->value);
+					$argVal=current($args)->value;
+					if ($param->byRef)	// byref handle
+						$t=&$this->reference($argVal);
+					else //byval
+						$t=$this->evaluate_expression($argVal);
 				}
-				else //byval
-				{
-					$function_variables[$this->name($param)]=$this->evaluate_expression(current($args)->value);
-				}
+				else //direct value
+					$t=current($args);
+
+				$function_variables[$this->name($param)]=$t;
 				next($args);
 			}
 			$index++;
@@ -225,9 +229,9 @@ class Emulator
 		return $res;
 	}
 	/**
-	 * Runs a function from user-defined functions
-	 * @param  [type] $name [description]
-	 * @param  [type] $args [description]
+	 * Runs a user-defined emulated function
+	 * @param  string $name [description]
+	 * @param  Node $args should be a parsed node
 	 * @return [type]       [description]
 	 */
 	protected function run_function($name,$args)
@@ -251,6 +255,48 @@ class Emulator
 		return $res;
 	}
 	/**
+	 * Runs a function, whether its internal or emulated.
+	 * @param  string $name [description]
+	 * @param  array $args parsed node or array of values
+	 * @return mixed
+	 */
+	public function call_function($name,$args)
+	{
+		if (isset($this->functions[$name])) //user function
+			return $this->run_function($name,$args); 
+		elseif (function_exists($name)) //internal or mocked internal function
+		{
+			$argValues=[];
+			foreach ($args as $arg)
+			{
+				if (is_object($arg) and $arg->value instanceof Node\Expr\Variable) //byref 
+					$argValues[]=&$this->reference(($arg->value));
+				else //byval
+					if (is_object($arg)) 
+						$argValues[]=$this->evaluate_expression($arg->value);
+					else //TODO: byref use support?
+						$argValues[]=$arg;
+			}
+			if (array_key_exists($name, $this->mock_functions)) //mocked
+			{
+				if (!function_exists($this->mock_functions[$name]))
+					$this->error("Mocked function '{$this->mock_functions[$name]}' not defined to mock '{$name}'");
+				array_unshift($argValues, $this); //emulator is first argument in mock functions
+				$ret=call_user_func_array($this->mock_functions[$name],$argValues); //core function
+			}
+			else //original core function
+			{
+				ob_start();	
+				$ret=call_user_func_array($name,$argValues); //core function
+				$output=ob_get_clean();
+				$this->output($output);
+			}
+			return $ret;
+		}
+		else
+			$this->error("Call to undefined function {$name}()",$node);
+	}
+	/**
 	 * Evaluate all nodes of type Node\Expr and return appropriate value
 	 * @param  Node $ast Abstract Syntax Tree node
 	 * @return mixed      value
@@ -265,40 +311,8 @@ class Emulator
 		elseif ($node instanceof Node\Expr\FuncCall)
 		{
 			$name=$this->name($node);
-			// $name=$this->evaluate_expression($node->name);
-			if (isset($this->functions[$name]))
-				return $this->run_function($name,$node->args); //user function
-			elseif (function_exists($name))
-			{
-				$argValues=[];
-				foreach ($node->args as $arg)
-				{
-					if ($arg->value instanceof Node\Expr\Variable) //byref probably?
-						$argValues[]=&$this->reference(($arg->value));
-					else
-						$argValues[]=$this->evaluate_expression($arg->value);
-				}
-				#FIXME: handle critical internal functions (e.g function_exists, ob_start, etc.)
-				if (array_key_exists($name, $this->mock_functions)) //mocked
-				{
-					if (!function_exists($this->mock_functions[$name]))
-						$this->error("Mocked function '{$this->mock_functions[$name]}' does not exists to mock '{$name}'");
-					array_unshift($argValues, $this); //emulator is first argument in mock functions
-					$ret=call_user_func_array($this->mock_functions[$name],$argValues); //core function
-				}
-				else //original core function
-				{
-					ob_start();	
-					$ret=call_user_func_array($name,$argValues); //core function
-					$output=ob_get_clean();
-					$this->output($output);
-				}
-				return $ret;
-			}
-			else
-			{
-				$this->error("Call to undefined function {$name}()",$node);
-			}
+			return $this->call_function($name,$node->args);
+			
 		}
 		elseif ($node instanceof Node\Expr\AssignRef)
 		{
@@ -1194,8 +1208,8 @@ foreach (glob(__DIR__."/mocks/*.php") as $mock)
 if (isset($argc) and $argv[0]==__FILE__)
 {
 	$x=new Emulator;
-	$x->start("sample-stmts.php");
-	// echo(($x->output));
+	$x->start("sample-callback.php");
+	echo(($x->output));
 }
 // $x->start("yapig-0.95b/index.php");
 // echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
