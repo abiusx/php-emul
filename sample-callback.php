@@ -19,7 +19,7 @@ array_walk($fruits, 'test_alter', 'fruit');
 echo "... and after:\n";
 array_walk($fruits, 'test_print');
 
-die();
+// die();
 #TODO: work with closures, emulator should support them too. Its php 5.3+
 function basic_callback($n)
 {

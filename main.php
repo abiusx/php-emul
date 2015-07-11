@@ -207,7 +207,7 @@ class Emulator
 			}
 			else //args still exist, copy to current symbol table
 			{
-				if (is_object(current($args)))
+				if (current($args) instanceof Node)
 				{
 					$argVal=current($args)->value;
 					if ($param->byRef)	// byref handle
@@ -215,7 +215,7 @@ class Emulator
 					else //byval
 						$t=$this->evaluate_expression($argVal);
 				}
-				else //direct value
+				else //direct value, not a Node
 				{
 					$t=&$args[key($args)]; //byref
 					// $t=current($args); //byval, not desired
@@ -271,15 +271,15 @@ class Emulator
 		elseif (function_exists($name)) //internal or mocked internal function
 		{
 			$argValues=[];
-			foreach ($args as $arg)
+			foreach ($args as &$arg)
 			{
 				if (is_object($arg) and $arg->value instanceof Node\Expr\Variable) //byref 
 					$argValues[]=&$this->reference($arg->value);
-				else //byval
-					if (is_object($arg)) 
+				else 
+					if ($arg instanceof Node) //byval
 						$argValues[]=$this->evaluate_expression($arg->value);
-					else //TODO: byref support for internal funcs?
-						$argValues[]=$arg;
+					else 
+						$argValues[]=&$arg; //byref or byval direct value (not Node)
 			}
 			if (array_key_exists($name, $this->mock_functions)) //mocked
 			{
@@ -1212,6 +1212,7 @@ foreach (glob(__DIR__."/mocks/*.php") as $mock)
 if (isset($argc) and $argv[0]==__FILE__)
 {
 	$x=new Emulator;
+	// $x->start("sample-stmts.php");
 	$x->start("sample-callback.php");
 	// echo(($x->output));
 }
