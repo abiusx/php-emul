@@ -15,8 +15,8 @@ echo "Before ...:\n";
 array_walk($fruits, 'test_print');
 
 array_walk($fruits, 'test_alter', 'fruit');
-echo "... and after:\n";
 
+echo "... and after:\n";
 array_walk($fruits, 'test_print');
 
 die();

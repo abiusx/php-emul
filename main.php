@@ -10,7 +10,7 @@ use PhpParser\Node;
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
-	public $direct_output	=	false;
+	public $direct_output	=	true;
 	public $verbose			=	false;
 	public $auto_mock		=	true;
 
@@ -187,6 +187,7 @@ class Emulator
 	 */
 	protected function run_sub($function,$args)
 	{
+
 		reset($args);
 		$count=count($args);
 		$index=0;
@@ -215,9 +216,12 @@ class Emulator
 						$t=$this->evaluate_expression($argVal);
 				}
 				else //direct value
-					$t=current($args);
+				{
+					$t=&$args[key($args)]; //byref
+					// $t=current($args); //byval, not desired
+				}
 
-				$function_variables[$this->name($param)]=$t;
+				$function_variables[$this->name($param)]=&$t;
 				next($args);
 			}
 			$index++;
@@ -274,7 +278,7 @@ class Emulator
 				else //byval
 					if (is_object($arg)) 
 						$argValues[]=$this->evaluate_expression($arg->value);
-					else //TODO: byref support?
+					else //TODO: byref support for internal funcs?
 						$argValues[]=$arg;
 			}
 			if (array_key_exists($name, $this->mock_functions)) //mocked
@@ -1209,7 +1213,7 @@ if (isset($argc) and $argv[0]==__FILE__)
 {
 	$x=new Emulator;
 	$x->start("sample-callback.php");
-	echo(($x->output));
+	// echo(($x->output));
 }
 // $x->start("yapig-0.95b/index.php");
 // echo "Output of size ".strlen($x->output)." was generated.",PHP_EOL;
