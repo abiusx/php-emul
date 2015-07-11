@@ -270,11 +270,11 @@ class Emulator
 			foreach ($args as $arg)
 			{
 				if (is_object($arg) and $arg->value instanceof Node\Expr\Variable) //byref 
-					$argValues[]=&$this->reference(($arg->value));
+					$argValues[]=&$this->reference($arg->value);
 				else //byval
 					if (is_object($arg)) 
 						$argValues[]=$this->evaluate_expression($arg->value);
-					else //TODO: byref use support?
+					else //TODO: byref support?
 						$argValues[]=$arg;
 			}
 			if (array_key_exists($name, $this->mock_functions)) //mocked

@@ -409,7 +409,8 @@ class OOEmulator extends Emulator
 }
 
 $x=new OOEmulator;
-$x->start("wordpress/index.php");
+// $x->start("wordpress/index.php");
+$x->start("wordpress/wp-admin/install.php");
 // $x->start("sample-oo.php");
 echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-200));

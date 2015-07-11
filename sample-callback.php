@@ -1,5 +1,26 @@
 <?php
+$fruits = array("d" => "lemon", "a" => "orange", "b" => "banana", "c" => "apple");
 
+function test_alter(&$item1, $key, $prefix)
+{
+    $item1 = "$prefix: $item1";
+}
+
+function test_print($item2, $key)
+{
+    echo "$key. $item2\n";
+}
+
+echo "Before ...:\n";
+array_walk($fruits, 'test_print');
+
+array_walk($fruits, 'test_alter', 'fruit');
+echo "... and after:\n";
+
+array_walk($fruits, 'test_print');
+
+die();
+#TODO: work with closures, emulator should support them too. Its php 5.3+
 function basic_callback($n)
 {
 	return $n*$n;
@@ -16,7 +37,7 @@ var_dump(array_map("double_callback",$a,$b));
 
 
 $text = "April fools day is 04/01/2002\n";
-$text.= "Last christmas was 12/24/2001\n";
+$text.= "Last christmas was 12/24/2001\n\n";
 // the callback function
 function next_year($matches)
 {
@@ -29,4 +50,5 @@ echo preg_replace_callback(
             "|(\d{2}/\d{2}/)(\d{4})|",
             "next_year",
             $text);
+
 
