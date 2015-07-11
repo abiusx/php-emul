@@ -7,7 +7,6 @@ function array_walk_mock(Emulator $emul, array &$array , $callback , $userdata =
 	### DO NOT CHANGE ABOVE THIS LINE ###
 	$args[0]=&$array;
 	$args[1]=function(&$item,$key,$userdata=null) 
-			//TODO: byref support, item can be byref!!
 			
 
 	### DO NOT CHANGE BELOW THIS LINE ###
