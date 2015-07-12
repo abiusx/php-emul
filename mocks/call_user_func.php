@@ -1,6 +1,6 @@
 <?php
 
-function call_user_func_array_mock(Emulator $emul,  $callback , array $param_arr )
+function call_user_func_mock(Emulator $emul,  $callback)
 {
 	$args=func_get_args();
 	array_shift($args); //$emul
