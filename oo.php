@@ -7,7 +7,7 @@ function apache_getenv()
 }
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
-
+//TODO: internal classes, methods and etc.
 class EmulatorObjectProperty
 {
 	public $name;

@@ -211,17 +211,15 @@ class Emulator
 				{
 					$argVal=current($args)->value;
 					if ($param->byRef)	// byref handle
-						$t=&$this->reference($argVal);
+						$function_variables[$this->name($param)]=&$this->reference($argVal);
 					else //byval
-						$t=$this->evaluate_expression($argVal);
+						$function_variables[$this->name($param)]=$this->evaluate_expression($argVal);
 				}
 				else //direct value, not a Node
 				{
-					$t=&$args[key($args)]; //byref
+					$function_variables[$this->name($param)]=&$args[key($args)]; //byref
 					// $t=current($args); //byval, not desired
 				}
-
-				$function_variables[$this->name($param)]=&$t;
 				next($args);
 			}
 			$index++;
