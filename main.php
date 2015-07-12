@@ -2,11 +2,7 @@
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
-#also callbacks, any function in PHP that accepts callbacks will fail because real callbacks do not exist. they all should be mocked
-#	e.g set_error_handler, register_shutdown_function, preg_replace_callback
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
-#FIXME: globals can be defined like this too: 	$GLOBALS['wp_object_cache'] = new WP_Object_Cache();
-#	handle properly
 class Emulator
 {	
 	public $infinite_loop	=	1000; #1000000;
