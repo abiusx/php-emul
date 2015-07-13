@@ -9,7 +9,7 @@ class Emulator
 	 * Configuration: inifite loop limit
 	 * @var integer
 	 */
-	public $infinite_loop	=	1000; #1000000;
+	public $infinite_loop	=	100; 
 	/**
 	 * Configuration: whether to output directly, or just store it in $output
 	 * @var boolean
@@ -973,7 +973,32 @@ class Emulator
 		$this->shutdown();
 		return $res;
 	}
-
+	/**
+	 * Used to check if loop condition is still valid
+	 * @return boolean
+	 */
+	private function loop_condition($i=0)
+	{
+		if ($this->break)
+		{
+			$this->break--;
+			return true;
+		}
+		if ($this->continue)
+		{
+			$this->continue--;
+			if ($this->continue)
+				return true; 
+		}
+		if ($i>$this->infinite_loop)
+		{
+			$this->error("Infinite loop");
+			return true; 
+		}
+		if ($this->terminated)
+			return true;
+		return false;
+	}
 	/**
 	 * Runs a single statement
 	 * If input is a statement, it will be run. If its an expression, it will be runned like an statement.
@@ -1023,7 +1048,7 @@ class Emulator
 				$this->return=true;
 				return $this->return_value;
 			}
-			elseif ($node instanceof Node\Stmt\For_)
+			elseif ($node instanceof Node\Stmt\For_) //Loop 1
 			{
 				$i=0;
 				$this->loop++;
@@ -1031,86 +1056,39 @@ class Emulator
 				{
 					$i++;	
 					$this->run_code($node->stmts);
-					if ($this->break)
-					{
-						$this->break--;
-						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							return;
-						else
-							return;
-					}
-					if ($this->continue)
-					{
-						$this->continue--;
-						if ($this->continue)
-							return; 
-					}
-					if ($i>$this->infinite_loop)
-					{
-						$this->error("Infinite loop");
-						return; 
-					}
+					if ($this->loop_condition($i))
+						break;
 				}
 				$this->loop--;
 			}
-			elseif ($node instanceof Node\Stmt\While_)
+			elseif ($node instanceof Node\Stmt\While_) //Loop 2
 			{
 				$i=0;
+				$this->loop++;
 				while ($this->evaluate_expression($node->cond))
 				{
 					$i++;
 					$this->run_code($node->stmts);
-					if ($this->break)
-					{
-						$this->break--;
-						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							return;
-						else
-							return;
-					}
-					if ($this->continue)
-					{
-						$this->continue--;
-						if ($this->continue)
-							return; 
-					}
-					if ($i>$this->infinite_loop)
-					{
-						$this->error("Infinite loop");
-						return; 
-					}
+					if ($this->loop_condition($i))
+						break;
 				}
+				$this->loop--;
 			}
-			elseif ($node instanceof Node\Stmt\Do_)
+			elseif ($node instanceof Node\Stmt\Do_) //Loop 3
 			{
 				$i=0;
+				$this->loop++;
 				do
 				{
-					$this->run_code($node->stmts);
 					$i++;
-					if ($this->break)
-					{
-						$this->break--;
-						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							return;
-						else
-							return;
-					}
-					if ($this->continue)
-					{
-						$this->continue--;
-						if ($this->continue)
-							return; 
-					}
-					if ($i>$this->infinite_loop)
-					{
-						$this->error("Infinite loop");
-						return; 
-					}
+					$this->run_code($node->stmts);
+					if ($this->loop_condition($i))
+						break;
 				}
 				while ($this->evaluate_expression($node->cond));
+				$this->loop--;
 			}
-			elseif ($node instanceof Node\Stmt\Foreach_)
+			elseif ($node instanceof Node\Stmt\Foreach_) //Loop 4
 			{
 				$list=$this->evaluate_expression($node->expr);
 				$keyed=false;
@@ -1120,31 +1098,22 @@ class Emulator
 					$keyVar=&$this->reference($node->keyVar);
 				}
 				$valueVar=&$this->reference($node->valueVar);
+				$this->loop++;
 				foreach ($list as $k=>$v)
 				{
 					if ($keyed)
 						$keyVar=$k;
 					$valueVar=$v;
 					$this->run_code($node->stmts);
-					if ($this->break)
-					{
-						$this->break--;
-						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							return;
-						else
-							return;
-					}
-					if ($this->continue)
-					{
-						$this->continue--;
-						if ($this->continue)
-							return; 
-					}
-
+					
+					if ($this->loop_condition())
+						break;
 				}
+				$this->loop--;
 			}
 			elseif ($node instanceof Node\Stmt\Declare_)
 			{
+				//TODO: handle tick function here, by wrapping it
 				$data=[];
 				$code="declare(";
 				foreach ($node->declares as $declare)
@@ -1162,20 +1131,8 @@ class Emulator
 				{
 					if ($case->cond===NULL /* default case*/ or $this->evaluate_expression($case->cond)==$arg)
 						$this->run_code($case->stmts);
-					if ($this->break)
-					{
-						$this->break--;
-						if ($this->break) //nested break, the 2 here ensures that the rest of statements in current loop don't execute
-							return;
-						else
-							return;
-					}
-					if ($this->continue)
-					{
-						$this->continue--;
-						if ($this->continue)
-							return; 
-					}
+					if ($this->loop_condition())
+						break;
 				}
 			} 
 			elseif ($node instanceof Node\Stmt\Break_)
@@ -1184,7 +1141,6 @@ class Emulator
 					$this->break+=$this->evaluate_expression($node->num);
 				else
 					$this->break++;
-				return; //break this loop of run_code, and have the real loop break because $this->break > 0
 			}
 			elseif ($node instanceof Node\Stmt\Continue_)
 			{
@@ -1193,17 +1149,12 @@ class Emulator
 					$num=$this->evaluate_expression($node->num);
 				else
 					$num=1;
-				// $this->continue++;
-				// $this->break+=$num-1;
 				$this->continue+=$num;
-
-				return ;
 			}
 			elseif ($node instanceof Node\Stmt\Unset_)
 			{
 				foreach ($node->vars as $var)
 				{
-					// print_r($var);
 					$temp=&$this->reference($var,false);
 					unset($temp); 
 				}
