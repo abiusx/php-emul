@@ -5,38 +5,145 @@ use PhpParser\Node;
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 class Emulator
 {	
+	/**
+	 * Configuration: inifite loop limit
+	 * @var integer
+	 */
 	public $infinite_loop	=	1000; #1000000;
+	/**
+	 * Configuration: whether to output directly, or just store it in $output
+	 * @var boolean
+	 */
 	public $direct_output	=	true;
+	/**
+	 * Configuration: Verbose messaging or not
+	 * @var boolean
+	 */
 	public $verbose			=	false;
+	/**
+	 * Whether to automatically mock functions or not
+	 * If true, on init emulator will mock all internal php functions with their mocked version.
+	 * If there's a mocked function (e.g array_walk_mock), emulator will use that instead of the original function
+	 * Some functions need to be mocked for the emulator to work properly. These are placed in 'mocks/' folder
+	 * @var boolean
+	 */
 	public $auto_mock		=	true;
 
+	/**
+	 * Emulator current settings
+	 * mostly used for error reporting
+	 * @var string
+	 */
 	protected $current_node,$current_file,$current_line;
 	protected $current_function;
+	
+	/**
+	 * The list of included files. used by *_once include functions as well
+	 * @var array
+	 */
 	public $included_files=[];
+	/**
+	 * The output of the program
+	 * @var string
+	 */
 	public $output;
+	/**
+	 * Symbol table of the current scope (all variables)
+	 * @var array
+	 */
 	public $variables=[]; 
+	/**
+	 * Super global variables (e.g $GLOBALS, $_GET, etc.)
+	 * @var array
+	 */
 	public $super_globals=[];
 
+	/**
+	 * User-defined (emulated) functions
+	 * @var array
+	 */
 	public $functions=[];
+	/**
+	 * User-defined (emulated) constants
+	 * @var array
+	 */
 	public $constants=[];
+
+	/**
+	 * The parser object used by the emulator. 
+	 * @var [type]
+	 */
 	public $parser;
 	
-	public $eval=0; //whether we are in eval or not
+	/**
+	 * The depth of eval.
+	 * Everything eval is used, this is incremented. Allows us to know whether we're inside eval'd code or not.
+	 * @var integer
+	 */
+	public $eval=0; 
 
+	/**
+	 * The variable stack (pushdown)
+	 * On function calls and new scopes, $variables is pushed on this
+	 * @var array
+	 */
 	public $variable_stack=[];
+	/**
+	 * Whether the application has terminated or not.
+	 * Used inside the emulator to prevent further execution, e.g when die is used.
+	 * @var boolean
+	 */
 	public $terminated=false;
 
+	/**
+	 * List of mocked functions. 
+	 * Keys are original functions, values are mocked equivalents
+	 * @var array
+	 */
 	public $mock_functions=[];
 
+	/**
+	 * Stack trace.
+	 * Used to see if we're inside a function or a method or etc.
+	 * @var array
+	 */
 	public $trace=[];
 
+	/**
+	 * Number of breaks/continues
+	 * Whether we still need to break or not
+	 * For a normal break it becomes 1, and then back to 0 in the loop emulation code
+	 * @var integer
+	 */
 	protected $break=0,$continue=0;
-	protected $try=0,$loop=0;
+	/**
+	 * Whether we're inside a try block or not (number of nested tries)
+	 * @var integer
+	 */
+	protected $try=0;
+	/**
+	 * Whether we're in a loop or not (and the number of nested loops)
+	 * @var integer
+	 */
+	protected $loop=0;
 
+	/**
+	 * Whether return value is available
+	 * @var boolean
+	 */
 	protected $return=false;
+	/**
+	 * The return value
+	 * @var mixed
+	 */
 	protected $return_value=null;
 
-	public $shutdown_functions=[]; //array of callback,args
+	/**
+	 * List of functions to run on shuwtdown
+	 * Each element is an object of callback and args.
+	 * @var array
+	 */
+	public $shutdown_functions=[]; 
 	function __construct()
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
@@ -45,7 +152,6 @@ class Emulator
 	/**
 	 * Initialize the emulator by setting environment variables (super globals)
 	 * and mocking mock functions
-	 * @return [type] [description]
 	 */
 	function init()
 	{
@@ -64,24 +170,14 @@ class Emulator
 	}
 	/**
 	 * Called after execution finished
-	 * @return [type] [description]
+	 * Runs shutdown functions
 	 */
 	protected function shutdown()
 	{
 		echo "Shutting down...",PHP_EOL;
 		foreach ($this->shutdown_functions as $shutdown_function)
-			$this->run_callback($shutdown_function->callback,$shutdown_function->args);
+			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 	}
-	protected function run_callback($callback,$args)
-	{
-		if (is_string($callback)) //function call
-			$this->run_function($callback,$args);
-		//TODO: handle closure
-		else
-			$this->warning("Unknown callback",$callback);
-
-	}
-
 	/**
 	 * Returns global variables, i.e those that are defined in the global scope
 	 * either first set on the stack, or current variables if no stack
@@ -129,12 +225,25 @@ class Emulator
 			$this->terminated=true;
 		return true;
 	}
+	/**
+	 * Used by emulator to mark emulation errors
+	 * @param  [type] $msg  [description]
+	 * @param  [type] $node [description]
+	 * @return [type]       [description]
+	 */
 	protected function error($msg,$node=null)
 	{
 		echo "Emulation Error: ";
 		$this->_error($msg,$node);
 		$this->terminated=true;
 	}
+	/**
+	 * Core function used by all types of error (warning, error, notice, etc.)
+	 * @param  [type]  $msg     [description]
+	 * @param  [type]  $node    [description]
+	 * @param  boolean $details [description]
+	 * @return [type]           [description]
+	 */
 	private function _error($msg,$node=null,$details=true)
 	{
 
@@ -158,6 +267,10 @@ class Emulator
 		$this->_error($msg,$node);
 		// trigger_error($msg);
 	}
+	/**
+	 * Outputs the args
+	 * @return [type] [description]
+	 */
 	function output()
 	{
 		$args=func_get_args();
@@ -166,20 +279,29 @@ class Emulator
 		if ($this->direct_output)
 			echo $data;
 	}
+	/**
+	 * Push current variables on var stack
+	 */
 	protected function push()
 	{
 		array_push($this->variable_stack, $this->variables);
 		$this->variables=[];
 	}
+	/**
+	 * Pop off the variable stack
+	 * @return array
+	 */
 	protected function pop()
 	{
 		$this->variables=array_pop($this->variable_stack);
 	}
 	/**
-	 * Runs a subcode, used by run_function and run_method
-	 * @param  [type] $function the parsed declaration of function
+	 * Runs a procedure (sub).
+	 * This is used by all function calling structures, such as run_function, run_method, run_static_method, etc.
+	 * This does the prologue and epilogue, sets up arguments and references, and starts execusion
+	 * @param  Node $function the parsed declaration of function
 	 * @param  Node|array $args          args can be either an array of values, or a parsed Node 
-	 * @return [type]                [description]
+	 * @return mixed return value of function
 	 */
 	protected function run_sub($function,$args)
 	{
@@ -227,10 +349,10 @@ class Emulator
 		return $res;
 	}
 	/**
-	 * Runs a user-defined emulated function
+	 * Runs a user-defined (emulated) function
 	 * @param  string $name [description]
 	 * @param  Node $args should be a parsed node
-	 * @return [type]       [description]
+	 * @return mixed
 	 */
 	protected function run_function($name,$args)
 	{
@@ -296,6 +418,7 @@ class Emulator
 	}
 	/**
 	 * Evaluate all nodes of type Node\Expr and return appropriate value
+	 * This is the core of the emulator/interpreter.
 	 * @param  Node $ast Abstract Syntax Tree node
 	 * @return mixed      value
 	 */
@@ -680,16 +803,22 @@ class Emulator
 			$this->error("Unknown expression node: ",$node);
 		return null;
 	}
+	/**
+	 * Not implemented in procedural emulator
+	 * @param  [type] $name [description]
+	 * @param  array  $args [description]
+	 * @return [type]       [description]
+	 */
 	protected function new_object($name,array $args)
 	{
 		echo "Not implemented.";
 		print_r($args);
 	}
 	/**
-	 * Returns a reference to a variable, so that it can be modified.
+	 * Returns a reference to a variable, so that it can be modified or read.
 	 * 
 	 * It should be used like this: $var=&$this->reference(...);
-	 * @param  Node 	$node [description]
+	 * @param  Node 	$node 
 	 * @param  bool 	$create whether to create the variable if it does not exist, or not.
 	 * @return reference       reference to variable
 	 */
@@ -758,6 +887,13 @@ class Emulator
 		else
 			$this->error("Can not find variable reference of this node type.",$node);
 	}
+	/**
+	 * Returns the name of nodes that have names
+	 * e.g function calls, variables, etc.
+	 * Used multiple times in the emulator code
+	 * @param  Node $ast 
+	 * @return string      name
+	 */
 	protected function name($ast)
 	{
 		if (is_string($ast))
@@ -793,6 +929,13 @@ class Emulator
 		else
 			$this->error("Can not determine name: ",$ast);
 	}
+	/**
+	 * Runs a PHP file
+	 * Basically it sets up current file and other state variables, reads the file,
+	 * parses it and passes the result to run_code
+	 * @param  string $file 
+	 * @return mixed    
+	 */
 	public function run_file($file)
 	{
 		$last_file=$this->current_file;
@@ -811,7 +954,14 @@ class Emulator
 		$this->current_file=$last_file;
 		return $res;
 	}
-	
+	/**
+	 * Starts the emulation
+	 * A php file should be given here
+	 * Current directory and other variables are set up here
+	 * @param  string  $file  
+	 * @param  boolean $chdir whether to change dir to the file's location or not
+	 * @return mixed         
+	 */
 	function start($file,$chdir=true)
 	{
 		chdir(dirname($file));
@@ -826,8 +976,8 @@ class Emulator
 
 	/**
 	 * Runs a single statement
-	 * @param  [type] $node [description]
-	 * @return [type]       [description]
+	 * If input is a statement, it will be run. If its an expression, it will be runned like an statement.
+	 * @param  Node $node 
 	 */
 	protected function run_statement($node)
 	{
@@ -1139,6 +1289,11 @@ class Emulator
 				$this->error("Unknown node type: ",$node);	
 			}
 	}
+	/**
+	 * Extracts declarations in AST node
+	 * Constants and function definitions are extracted before code is executed
+	 * @param  Node $node 
+	 */
 	protected function get_declarations($node)
 	{
 		if (0);
@@ -1159,6 +1314,11 @@ class Emulator
 			}
 		}
 	}
+	/**
+	 * Runs an AST as code.
+	 * It basically loops over statements and runs them.
+	 * @param  Node $ast 
+	 */
 	protected function run_code($ast)
 	{
 		//first pass, get all definitions
