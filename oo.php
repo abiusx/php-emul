@@ -380,12 +380,14 @@ class OOEmulator extends Emulator
 			// print_r($node);
 			$var=&$this->reference($node->var);
 			$property_name=$this->name($node->name);
-			if (!$create and !array_key_exists($property_name, $var->properties))
-			{
-				$this->notice("Undefined property: {$var->classname}::\${$property_name}");
-				return null;
-			}
-			$var->properties[$property_name]=new EmulatorObjectProperty($property_name);
+			if (!array_key_exists($property_name, $var->properties))
+				if (!$create)
+				{
+					$this->notice("Undefined property: {$var->classname}::\${$property_name}");
+					return null;
+				}
+			else
+				$var->properties[$property_name]=new EmulatorObjectProperty($property_name);
 			return $var->properties[$property_name]->value;
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)

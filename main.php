@@ -176,7 +176,10 @@ class Emulator
 	{
 		echo "Shutting down...",PHP_EOL;
 		foreach ($this->shutdown_functions as $shutdown_function)
+		{
+			echo "Calling shutdown function {$shutdown_function}...\n"	;
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
+		}
 	}
 	/**
 	 * Returns global variables, i.e those that are defined in the global scope
@@ -259,6 +262,7 @@ class Emulator
 	{
 		echo "Emulation Notice: ";
 		$this->_error($msg,$node,false);
+		$this->terminated=true;
 	}
 
 	protected function warning($msg,$node=null)
