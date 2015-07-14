@@ -1,13 +1,4 @@
 <?php
-echo "Reference and notice test:",PHP_EOL;
-var_dump(isset($x));
-$x=2;
-var_dump(isset($x));
-$x+=$y;
-$z++;
-var_dump(isset($z));
-var_dump($z);
-die();
 $fruits = array("d" => "lemon", "a" => "orange", "b" => "banana", "c" => "apple");
 
 function test_alter(&$item1, $key, $prefix)
