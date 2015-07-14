@@ -49,24 +49,6 @@ class OOEmulator extends Emulator
 	protected $current_namespace;
 	protected $this=null,$self=null;
 
-	protected function run_callback($callback,$args)
-	{
-		if (is_array($callback)) //method call
-		{
-			$object=$callback[0];
-			$method_name=$callback[1];
-			$this->run_method($object,$method_name,$args);
-		}
-		elseif (is_string($callback) and strpos($callback,"::")!==false) //static call
-		{
-			list($class,$method)=explode("::",$callback);
-			$this->run_static_method($class,$method,$args);
-		}
-		else
-			parent::run_callback($callback,$args);
-
-	}
-
 	protected function get_declarations($node)
 	{
 		if ($node instanceof Node\Stmt\ClassLike)
@@ -404,7 +386,6 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\PropertyFetch)
 		{
-			// print_r($node);
 			$var=&$this->reference($node->var);
 			if (!($var instanceof EmulatorObject))
 			{
@@ -412,14 +393,15 @@ class OOEmulator extends Emulator
 				return null;
 			}
 			$property_name=$this->name($node->name);
+
 			if (!array_key_exists($property_name, $var->properties))
+			{
+				$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 				if (!$create)
-				{
-					$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 					return null;
-				}
-				else
+				else //dynamic properties, on all classes (FIXME: only notice if not stdClass?)
 					$var->properties[$property_name]=new EmulatorObjectProperty($property_name);
+			}
 			return $var->properties[$property_name]->value;
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
@@ -444,6 +426,23 @@ class OOEmulator extends Emulator
 		else
 			return parent::reference($node,$create);
 	}
+	public function call_function($name,$args)
+	{
+		if (is_array($name) and count($name)==2) //method call
+		{
+			$object=$name[0];
+			$method_name=$name[1];
+			$this->run_method($object,$method_name,$args);
+		}
+		elseif (is_string($name) and strpos($name,"::")!==false) //static call
+		{
+			list($class,$method)=explode("::",$name);
+			$this->run_static_method($class,$method,$args);
+		}
+		else
+			return parent::call_function($name,$args);
+	}
+
 }
 
 $x=new OOEmulator;

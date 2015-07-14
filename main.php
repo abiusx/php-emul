@@ -271,7 +271,6 @@ class Emulator
 	{
 		echo "Emulation Notice: ";
 		$this->_error($msg,$node,false);
-		$this->terminated=true;
 	}
 
 	protected function warning($msg,$node=null)
