@@ -3,6 +3,7 @@ require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
+#
 class Emulator
 {	
 	/**
@@ -180,7 +181,10 @@ class Emulator
 	 */
 	protected function shutdown()
 	{
+
 		echo "Shutting down...",PHP_EOL;
+		return false;
+		//FIXME TODO
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
 			echo "Calling shutdown function "	;
@@ -405,7 +409,7 @@ class Emulator
 				{
 					//TODO: use another means to check if its byref, this is not right
 					if ($arg->value instanceof Node\Expr\Variable or $arg->value instanceof Node\Expr\ArrayDimFetch) //byref 
-						$argValues[]=&$this->reference($arg->value);
+						$argValues[]=&$this->reference($arg->value,false,true);
 					else //byval
 						$argValues[]=$this->evaluate_expression($arg->value);
 				}
@@ -483,7 +487,7 @@ class Emulator
 				// $this->error("Unknown assign: ",$node);
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch) //access multidimensional arrays $x[...][..][...]
-			return $this->reference($node);
+			return $this->reference($node,false,false);
 		elseif ($node instanceof Node\Expr\Array_)
 		{
 			$out=[];
@@ -524,27 +528,27 @@ class Emulator
 
 		elseif ($node instanceof Node\Expr\PreInc)
 		{
-			$var=&$this->reference($node->var);	
+			$var=&$this->reference($node->var,true,true);	
 			return ++$var;
 		}
 		elseif ($node instanceof Node\Expr\PostInc)
 		{
-			$var=&$this->reference($node->var);	
+			$var=&$this->reference($node->var,true,true);	
 			return $var++;
 		}
 		elseif ($node instanceof Node\Expr\PreDec)
 		{
-			$var=&$this->reference($node->var);	
+			$var=&$this->reference($node->var,true,true);	
 			return --$var;
 		}
 		elseif ($node instanceof Node\Expr\PostDec)
 		{
-			$var=&$this->reference($node->var);	
+			$var=&$this->reference($node->var,true,true);	
 			return $var--;
 		}
 		elseif ($node instanceof Node\Expr\AssignOp)
 		{
-			$var=&$this->reference($node->var);
+			$var=&$this->reference($node->var,true,true);
 			$val=$this->evaluate_expression($node->expr);
 			if ($node instanceof Node\Expr\AssignOp\Plus)
 				return $var+=$val;
@@ -682,7 +686,7 @@ class Emulator
 		
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			return $this->reference($node);
+			return $this->reference($node,true,true);
 		}
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
@@ -723,8 +727,11 @@ class Emulator
 			#FIXME: if the name expression is multipart, and one part of it also doesn't exist this warns. Does PHP too?
 			foreach ($node->vars as $var)
 			{
-				$temp=&$this->reference($var,false);
-				if (!isset($temp))
+				$temp=&$this->reference($var,false,false);
+				$this->null_reference=(object)rand(1,1000); //FIXME: this is a hack, just something that we're sure will not equal temp if it had a value
+				$res=$temp===$this->null_reference;
+				$this->null_reference=null;
+				if ($res)
 					return false;
 			}
 			return true;
@@ -831,19 +838,27 @@ class Emulator
 		print_r($args);
 	}
 	/**
+	 * A reference to this will be returned by 
+	 * reference function whenever the variable is not found
+	 * @var [type]
+	 */
+	protected $null_reference=null; 
+	/**
 	 * Returns a reference to a variable, so that it can be modified or read.
 	 * 
 	 * It should be used like this: $var=&$this->reference(...);
 	 * @param  Node 	$node 
 	 * @param  bool 	$create whether to create the variable if it does not exist, or not.
+	 * @param  bool 	$notice whether to send a notice if not exists. false by default. should be true on expressions
 	 * @return reference       reference to variable
 	 */
-	protected function &reference($node,$create=true)
+	protected function &reference($node,$create=true,$notice=false)
 	{
 		if ($node===null)
 		{
-			$this->notice("Undefined variable: {$node}");	
-			return null;
+			if ($notice)
+				$this->notice("Undefined variable: {$node}");	
+			return $this->null_reference;
 		}
 		elseif (is_string($node))
 		{
@@ -853,15 +868,19 @@ class Emulator
 				return $this->globals();
 			elseif (array_key_exists($node, $this->super_globals)) //super globals
 				return $this->super_globals[$node];
-			elseif ($create)
-			{
-				$this->variables[$node]=null;
-				return $this->variables[$node];
-			}
 			else
 			{
-				$this->notice("Undefined variable: {$node}");	
-				return null; //variable not exists
+				if ($notice) 
+					$this->notice("Undefined variable: {$node}");	
+				if ($create)
+				{
+					$this->variables[$node]=null;
+					return $this->variables[$node];
+				}
+				else
+				{
+					return $this->null_reference; //variable not exists
+				}
 			}
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch)
@@ -882,7 +901,9 @@ class Emulator
 			}
 			$indexes=array_reverse($indexes);
 
-			$base=&$this->reference($t);
+			$base=&$this->reference($t,$create,$notice);
+			if (!is_array($base))
+				return $this->null_reference;
 			foreach ($indexes as $index)
 			{
 				if ($index===NULL)
@@ -897,9 +918,7 @@ class Emulator
 			return $base;
 		}
 		elseif ($node instanceof Node\Expr\Variable)
-		{
-				return $this->reference($node->name);
-		}
+			return $this->reference($node->name,$create,$notice);
 		else
 			$this->error("Can not find variable reference of this node type.",$node);
 	}
@@ -1171,7 +1190,7 @@ class Emulator
 			{
 				foreach ($node->vars as $var)
 				{
-					$temp=&$this->reference($var,false);
+					$temp=&$this->reference($var,false,false);
 					unset($temp); 
 				}
 			}
