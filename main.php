@@ -1190,12 +1190,15 @@ class Emulator
 			{
 				$list=$this->evaluate_expression($node->expr);
 				$keyed=false;
+				$this->silenced++; //create two variables
 				if (isset($node->keyVar))
 				{
 					$keyed=true;	
 					$keyVar=&$this->reference($node->keyVar);
 				}
 				$valueVar=&$this->reference($node->valueVar);
+				$this->silenced--; //create two variables
+				
 				$this->loop++;
 				foreach ($list as $k=>$v)
 				{
