@@ -144,6 +144,12 @@ class Emulator
 	 * @var array
 	 */
 	public $shutdown_functions=[]; 
+
+	/**
+	 * Whether or not the error reporter is silenced
+	 * @var boolean
+	 */
+	public $silenced=false;
 	function __construct()
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
@@ -221,7 +227,9 @@ class Emulator
 			default:
 				$str="Error";
 		}
-		echo "PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)",PHP_EOL;
+
+		if (!$this->silenced and !$fatal) //silenced and non-fatal, shush!
+			echo "PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)",PHP_EOL;
 		if ($this->verbose)
 			debug_print_backtrace();
 		if ($fatal) 
@@ -689,10 +697,11 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\ErrorSuppress)
 		{
-			$error_reporting=error_reporting();
-			error_reporting(0);
+			// $error_reporting=error_reporting();
+			// error_reporting(0);
+			$this->silenced=true;
 			$res=$this->evaluate_expression($node->expr);
-			error_reporting($error_reporting);
+			$this->silenced=false;
 			return $res;
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
