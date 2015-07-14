@@ -183,7 +183,8 @@ class Emulator
 		echo "Shutting down...",PHP_EOL;
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
-			echo "Calling shutdown function {$shutdown_function}...\n"	;
+			echo "Calling shutdown function "	;
+			print_r($shutdown_function);
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
 	}
@@ -506,8 +507,8 @@ class Emulator
 				return (bool)$this->evaluate_expression($node->expr);
 			elseif ($node instanceof Node\Expr\Cast\String_)
 				return (string)$this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\Cast\Object_)
-				return (object)$this->evaluate_expression($node->expr);
+			// elseif ($node instanceof Node\Expr\Cast\Object_)
+			// 	return (object)$this->evaluate_expression($node->expr);
 			else
 				$this->error("Unknown cast: ",$node);
 		}

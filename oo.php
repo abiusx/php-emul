@@ -26,9 +26,16 @@ class EmulatorObjectProperty
 }
 class EmulatorObject
 {
+	/**
+	 * Array of keys as propname, values as EmulatorObjectProperty
+	 * @var [type]
+	 */
 	public $properties;
+	/**
+	 * @var string
+	 */
 	public $classname;
-	public function __construct($classname,$properties)
+	public function __construct($classname,$properties=[])
 	{
 		$this->classname=$classname;
 		$this->properties=$properties;
@@ -301,10 +308,30 @@ class OOEmulator extends Emulator
 			else
 				return $var instanceof $classname;
 		}		
+		elseif ($node instanceof Node\Expr\Cast\Object_)
+				return $this->to_object($this->evaluate_expression($node->expr));
 		else
 			return parent::evaluate_expression($node);
 
 	}	
+	/**
+	 * Converts any value to object
+	 * @param  mixed $val [description]
+	 * @return EmulatorObject      [description]
+	 */
+	protected function to_object($val)
+	{
+		$obj=new EmulatorObject("stdClass");
+		if (is_array($val))
+		{
+			foreach ($val as $k=>$v)
+				$obj->properties[$k]=new EmulatorObjectProperty($k,$v);
+		}
+		else
+			$obj->properties['scalar']=$val;
+
+		return $obj;
+	}
 	protected function real_class($classname)
 	{
 		if ($classname==="self")
@@ -379,6 +406,11 @@ class OOEmulator extends Emulator
 		{
 			// print_r($node);
 			$var=&$this->reference($node->var);
+			if (!($var instanceof EmulatorObject))
+			{
+				$this->error("Trying to get property of non-object",$var);
+				return null;
+			}
 			$property_name=$this->name($node->name);
 			if (!array_key_exists($property_name, $var->properties))
 				if (!$create)
