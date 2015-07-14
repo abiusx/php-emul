@@ -9,7 +9,7 @@ class Emulator
 	 * Configuration: inifite loop limit
 	 * @var integer
 	 */
-	public $infinite_loop	=	100; 
+	public $infinite_loop	=	10; 
 	/**
 	 * Configuration: whether to output directly, or just store it in $output
 	 * @var boolean
@@ -384,18 +384,21 @@ class Emulator
 	{
 		if (isset($this->functions[$name])) //user function
 			return $this->run_function($name,$args); 
-		elseif (function_exists($name)) //internal or mocked internal function
+		elseif (function_exists($name)) //core function
 		{
 			$argValues=[];
 			foreach ($args as &$arg)
 			{
-				if (is_object($arg) and $arg->value instanceof Node\Expr\Variable) //byref 
-					$argValues[]=&$this->reference($arg->value);
-				else 
-					if ($arg instanceof Node) //byval
+				if ($arg instanceof Node)
+				{
+					//TODO: use another means to check if its byref, this is not right
+					if ($arg->value instanceof Node\Expr\Variable or $arg->value instanceof Node\Expr\ArrayDimFetch) //byref 
+						$argValues[]=&$this->reference($arg->value);
+					else //byval
 						$argValues[]=$this->evaluate_expression($arg->value);
-					else 
-						$argValues[]=&$arg; //byref or byval direct value (not Node)
+				}
+				else //direct value
+					$argValues[]=&$arg; //byref or byval direct value (not Node)
 			}
 			if (array_key_exists($name, $this->mock_functions)) //mocked
 			{
@@ -1299,7 +1302,7 @@ class Emulator
 }
 
 
-
+//this loads all functions, so that auto-mock will replace them
 foreach (glob(__DIR__."/mocks/*.php") as $mock)
 	require_once $mock;
 
