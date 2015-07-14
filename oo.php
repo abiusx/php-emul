@@ -13,7 +13,7 @@ class EmulatorObjectProperty
 	public $name;
 	public $value;
 	public $visibility;
-	function __construct($name,$value,$visibility=Visibility_Public)
+	function __construct($name,$value=null,$visibility=Visibility_Public)
 	{
 		$this->name=$name;
 		$this->value=$value;
@@ -380,8 +380,12 @@ class OOEmulator extends Emulator
 			// print_r($node);
 			$var=&$this->reference($node->var);
 			$property_name=$this->name($node->name);
-			if (!array_key_exists($property_name, $var->properties))
+			if (!$create and !array_key_exists($property_name, $var->properties))
+			{
 				$this->notice("Undefined property: {$var->classname}::\${$property_name}");
+				return null;
+			}
+			$var->properties[$property_name]=new EmulatorObjectProperty($property_name);
 			return $var->properties[$property_name]->value;
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
