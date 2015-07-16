@@ -1,4 +1,5 @@
 <?php
+
 echo "Isset and Empty test:",PHP_EOL;
 echo "There should be a notice about p on line 13",PHP_EOL;
 echo "Results should be tf\tff\tft\ttftf\ttftt\ttfft",PHP_EOL;

@@ -213,7 +213,10 @@ class OOEmulator extends Emulator
 	protected function run_method(&$object,$method_name,$args)
 	{
 		if (!($object instanceof EmulatorObject))
-			$this->error("Inconsistency in object oriented emulation.",$object);
+		{
+			$this->error("Inconsistency in object oriented emulation. A malformed object detected.",$object);
+			return null;
+		}
 		$class_name=$object->classname;
 		$old_this=$this->this;
 		$this->this=&$object;
@@ -232,12 +235,6 @@ class OOEmulator extends Emulator
 		{
 			$object=&$this->reference($node->var,false);
 			$method_name=$this->name($node->name);
-			if ($method_name=='add_global_groups')
-			{
-				// var_dump($node);
-				print_r($this->variables);	
-				var_dump($object);
-			}
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
 		}
@@ -475,6 +472,6 @@ $x=new OOEmulator;
 // $x->start("wordpress/index.php");
 $x->start("wordpress/wp-admin/install.php");
 // $x->start("sample-oo.php");
-echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
+// echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
 // var_dump(substr($x->output,-200));
-echo(($x->output));
+// echo(($x->output));

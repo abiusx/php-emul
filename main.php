@@ -164,10 +164,10 @@ class Emulator
 	{
 		foreach ($GLOBALS as $k=>$v)
 		{
-			if ($k=="GLOBALS") continue; 
+			// if ($k=="GLOBALS") continue; 
 			$this->super_globals[$k]=$v;
 		}
-		$this->super_globals["GLOBALS"]=&$this->super_globals;
+		// $this->super_globals["GLOBALS"]=&$this->super_globals;
 		// $this->variables['_POST']=isset($_POST)?$_POST:array();
 		if ($this->auto_mock)
 		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives internal and user subarrays.
@@ -192,18 +192,6 @@ class Emulator
 			print_r($shutdown_function);
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
-	}
-	/**
-	 * Returns global variables, i.e those that are defined in the global scope
-	 * either first set on the stack, or current variables if no stack
-	 * @return array byref
-	 */
-	protected function &globals()
-	{
-		if (count($this->variable_stack))
-			return $this->variable_stack[0];
-		else
-			return $this->variables;
 	}
 	/**
 	 * The emulator error handler (in case an error happens in the emulation, that is not handled)
@@ -892,12 +880,17 @@ class Emulator
 			}
 			elseif ($node == "GLOBALS")
 			{
-				$key=$node;
-				return $this->globals();
+				#TODO: find a better way to implement GLOBALS. null key typically means not found, except this case!
+				#unset($GLOBALS['x']) might fail
+				#this is the only instance where NULL key actually means its valid response! (see reference() for details)
+				$key=null;
+				if (count($this->variable_stack))
+					return $this->variable_stack[0];
+				else
+					return $this->variables;
 			}
 			elseif (array_key_exists($node, $this->super_globals)) //super globals
 			{
-
 				$key=$node;
 				return $this->super_globals;
 			}
@@ -1198,7 +1191,7 @@ class Emulator
 				}
 				$valueVar=&$this->reference($node->valueVar);
 				$this->silenced--; //create two variables
-				
+
 				$this->loop++;
 				foreach ($list as $k=>$v)
 				{
@@ -1327,12 +1320,10 @@ class Emulator
 				foreach ($node->vars as $var)
 				{
 					$name=$this->name($var->name);
-					if (!array_key_exists($name,$this->globals()))
-					{
-						$this->globals()[$name]=null;
-						// $this->notice("Undefined index '{$name}' in globals",$this->globals()); //no notice needed here
-					}
-					$this->variables[$name]=&$this->globals()[$name];
+					$base=&$this->base("GLOBALS",$key); //null key is returned with globals
+					if (!isset($base[$name]))
+						$base[$name]=null; //create
+					$this->variables[$name]=&$base[$name];
 				}
 			}
 			elseif ($node instanceof Node\Expr)
