@@ -480,10 +480,12 @@ class Emulator
 				{
 					if ($var instanceof Node\Expr\Variable)
 					{
-						$var=&$this->reference($var);
-						$var=current($resArray);
+						$v=&$this->reference($var);
+						$v=current($resArray);
 						next($resArray);
 					}
+					else
+						$this->error("List() should have a variable as argument.",$node);
 				}
 			}
 			else
@@ -1429,8 +1431,8 @@ foreach (glob(__DIR__."/mocks/*.php") as $mock)
 if (isset($argc) and $argv[0]==__FILE__)
 {
 	$x=new Emulator;
-	// $x->start("sample-stmts.php");
-	$x->start("sample-isset-empty.php");
+	$x->start("sample-stmts.php");
+	// $x->start("sample-isset-empty.php");
 	// echo(($x->output));
 }
 // $x->start("yapig-0.95b/index.php");

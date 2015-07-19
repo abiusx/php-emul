@@ -1,4 +1,10 @@
 <?php
+$a=[1,2];
+list($x,$y)=$a;
+
+var_dump($x);
+var_dump($y);
+die();
 echo "Testing eval...",PHP_EOL;
 eval("echo 'hello there!',PHP_EOL;");
 
