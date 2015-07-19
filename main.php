@@ -476,17 +476,19 @@ class Emulator
 				if (count($resArray)!=count($node->var->vars))
 					$this->warning("list() used but number of arguments do not match");
 				reset($resArray);
+				$outArray=[];
 				foreach ($node->var->vars as $var)
 				{
 					if ($var instanceof Node\Expr\Variable)
 					{
 						$v=&$this->reference($var);
-						$v=current($resArray);
+						$outArray[]=($v=current($resArray));
 						next($resArray);
 					}
 					else
 						$this->error("List() should have a variable as argument.",$node);
 				}
+				return $outArray;
 			}
 			else
 			{
