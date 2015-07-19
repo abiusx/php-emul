@@ -175,11 +175,9 @@ class OOEmulator extends Emulator
 		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
 			echo "\tRunning {$class_name}::{$method_name}()...",PHP_EOL;
-		$last_file=$this->current_file;
 		$last_method=$this->current_method;
 		$last_class=$this->current_class;
 		$this->current_method=$method_name;
-		$this->current_file=$this->classes[$class_name]->file;
 		$this->current_class=$class_name;
 		$flag=false;
 		foreach ($this->ancestry($class_name) as $class)
@@ -188,7 +186,9 @@ class OOEmulator extends Emulator
 			{
 				$last_self=$this->self;
 				$this->self=$class;
-				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class));
+				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
+				$last_file=$this->current_file;
+				$this->current_file=$this->classes[$class_name]->file;
 				$res=$this->run_sub($this->classes[$class]->methods[$method_name],$args);
 				array_pop($this->trace);
 				$this->self=$last_self;

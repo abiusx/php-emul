@@ -20,7 +20,7 @@ class Emulator
 	 * Configuration: Verbose messaging or not
 	 * @var boolean
 	 */
-	public $verbose			=	false;
+	public $verbose			=	true;
 	/**
 	 * Whether to automatically mock functions or not
 	 * If true, on init emulator will mock all internal php functions with their mocked version.
@@ -223,8 +223,8 @@ class Emulator
 		}
 
 		echo "PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)",PHP_EOL;
-		if ($this->verbose)
-			debug_print_backtrace();
+		// if ($this->verbose)
+		// 	debug_print_backtrace();
 		if ($fatal) 
 			$this->terminated=true;
 		return true;
@@ -364,12 +364,15 @@ class Emulator
 		if ($this->verbose)
 			echo "\tRunning {$name}()...",PHP_EOL;
 		
-		$last_file=$this->current_file;
 		$last_function=$this->current_function;
 		$this->current_function=$name;
+
+		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
+		array_push($this->trace, (object)array("type"=>"function","name"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
+
+		$last_file=$this->current_file;
 		$this->current_file=$this->functions[$name]->file;
 
-		array_push($this->trace, (object)array("type"=>"function","name"=>$name));
 		$res=$this->run_sub($this->functions[$name],$args);
 		array_pop($this->trace);
 
@@ -398,7 +401,11 @@ class Emulator
 				{
 					//TODO: use another means to check if its byref, this is not right
 					if ($arg->value instanceof Node\Expr\Variable or $arg->value instanceof Node\Expr\ArrayDimFetch) //byref 
-						$argValues[]=&$this->reference($arg->value,false); //should not create the variable
+					{
+						$this->silenced++;	
+						$argValues[]=&$this->reference($arg->value,true); //should create the variable, like byref return vars
+						$this->silenced--;	
+					}
 					else //byval
 						$argValues[]=$this->evaluate_expression($arg->value);
 				}
@@ -435,6 +442,12 @@ class Emulator
 	{
 		$node=$ast;
 		$this->current_node=$node;
+		if ($node->getLine()!=$this->current_line)
+		{
+			$this->current_line=$node->getLine();
+			if ($this->verbose) 
+				echo "\t\tLine {$this->current_line}",PHP_EOL;
+		}	
 		if (false);
 		elseif (is_array($node))
 			die("array node!");
@@ -807,7 +820,7 @@ class Emulator
 			{
 				return $this->new_object($classname,$node->args); //user function
 			}
-			else
+			elseif (class_exists($classname))
 			{
 				$argValues=[];
 				foreach ($node->args as $arg)
@@ -820,6 +833,10 @@ class Emulator
 				$output=ob_get_clean();
 				$this->output($output);
 				return $ret;
+			}
+			else
+			{
+				$this->error("Class '{$classname}' not found",$node);
 			}
 		}
 		else
@@ -882,6 +899,7 @@ class Emulator
 			{
 				#TODO: find a better way to implement GLOBALS. null key typically means not found, except this case!
 				#unset($GLOBALS['x']) might fail
+				#also $GLOBALS['_GET'] will fail
 				#this is the only instance where NULL key actually means its valid response! (see reference() for details)
 				$key=null;
 				if (count($this->variable_stack))
