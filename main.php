@@ -20,7 +20,7 @@ class Emulator
 	 * Configuration: Verbose messaging or not
 	 * @var boolean
 	 */
-	public $verbose			=	true;
+	public $verbose			=	false;
 	/**
 	 * Whether to automatically mock functions or not
 	 * If true, on init emulator will mock all internal php functions with their mocked version.
@@ -349,6 +349,7 @@ class Emulator
 		}
 		$this->push();
 		$this->variables=$function_variables;
+		end($this->trace)->args=$function_variables;
 		$res=$this->run_code($function->code);
 		$this->pop();
 		return $res;
