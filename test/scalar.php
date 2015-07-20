@@ -13,8 +13,10 @@ $d = 5;		# LNumber
 assert(is_scalar($d));
 $l = 5.2;	# DNumber
 assert(is_scalar($l));
-$e = "this is an encapsed string with $s";
+$j = "mamad";
+$e = "this is an encapsed string with $j";
 assert(is_scalar($e));
+assert("$e" == "this is an encapsed string with mamad");
 
 
 # -------- Magic Consts --------
@@ -28,7 +30,7 @@ assert(is_scalar(__NAMESPACE__));
 assert(is_scalar(__TRAIT__));
 # -> Although these are all unset, (func, class, method and trait), but php asserts equal, while the emulator does not, and throws exception.
 
-assert(__LINE__ == 31);			// Use an enter key and watch the sky falling on your head
+assert(__LINE__ == 33);			// Use an enter key and watch the sky falling on your head
 
 function mamad(){
 	assert(__FUNCTION__ == __NAMESPACE__ . '\mamad');
@@ -53,5 +55,3 @@ $mam -> ass_ert();
 $mam -> asse_rt();
 
 //assert(__NAMESPACE__ == 'mam_ad');		# TODO: uncomment this line -- note: namespace stmt is not declared
-
-#TODO: assert for trait, what is trait aslan? :D
