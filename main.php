@@ -952,11 +952,6 @@ class Emulator
 			$indexes=array_reverse($indexes);
 
 			$base=&$this->reference($t,$create);
-			if (!is_array($base)) //TODO: array interface?
-			{
-				$key=null;	
-				return $this->null_reference;
-			}
 
 			$lastIndex=array_pop($indexes);
 
