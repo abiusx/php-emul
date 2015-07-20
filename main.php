@@ -971,6 +971,13 @@ class Emulator
 				}
 				$base=&$base[$index];
 			}
+			//TODO: code repetition
+			if ($lastIndex===NULL)
+			{
+				$base[]=NULL;
+				end($base);
+				$lastIndex=key($base);
+			}
 			$key=$lastIndex;
 			return $base;
 		}
