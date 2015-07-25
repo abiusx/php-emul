@@ -50,7 +50,7 @@ Class Mamad {
 		assert(__METHOD__ == __CLASS__ . '::ass_ert');
 	}
 }
-$mam = new Mamad();
+$mam = new MaMad(); # class names are case insensitive
 $mam -> ass_ert();
 $mam -> asse_rt();
 
