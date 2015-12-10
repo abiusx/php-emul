@@ -1,6 +1,5 @@
 <?php
 echo "Testing array append...",PHP_EOL;
-$t=array();
 $t[]=2;
 var_dump($t);
 $z=array();
@@ -27,7 +26,7 @@ function f2()
 f2();
 echo "5=",$something,PHP_EOL;
 
-
+unset($t);
 $t[0][1][2][3]=4;
 echo $t[0][1][2][3],"=4",PHP_EOL;
 echo "Testing static variables...",PHP_EOL;
