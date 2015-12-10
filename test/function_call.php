@@ -1,4 +1,13 @@
 <?php
+function randomiz(){
+	return 4;	// guarrantied
+}
+
+assert(raNDoMiz() === 4);	// php treats case insensitive with funcs
+							// #bug
+
+assert(Md5("1") == 'c4ca4238a0b923820dcc509a6f75849b');
+							
 function in_file_func($a, &$b){
 	echo $a;
 	$b++;
