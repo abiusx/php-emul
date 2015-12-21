@@ -958,7 +958,6 @@ class Emulator
 			$indexes=array_reverse($indexes);
 			$base=&$this->reference($t,$create);
 
-			#FIXME: array element creation fails here
 			$lastIndex=array_pop($indexes);
 			foreach ($indexes as $index)
 			{
