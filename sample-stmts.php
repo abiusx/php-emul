@@ -136,7 +136,7 @@ somefunc();
 
 
 $s=0;
-for ($i=0;$i<100;++$i)
+for ($i=0;$i<10;++$i)
 {
 	if ($i&1)
 		continue;
@@ -221,3 +221,16 @@ for ($k=0;$k<2;++$k)
 	}
 	echo "!";
 }
+echo PHP_EOL;
+
+$GLOBALS['abc']='hello';
+echo "hello=",$abc,PHP_EOL;
+
+function temp()
+{
+	global $abc;
+	$abc.="a";
+	echo $abc,"=helloa",PHP_EOL;
+}
+temp();
+echo "helloa=",$abc,PHP_EOL;
