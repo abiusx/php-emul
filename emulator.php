@@ -4,8 +4,7 @@ use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 #
-class EmulatorBase {}
-class Emulator extends EmulatorBase
+class Emulator
 {	
 	/**
 	 * Configuration: inifite loop limit
@@ -37,8 +36,14 @@ class Emulator extends EmulatorBase
 	 * @var string
 	 */
 	protected $current_node,$current_file,$current_line;
-	protected $current_function;
+	protected $current_function,$current_statement_index;
 	
+	/**
+	 * Number of statements executed so far
+	 * @var integer
+	 */
+	public $statement_count	=	0;
+
 	/**
 	 * The list of included files. used by *_once include functions as well
 	 * @var array
@@ -874,19 +879,19 @@ class Emulator extends EmulatorBase
 	 */
 	protected function is_set($var)
 	{
-		$this->base($var,$key,false);
+		$this->symbol_table($var,$key,false);
 		return $key!==null;
 	}
 	/**
-	 * Returns the base array that the variable exists in, as well as the key in that array for the variable
+	 * Returns the base array (symbol table) that the variable exists in, as well as the key in that array for the variable
 	 * Used to access variables by reference (in reference() method)
 	 * 
 	 * @param  Node  $node   
-	 * @param  byref  &$key  the key, which will be null if not found
+	 * @param  byref  &$key  the key of the element, which will be null if not found
 	 * @param  boolean $create 
-	 * @return reference          reference to the array (check key first before accessing this)
+	 * @return reference          reference to the symbol table array (check key first before accessing this)
 	 */
-	protected function &base($node,&$key,$create=true)
+	protected function &symbol_table($node,&$key,$create=true)
 	{
 		if ($node===null)
 		{
@@ -951,7 +956,6 @@ class Emulator extends EmulatorBase
 				$t=$t->var;
 			}
 			$indexes=array_reverse($indexes);
-
 			$base=&$this->reference($t,$create);
 
 			#FIXME: array element creation fails here
@@ -965,6 +969,7 @@ class Emulator extends EmulatorBase
 					end($base);
 					$index=key($base);
 				}
+
 				$base=&$base[$index];
 			}
 			//TODO: code repetition
@@ -974,12 +979,16 @@ class Emulator extends EmulatorBase
 				end($base);
 				$lastIndex=key($base);
 			}
+			//create the last element if not exists and create mode, 
+			//e.g a[1][2][3] will create a[1][2] as base and 3 as key, but a[1][2] [3] does not exist and needs to be created
+			elseif ($create and !isset($base[$lastIndex]))
+				$base[$lastIndex]=null; 
 			$key=$lastIndex;
 			return $base;
 		}
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			return $this->base($node->name,$key,$create);
+			return $this->symbol_table($node->name,$key,$create);
 		}
 		else
 		{
@@ -998,14 +1007,14 @@ class Emulator extends EmulatorBase
 	 */
 	protected function &reference($node,$create=true)
 	{
-		$base=&$this->base($node,$key,$create);
+
+		$base=&$this->symbol_table($node,$key,$create);
 		if ($key===null) //not found or GLOBALS
 			return $base;
 		elseif (is_array($base))
 			return $base[$key];
 		else
 		{
-
 			$this->error("Could not retrive reference",$node);
 		}
 	}
@@ -1086,9 +1095,14 @@ class Emulator extends EmulatorBase
 	 */
 	function start($file,$chdir=true)
 	{
-		$this->entry_file=$file;
-		chdir(dirname($file));
-		$file=basename($file);
+		$this->entry_file=realpath($file);
+		if (!$this->entry_file)
+		{
+			echo "File not found '{$file}'.",PHP_EOL;
+			return false;
+		}
+		chdir(dirname($this->entry_file));
+		$file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
 		$res=$this->run_file($file);
@@ -1104,13 +1118,20 @@ class Emulator extends EmulatorBase
 	 * @param  int $instruction index of the instruction in the file
 	 * @return mixed
 	 */
-	function resume($file,$instruction)
+	function resume()
 	{
-		chdir(dirname($file));
-		$file=basename($file);
+		chdir(dirname($this->entry_file));
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
-		$res=$this->run_file($file);
+
+		echo "Resuming from {$this->current_file}:{$this->current_line} instruction {$this->current_statement_index}...",PHP_EOL;
+		$code=file_get_contents($this->current_file);
+		$ast=$this->parser->parse($code);
+
+		$res=$this->run_code($ast,$this->current_statement_index);
+		if ($this->return)
+			$this->return=false;
+		
 		restore_error_handler();
 		$this->shutdown();
 		return $res;
@@ -1300,7 +1321,7 @@ class Emulator extends EmulatorBase
 			{
 				foreach ($node->vars as $var)
 				{
-					$base=&$this->base($var,$index,false);
+					$base=&$this->symbol_table($var,$index,false);
 					if ($index)
 						unset($base[$index]);
 				}
@@ -1371,7 +1392,7 @@ class Emulator extends EmulatorBase
 				foreach ($node->vars as $var)
 				{
 					$name=$this->name($var->name);
-					$base=&$this->base("GLOBALS",$key); //null key is returned with globals
+					$base=&$this->symbol_table("GLOBALS",$key); //null key is returned with globals
 					if (!isset($base[$name]))
 						$base[$name]=null; //create
 					$this->variables[$name]=&$base[$name];
@@ -1414,30 +1435,92 @@ class Emulator extends EmulatorBase
 	 * It basically loops over statements and runs them.
 	 * @param  Node $ast 
 	 */
-	protected function run_code($ast)
+	protected function run_code($ast,$start_index=null)
 	{
 		//first pass, get all definitions
+		if ($start_index===null)
 		foreach ($ast as $node)
 			$this->get_declarations($node);
 
+
 		//second pass, execute
-		foreach ($ast as $node)
+		foreach ($ast as $index=>$node)
 		{
+			if ($index<$start_index) 
+				continue;
 			$this->current_node=$node;
+			$this->current_statement_index=$index;
+
 			if ($node->getLine()!=$this->current_line)
 			{
 				$this->current_line=$node->getLine();
 				if ($this->verbose) 
 					echo "\t\tLine {$this->current_line}",PHP_EOL;
 			}
+			//comment meta-commands to the emulator. 
+			// if ($node->hasAttribute("comments") 
+			// 	and $index!==$start_index) //don't retake commands after resume
+			// {
+			// 	$comments=	$node->getAttribute("comments");
+			// 	foreach ($comments as $comment)
+			// 		if (strpos($comment->getText(),"emul::")!==false)
+			// 			if ($this->comment_command($comment->getText())) return;
+			// }
+			$this->statement_count++;
+			// if ($this->statement_count%200==0)
+			// 	$this->save_state();
 			$this->run_statement($node);
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;
 			if ($this->break) break;
 			if ($this->continue) break;
 		}
+		$this->current_statement_index=null;
 	}	
+	// /**
+	//  * Process commands sent to the emulator using comments
+	//  * @param  string $comment 
+	//  */
+	// function comment_command($comment)
+	// {
+	// 	if (strpos($comment,"emul::pause()")!==false)
+	// 	{
+	// 		echo "Emulator meta-command found: emul::pause(). Saving state...",PHP_EOL;
+	// 		$this->save_state();
+	// 	}
+	// }
+	// function save_state()
+	// {
+	// 	require_once __DIR__."/state.php";
+	// 		$state= new EmulatorState();
+	// 		$file=$state->save($this);
+	// 		echo "State saved into ",$file,PHP_EOL;
+	// 		die(0);
+	// }
 	function __destruct()
 	{
 	}
+}
+
+//this loads all functions, so that auto-mock will replace them
+foreach (glob(__DIR__."/mocks/*.php") as $mock)
+	require_once $mock;
+
+// $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
+
+if (isset($argc) and realpath($argv[0])==__FILE__)
+{
+	$x=new Emulator;
+	$entry_file="sample-stmts.php";
+	// $entry_file="wordpress/index.php";
+
+	$x->start($entry_file);
+	
+	// $x->start("sample-isset-empty.php");
+	// echo(($x->output));
+}
+die(0);
+if (isset($argc) and $argv[0]==__FILE__)
+{
+	die("Should not run this directly.".PHP_EOL);
 }
