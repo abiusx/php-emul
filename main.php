@@ -2,13 +2,6 @@
 
 require_once "emulator.php";
 
-//this loads all functions, so that auto-mock will replace them
-foreach (glob(__DIR__."/mocks/*.php") as $mock)
-	require_once $mock;
-
-
-
-
 
 
 

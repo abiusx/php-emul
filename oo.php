@@ -382,7 +382,7 @@ class OOEmulator extends Emulator
 			parent::run_statement($node);
 	}
 
-	protected function &base($node,&$key,$create=true)
+	protected function &symbol_table($node,&$key,$create=true)
 	{
 		if ($node instanceof Node\Expr\PropertyFetch)
 		{
@@ -391,7 +391,7 @@ class OOEmulator extends Emulator
 			{
 				$this->error("Trying to get property of non-object",$var);
 				$key=null;
-				return $this->null_reference;
+				return $this->null_reference=null;
 			}
 			$property_name=$this->name($node->name);
 
@@ -430,10 +430,10 @@ class OOEmulator extends Emulator
 			else
 				$this->error("Class '{$classname}' not found");
 			$key=null;
-			return $this->null_reference;
+			return $this->null_reference=null;
 		}
 		else
-			return parent::base($node,$key,$create);
+			return parent::symbol_table($node,$key,$create);
 	}
 	protected function &reference($node,$create=true)
 	{
@@ -443,7 +443,7 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\PropertyFetch or $node instanceof Node\Expr\StaticPropertyFetch)
 		{
-			$base=&$this->base($node,$key,$create);
+			$base=&$this->symbol_table($node,$key,$create);
 			return $base[$key]->value;
 		}
 		else

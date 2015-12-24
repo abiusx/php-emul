@@ -3,14 +3,14 @@ require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
-#
+#FIXME: redo the whole symbol table thing. have it return the actual variable old style
 class Emulator
 {	
 	/**
 	 * Configuration: inifite loop limit
 	 * @var integer
 	 */
-	public $infinite_loop	=	10; 
+	public $infinite_loop	=	100; 
 	/**
 	 * Configuration: whether to output directly, or just store it in $output
 	 * @var boolean
@@ -897,7 +897,7 @@ class Emulator
 		{
 			$this->notice("Undefined variable: {$node}");	
 			$key=null;
-			return $this->null_reference;
+			return $this->null_reference=null;
 		}
 		elseif (is_string($node))
 		{
@@ -935,7 +935,7 @@ class Emulator
 				else
 				{
 					$key=null;
-					return $this->null_reference;
+					return $this->null_reference=null;
 				}
 			}
 		}
@@ -957,6 +957,11 @@ class Emulator
 			}
 			$indexes=array_reverse($indexes);
 			$base=&$this->reference($t,$create);
+			if ($base===null) //variable not exists
+			{
+				$key=null;
+				return $this->null_reference=null;
+			}
 
 			$lastIndex=array_pop($indexes);
 			foreach ($indexes as $index)
@@ -982,6 +987,13 @@ class Emulator
 			//e.g a[1][2][3] will create a[1][2] as base and 3 as key, but a[1][2] [3] does not exist and needs to be created
 			elseif ($create and !isset($base[$lastIndex]))
 				$base[$lastIndex]=null; 
+			if ($lastIndex=="siteurl" and $base==null)
+			{
+				print_r($indexes);
+				var_dump($base);
+				var_dump($key);
+			}
+
 			$key=$lastIndex;
 			return $base;
 		}
@@ -993,7 +1005,7 @@ class Emulator
 		{
 			$this->error("Can not find variable reference of this node type.",$node);
 			$key=null;
-			return $this->null_reference;
+			return $this->null_reference=null;
 		}
 	}
 	/**
@@ -1500,25 +1512,13 @@ class Emulator
 	{
 	}
 }
-
 //this loads all functions, so that auto-mock will replace them
 foreach (glob(__DIR__."/mocks/*.php") as $mock)
 	require_once $mock;
 
-// $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 
-if (isset($argc) and realpath($argv[0])==__FILE__)
-{
-	$x=new Emulator;
-	$entry_file="sample-stmts.php";
-	// $entry_file="wordpress/index.php";
 
-	$x->start($entry_file);
-	
-	// $x->start("sample-isset-empty.php");
-	// echo(($x->output));
-}
-die(0);
+
 if (isset($argc) and $argv[0]==__FILE__)
 {
 	die("Should not run this directly.".PHP_EOL);
