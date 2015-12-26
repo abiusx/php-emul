@@ -44,6 +44,11 @@ class EmulatorObject
 }
 class OOEmulator extends Emulator
 {
+	function __construct()
+	{
+		parent::__construct();
+		$this->this_hack=array('this'=>&$this->this);
+	}
 	public $classes=[];
 	protected $current_class,$current_method,$current_trait;
 	protected $current_namespace;
@@ -233,7 +238,7 @@ class OOEmulator extends Emulator
 			;
 		elseif ($node instanceof Node\Expr\MethodCall)
 		{
-			$object=&$this->reference($node->var,false);
+			$object=&$this->variable_reference($node->var);
 			$method_name=$this->name($node->name);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
@@ -252,12 +257,12 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\PropertyFetch)
 		{
-			$var=&$this->reference($node);
+			$var=&$this->variable_reference($node);
 			return $var;
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
 		{
-			$var=&$this->reference($node,false); //do not create the property in static
+			$var=&$this->variable_reference($node); //do not create the property in static
 			return $var;
 		}
 		elseif ($node instanceof Node\Expr\ClassConstFetch)
@@ -273,7 +278,7 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\Clone_)
 		{
-			$var=&$this->reference($node->expr,false);
+			$var=$this->variable_get($node->expr);
 			$var2=clone $var;
 			// $var2->properties=[];
 			foreach ($var->properties as $k=>$property)
@@ -386,12 +391,15 @@ class OOEmulator extends Emulator
 	{
 		if ($node instanceof Node\Expr\PropertyFetch)
 		{
-			$var=&$this->reference($node->var,$create);
+			$base=&$this->symbol_table($node->var,$key2,$create);
+			if ($key2===null)
+				return $this->null_reference=$key=null;
+				
+			$var=&$base[$key2];
 			if (!($var instanceof EmulatorObject))
 			{
 				$this->error("Trying to get property of non-object",$var);
-				$key=null;
-				return $this->null_reference=null;
+				return $this->null_reference=$key=null;
 			}
 			$property_name=$this->name($node->name);
 
@@ -399,10 +407,7 @@ class OOEmulator extends Emulator
 			{
 				$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 				if (!$create)
-				{
-					$key=null;	
-					return $this->null_reference;
-				}
+					return $this->null_reference=$key=null;
 				else //dynamic properties, on all classes (FIXME: only notice if not stdClass?)
 					$var->properties[$property_name]=new EmulatorObjectProperty($property_name);
 			}
@@ -429,25 +434,15 @@ class OOEmulator extends Emulator
 			}
 			else
 				$this->error("Class '{$classname}' not found");
-			$key=null;
-			return $this->null_reference=null;
+			return $this->null_reference=$key=null;
+		}
+		elseif ($node instanceof Node\Expr\Variable and is_string($node->name) and $node->name=="this") //$this
+		{
+			$key='this';
+			return $this->this_hack;
 		}
 		else
 			return parent::symbol_table($node,$key,$create);
-	}
-	protected function &reference($node,$create=true)
-	{
-		if ($node instanceof Node\Expr\Variable and is_string($node->name) and $node->name=="this") //$this
-		{
-			return $this->this;
-		}
-		elseif ($node instanceof Node\Expr\PropertyFetch or $node instanceof Node\Expr\StaticPropertyFetch)
-		{
-			$base=&$this->symbol_table($node,$key,$create);
-			return $base[$key]->value;
-		}
-		else
-			return parent::reference($node,$create);
 	}
 	public function call_function($name,$args)
 	{

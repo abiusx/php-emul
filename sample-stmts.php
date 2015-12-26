@@ -1,5 +1,5 @@
 <?php
-echo "Testing array append...",PHP_EOL;
+echo "Testing array append... Should get array(2) and then array(2=>array(array(3)))",PHP_EOL;
 $t[]=2;
 var_dump($t);
 $z=array();
@@ -7,7 +7,7 @@ $z[2][][]=3;
 var_dump($z);
 
 
-echo "Testing List...",PHP_EOL;
+echo "Testing List... Should get array(1,2) then int(1) and int(2)",PHP_EOL;
 $a=[1,2];
 var_dump(list($x,$y)=$a);
 
@@ -70,7 +70,7 @@ function f($x)
 		echo "Match",PHP_EOL;
 		break;
 		case 7:
-		echo "No match! should not output.",PHP_EOL;
+		echo "No match!",PHP_EOL;
 		default:
 		echo "Default",PHP_EOL;
 	}
@@ -142,7 +142,7 @@ for ($i=0;$i<10;++$i)
 		continue;
 	$s++;
 }
-echo $s," should be 50",PHP_EOL;
+echo $s," should be 5",PHP_EOL;
 
 const ABC="abc";
 echo ABC, " should be abc",PHP_EOL;

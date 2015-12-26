@@ -159,6 +159,8 @@ class Emulator
 	public $silenced=0;
 	function __construct()
 	{
+		$this->variable_stack['global']=array();
+		$this->variables=&$this->variable_stack['global'];
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
     	$this->init();
 	}
@@ -295,8 +297,14 @@ class Emulator
 	 */
 	protected function push()
 	{
-		array_push($this->variable_stack, $this->variables);
-		$this->variables=[];
+		array_push($this->variable_stack,array());
+		$this->_reference_variables_to_stack();
+	}
+	private function _reference_variables_to_stack()
+	{
+		unset($this->variables);
+		end($this->variable_stack);
+		$this->variables=&$this->variable_stack[key($this->variable_stack)];
 	}
 	/**
 	 * Pop off the variable stack
@@ -304,7 +312,8 @@ class Emulator
 	 */
 	protected function pop()
 	{
-		$this->variables=array_pop($this->variable_stack);
+		array_pop($this->variable_stack);
+		$this->_reference_variables_to_stack();
 	}
 	/**
 	 * Runs a procedure (sub).
@@ -340,7 +349,7 @@ class Emulator
 				{
 					$argVal=current($args)->value;
 					if ($param->byRef)	// byref handle
-						$function_variables[$this->name($param)]=&$this->reference($argVal);
+						$function_variables[$this->name($param)]=&$this->variable_reference($argVal);
 					else //byval
 						$function_variables[$this->name($param)]=$this->evaluate_expression($argVal);
 				}
@@ -410,7 +419,9 @@ class Emulator
 					if ($arg->value instanceof Node\Expr\Variable or $arg->value instanceof Node\Expr\ArrayDimFetch) //byref 
 					{
 						$this->silenced++;	
-						$argValues[]=&$this->reference($arg->value,true); //should create the variable, like byref return vars
+						if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
+							$this->variable_set($arg->value);
+						$argValues[]=&$this->variable_reference($arg->value); 
 						$this->silenced--;	
 					}
 					else //byval
@@ -466,16 +477,13 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Expr\AssignRef)
 		{
-			$this->silenced++;
 			// $originalVar=$this->name($node->expr);
-			$originalVar=&$this->reference($node->expr);
-			$var=&$this->reference($node->var);
+			$originalVar=&$this->variable_reference($node->expr);
+			$this->variable_set($node->var,$originalVar);
 			$var=$originalVar;
-			$this->silenced--;
 		}
 		elseif ($node instanceof Node\Expr\Assign)
 		{
-			$this->silenced++;
 			if ($node->var instanceof Node\Expr\List_) //list(x,y)=f()
 			{
 				$resArray=$this->evaluate_expression($node->expr);
@@ -487,8 +495,7 @@ class Emulator
 				{
 					if ($var instanceof Node\Expr\Variable)
 					{
-						$v=&$this->reference($var);
-						$outArray[]=($v=current($resArray));
+						$outArray[]=$this->variable_set($var,current($resArray));
 						next($resArray);
 					}
 					else
@@ -498,15 +505,13 @@ class Emulator
 			}
 			else
 			{
-				$var=&$this->reference($node->var);
-				$this->silenced--;
-				return $var=$this->evaluate_expression($node->expr);
+				// $var=&$this->variable_reference($node->var);
+				return $this->variable_set($node->var,$this->evaluate_expression($node->expr));
 			}
-			$this->silenced--;
 				// $this->error("Unknown assign: ",$node);
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch) //access multidimensional arrays $x[...][..][...]
-			return $this->reference($node,false); //should not create
+			return $this->variable_get($node); //should not create
 		elseif ($node instanceof Node\Expr\Array_)
 		{
 			$out=[];
@@ -547,27 +552,27 @@ class Emulator
 
 		elseif ($node instanceof Node\Expr\PreInc)
 		{
-			$var=&$this->reference($node->var);	
-			return ++$var;
+			return $this->variable_set($node->var,$this->variable_get($node->var)+1);	
 		}
 		elseif ($node instanceof Node\Expr\PostInc)
 		{
-			$var=&$this->reference($node->var);	
-			return $var++;
+			$t=$this->variable_get($node->var);
+			$this->variable_set($node->var,$t+1);
+			return $t;
 		}
 		elseif ($node instanceof Node\Expr\PreDec)
 		{
-			$var=&$this->reference($node->var);	
-			return --$var;
+			return $this->variable_set($node->var,$this->variable_get($node->var)-1);	
 		}
 		elseif ($node instanceof Node\Expr\PostDec)
 		{
-			$var=&$this->reference($node->var);	
-			return $var--;
+			$t=$this->variable_get($node->var);
+			$this->variable_set($node->var,$t-1);
+			return $t;
 		}
 		elseif ($node instanceof Node\Expr\AssignOp)
 		{
-			$var=&$this->reference($node->var);
+			$var=&$this->variable_reference($node->var); //TODO: use variable_set and get here instead
 			$val=$this->evaluate_expression($node->expr);
 			if ($node instanceof Node\Expr\AssignOp\Plus)
 				return $var+=$val;
@@ -705,7 +710,7 @@ class Emulator
 		
 		elseif ($node instanceof Node\Expr\Variable)
 		{
-			return $this->reference($node,false); //should not be created on access
+			return $this->variable_get($node); //should not be created on access
 		}
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
@@ -739,7 +744,7 @@ class Emulator
 		{
 			//return true if not isset, or if false
 			$this->silenced++;
-			$res=(!$this->is_set($node->expr) or ($this->evaluate_expression($node->expr)==false));
+			$res=(!$this->variable_isset($node->expr) or ($this->evaluate_expression($node->expr)==false));
 			$this->silenced--;
 			return $res;
 		}
@@ -751,7 +756,7 @@ class Emulator
 			$res=true;
 			foreach ($node->vars as $var)
 			{
-				if (!$this->is_set($var) or $this->evaluate_expression($var)===null)
+				if (!$this->variable_isset($var) or $this->evaluate_expression($var)===null)
 				{
 					$res=false;
 					break;
@@ -867,37 +872,71 @@ class Emulator
 	}
 	/**
 	 * A reference to this will be returned by 
-	 * base/reference function whenever the variable is not found
+	 * symbol_table function whenever the variable is not found
 	 * because byref functions need to return something
 	 * @var null
 	 */
-	protected $null_reference=null; 
-	/**
-	 * Whether or not a variable is set
-	 * @param  Node  $var 
-	 * @return boolean    
-	 */
-	protected function is_set($var)
+	private $null_reference=null; 
+	protected function &null_reference()
 	{
-		$this->symbol_table($var,$key,false);
+		$this->null_reference=null;
+		return $this->null_reference;
+
+	}	
+	function variable_set($node,$value)
+	{
+		$r=&$this->symbol_table($node,$key,true);
+		if ($key!==null)
+			return $r[$key]=$value;
+		else 
+			return null;
+	}
+	function variable_get($node)
+	{
+		$r=&$this->symbol_table($node,$key,false);
+		if ($key!==null)
+			return $r[$key];
+		else 
+			return null;
+	}
+	function variable_isset($node)
+	{
+		$r=$this->symbol_table($node,$key,false);
 		return $key!==null;
 	}
+	function variable_unset($node)
+	{
+		$base=&$this->symbol_table($node,$key,false);
+		if ($key!==null)
+			unset($base[$key]);
+	}
+	function &variable_reference($node)
+	{
+		$r=&$this->symbol_table($node,$key,false);
+		if ($key===null) //not found or GLOBALS
+			return $this->null_reference=null;
+		elseif (is_array($r))
+			return $r[$key];
+		else
+			$this->error("Could not retrive reference",$node);
+	}
+
 	/**
 	 * Returns the base array (symbol table) that the variable exists in, as well as the key in that array for the variable
-	 * Used to access variables by reference (in reference() method)
+	 * 
 	 * 
 	 * @param  Node  $node   
 	 * @param  byref  &$key  the key of the element, which will be null if not found
 	 * @param  boolean $create 
 	 * @return reference          reference to the symbol table array (check key first before accessing this)
 	 */
-	protected function &symbol_table($node,&$key,$create=true)
+	protected function &symbol_table($node,&$key,$create)
 	{
 		if ($node===null)
 		{
 			$this->notice("Undefined variable: {$node}");	
 			$key=null;
-			return $this->null_reference=null;
+			return $this->null_reference();
 		}
 		elseif (is_string($node))
 		{
@@ -908,15 +947,8 @@ class Emulator
 			}
 			elseif ($node == "GLOBALS")
 			{
-				#TODO: find a better way to implement GLOBALS. null key typically means not found, except this case!
-				#unset($GLOBALS['x']) might fail
-				#also $GLOBALS['_GET'] will fail
-				#this is the only instance where NULL key actually means its valid response! (see reference() for details)
-				$key=null;
-				if (count($this->variable_stack))
-					return $this->variable_stack[0];
-				else
-					return $this->variables;
+				$key='global';	
+				return $this->variable_stack;
 			}
 			elseif (array_key_exists($node, $this->super_globals)) //super globals
 			{
@@ -925,7 +957,6 @@ class Emulator
 			}
 			else
 			{
-				$this->notice("Undefined variable: {$node}");	
 				if ($create)
 				{
 					$this->variables[$node]=null;
@@ -934,8 +965,9 @@ class Emulator
 				}
 				else
 				{
+					$this->notice("Undefined variable: {$node}");	
 					$key=null;
-					return $this->null_reference=null;
+					return $this->null_reference();
 				}
 			}
 		}
@@ -943,58 +975,58 @@ class Emulator
 		{
 			$t=$node;
 
+			//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
 			$dim=0;
 			$indexes=[];
-			//each ArrayDimFetch has a var and a dim. var can either be a variable, or another ArrayDimFetch
+			
+			//extracting indices
 			while ($t instanceof Node\Expr\ArrayDimFetch)
 			{
 				$dim++;
 				if ($t->dim)
 					$indexes[]=$this->evaluate_expression($t->dim);
 				else
-					$indexes[]=NULL;
+					$indexes[]=null;
 				$t=$t->var;
 			}
 			$indexes=array_reverse($indexes);
-			$base=&$this->reference($t,$create);
-			if ($base===null) //variable not exists
+			//check if the array exists at all or not
+			$base=&$this->symbol_table($t,$key2,$create);
+			if ($key2===null) //the base arrayDimFetch variable not exists, e.g $a in $a[1][2]
 			{
-				$key=null;
-				return $this->null_reference=null;
+				$key=null;	
+				return $this->null_reference();
 			}
-
-			$lastIndex=array_pop($indexes);
+			$base=&$base[$key2];
+			$key=array_pop($indexes);
 			foreach ($indexes as $index)
 			{
 				if ($index===NULL)
 				{
-					//it might be $a[]=
-					$base[]=NULL;
-					end($base);
-					$index=key($base);
+					$base[]=NULL; //append to base array
+					end($base);	//move the pointer to end of base array
+					$index=key($base); //retrieve the key as index
 				}
+				elseif (!isset($base[$index]))
+					if ($create)
+					{
+						echo "creating array index '{$index}'...",PHP_EOL;	
+						$base[$index]=null;
+					}
+					else
+					{
+						$key=null;	
+						return $this->null_reference();
+					}
 
 				$base=&$base[$index];
 			}
-			//TODO: code repetition
-			if ($lastIndex===NULL)
-			{
-				$base[]=NULL;
-				end($base);
-				$lastIndex=key($base);
-			}
-			//create the last element if not exists and create mode, 
-			//e.g a[1][2][3] will create a[1][2] as base and 3 as key, but a[1][2] [3] does not exist and needs to be created
-			elseif ($create and !isset($base[$lastIndex]))
-				$base[$lastIndex]=null; 
-			if ($lastIndex=="siteurl" and $base==null)
-			{
-				print_r($indexes);
-				var_dump($base);
-				var_dump($key);
-			}
+			if ($create and !isset($base[$key]))
+				if ($key===null)
+					$base[]=null;
+				else
+					$base[$key]=null;
 
-			$key=$lastIndex;
 			return $base;
 		}
 		elseif ($node instanceof Node\Expr\Variable)
@@ -1005,28 +1037,7 @@ class Emulator
 		{
 			$this->error("Can not find variable reference of this node type.",$node);
 			$key=null;
-			return $this->null_reference=null;
-		}
-	}
-	/**
-	 * Returns a reference to a variable, so that it can be modified or read.
-	 * 
-	 * It should be used like this: $var=&$this->reference(...);
-	 * @param  Node 	$node 
-	 * @param  bool 	$create whether to create the variable if it does not exist, or not.
-	 * @return reference       reference to variable
-	 */
-	protected function &reference($node,$create=true)
-	{
-
-		$base=&$this->symbol_table($node,$key,$create);
-		if ($key===null) //not found or GLOBALS
-			return $base;
-		elseif (is_array($base))
-			return $base[$key];
-		else
-		{
-			$this->error("Could not retrive reference",$node);
+			return $this->null_reference();
 		}
 	}
 	/**
@@ -1082,8 +1093,7 @@ class Emulator
 	{
 		$last_file=$this->current_file;
 		$this->current_file=realpath($file);
-
-		echo "Now running {$this->current_file}...",PHP_EOL;
+		printf("Now running %s...\n",substr($this->current_file,strlen($this->folder)) );
 		
 		$this->included_files[$this->current_file]=true;
 		
@@ -1091,6 +1101,7 @@ class Emulator
 		$ast=$this->parser->parse($code);
 
 		$res=$this->run_code($ast);
+		echo "Running ".substr($this->current_file,strlen($this->folder))." finished.",PHP_EOL;
 		if ($this->return)
 			$this->return=false;
 		$this->current_file=$last_file;
@@ -1112,7 +1123,8 @@ class Emulator
 			echo "File not found '{$file}'.",PHP_EOL;
 			return false;
 		}
-		chdir(dirname($this->entry_file));
+		$this->folder=dirname($this->entry_file)."/";
+		chdir($this->folder);
 		$file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
@@ -1121,32 +1133,32 @@ class Emulator
 		$this->shutdown();
 		return $res;
 	}
-	/**
-	 * Resume emulation from a saved state.
-	 * This function does not restore state, the state has to be restored to the emulator
-	 * before calling this function.
-	 * @param  string $file        the file to resume emulation from
-	 * @param  int $instruction index of the instruction in the file
-	 * @return mixed
-	 */
-	function resume()
-	{
-		chdir(dirname($this->entry_file));
-		ini_set("memory_limit",-1);
-		set_error_handler(array($this,"error_handler"));
+	// /**
+	//  * Resume emulation from a saved state.
+	//  * This function does not restore state, the state has to be restored to the emulator
+	//  * before calling this function.
+	//  * @param  string $file        the file to resume emulation from
+	//  * @param  int $instruction index of the instruction in the file
+	//  * @return mixed
+	//  */
+	// function resume()
+	// {
+	// 	chdir(dirname($this->entry_file));
+	// 	ini_set("memory_limit",-1);
+	// 	set_error_handler(array($this,"error_handler"));
 
-		echo "Resuming from {$this->current_file}:{$this->current_line} instruction {$this->current_statement_index}...",PHP_EOL;
-		$code=file_get_contents($this->current_file);
-		$ast=$this->parser->parse($code);
+	// 	echo "Resuming from {$this->current_file}:{$this->current_line} instruction {$this->current_statement_index}...",PHP_EOL;
+	// 	$code=file_get_contents($this->current_file);
+	// 	$ast=$this->parser->parse($code);
 
-		$res=$this->run_code($ast,$this->current_statement_index);
-		if ($this->return)
-			$this->return=false;
+	// 	$res=$this->run_code($ast,$this->current_statement_index);
+	// 	if ($this->return)
+	// 		$this->return=false;
 		
-		restore_error_handler();
-		$this->shutdown();
-		return $res;
-	}
+	// 	restore_error_handler();
+	// 	$this->shutdown();
+	// 	return $res;
+	// }
 	/**
 	 * Used to check if loop condition is still valid
 	 * @return boolean
@@ -1331,11 +1343,7 @@ class Emulator
 			elseif ($node instanceof Node\Stmt\Unset_)
 			{
 				foreach ($node->vars as $var)
-				{
-					$base=&$this->symbol_table($var,$index,false);
-					if ($index)
-						unset($base[$index]);
-				}
+					$this->variable_unset($var);
 			}
 			elseif ($node instanceof Node\Stmt\Throw_)
 			{
@@ -1358,10 +1366,9 @@ class Emulator
 					{
 						//each has type, the exception type, var, the exception variable, and stmts
 						$type=$this->name($catch->type);
-						$var=&$this->reference($catch->var);
 						if ($e instanceof $type)
 						{
-							$var=$e;
+							$this->variable_set($catch->var,$e);
 							$this->run_code($catch->stmts);
 							break;
 						}
@@ -1403,10 +1410,11 @@ class Emulator
 				foreach ($node->vars as $var)
 				{
 					$name=$this->name($var->name);
-					$base=&$this->symbol_table("GLOBALS",$key); //null key is returned with globals
-					if (!isset($base[$name]))
-						$base[$name]=null; //create
-					$this->variables[$name]=&$base[$name];
+					$globals_=&$this->variable_reference("GLOBALS");
+
+					if (!isset($globals_[$name]))
+						$globals_[$name]=null; //create
+					$this->variables[$name]=&$globals_[$name];
 				}
 			}
 			elseif ($node instanceof Node\Expr)
@@ -1466,7 +1474,7 @@ class Emulator
 			{
 				$this->current_line=$node->getLine();
 				if ($this->verbose) 
-					echo "\t\tLine {$this->current_line}",PHP_EOL;
+					printf("\t\t%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line);
 			}
 			//comment meta-commands to the emulator. 
 			// if ($node->hasAttribute("comments") 
@@ -1511,6 +1519,10 @@ class Emulator
 	function __destruct()
 	{
 	}
+
+
+
+
 }
 //this loads all functions, so that auto-mock will replace them
 foreach (glob(__DIR__."/mocks/*.php") as $mock)
