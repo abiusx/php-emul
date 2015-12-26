@@ -1275,8 +1275,12 @@ class Emulator
 				if (isset($node->keyVar))
 				{
 					$keyed=true;	
+					if (!$this->variable_isset($node->keyVar))
+						$this->variable_set($node->keyVar);
 					$keyVar=&$this->variable_reference($node->keyVar);
 				}
+				if (!$this->variable_isset($node->valueVar))
+					$this->variable_set($node->valueVar);
 				$valueVar=&$this->variable_reference($node->valueVar);
 				$this->silenced--; //create two variables
 
