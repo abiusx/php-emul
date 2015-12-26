@@ -8,22 +8,6 @@ function apache_getenv()
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: internal classes, methods and etc.
-// class EmulatorObjectProperty
-// {
-// 	public $name;
-// 	public $value;
-// 	public $visibility;
-// 	function __construct($name,$value=null,$visibility=EmulatorObjectProperty::Visibility_Public)
-// 	{
-// 		$this->name=$name;
-// 		$this->value=$value;
-// 		$this->visibility=$visibility;
-// 	}
-
-// 	const Visibility_Public=1;
-// 	const Visibility_Protected=2;
-// 	const Visibility_Private=4;
-// }
 class EmulatorObject
 {
 	const Visibility_Public=1;

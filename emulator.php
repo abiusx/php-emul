@@ -3,7 +3,8 @@ require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
-#FIXME: redo the whole symbol table thing. have it return the actual variable old style
+#FIXME: the way silencing works now is stupid and just suppresses a lot of bugs. totally replace
+
 class Emulator
 {	
 	/**
