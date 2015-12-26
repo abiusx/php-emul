@@ -15,12 +15,18 @@ class Emulator
 	 * Configuration: whether to output directly, or just store it in $output
 	 * @var boolean
 	 */
-	public $direct_output	=	true;
+	public $direct_output	=	false;
 	/**
-	 * Configuration: Verbose messaging or not
+	 * Configuration: Verbose messaging depth. -1 means no messages, even critical ones
+	 * @var integer
+	 */
+	public $verbose			=	2;
+
+	/**
+	 * Whether to stop on all errors or not.
 	 * @var boolean
 	 */
-	public $verbose			=	false;
+	public $strict			= 	true;
 	/**
 	 * Whether to automatically mock functions or not
 	 * If true, on init emulator will mock all internal php functions with their mocked version.
@@ -164,6 +170,11 @@ class Emulator
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
     	$this->init();
 	}
+	function verbose($msg,$verbosity=1)
+	{
+		if ($this->verbose>=$verbosity)
+			echo str_repeat("\t",$verbosity).$msg;
+	}
 	/**
 	 * Initialize the emulator by setting environment variables (super globals)
 	 * and mocking mock functions
@@ -191,12 +202,12 @@ class Emulator
 	protected function shutdown()
 	{
 
-		echo "Shutting down...",PHP_EOL;
+		$this->verbose("Shutting down...".PHP_EOL);
 		return false;
 		//FIXME TODO
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
-			echo "Calling shutdown function "	;
+			$this->verbose( "Calling shutdown function: ");
 			print_r($shutdown_function);
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
@@ -230,7 +241,7 @@ class Emulator
 				$str="Error";
 		}
 
-		echo "PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)",PHP_EOL;
+		$this->verbose("PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)".PHP_EOL,0);
 		// if ($this->verbose)
 		// 	debug_print_backtrace();
 		if ($fatal) 
@@ -245,7 +256,7 @@ class Emulator
 	 */
 	protected function error($msg,$node=null)
 	{
-		echo "Emulation Error: ";
+		$this->verbose("Emulation Error: ",0);
 		$this->_error($msg,$node);
 		$this->terminated=true;
 	}
@@ -258,25 +269,26 @@ class Emulator
 	 */
 	private function _error($msg,$node=null,$details=true)
 	{
-		echo $msg," in ",$this->current_file," on line ",$this->current_line,PHP_EOL;
+		$this->verbose($msg." in ".$this->current_file." on line ".$this->current_line.PHP_EOL,0);
 		if ($details)
 		{
 			print_r($node);
 			if ($this->verbose)
 				debug_print_backtrace();
 		}
+		if ($this->strict) $this->terminated=true;
 	}
 	protected function notice($msg,$node=null)
 	{
 		if ($this->silenced>0) return;
-		echo "Emulation Notice: ";
+		$this->verbose("Emulation Notice: ",0);
 		$this->_error($msg,$node,false);
 	}
 
 	protected function warning($msg,$node=null)
 	{
 		if ($this->silenced>0) return;
-		echo "Emulation Warning: ";
+		$this->verbose("Emulation Warning: ",0);
 		$this->_error($msg,$node);
 		// trigger_error($msg);
 	}
@@ -315,35 +327,26 @@ class Emulator
 		array_pop($this->variable_stack);
 		$this->_reference_variables_to_stack();
 	}
-	/**
-	 * Runs a procedure (sub).
-	 * This is used by all function calling structures, such as run_function, run_method, run_static_method, etc.
-	 * This does the prologue and epilogue, sets up arguments and references, and starts execution
-	 * @param  Node $function the parsed declaration of function
-	 * @param  Node|array $args          args can be either an array of values, or a parsed Node 
-	 * @return mixed return value of function
-	 */
-	protected function run_sub($function,$args)
+	protected function function_prologue($function,$args)
 	{
-
 		reset($args);
 		$count=count($args);
 		$index=0;
 		$function_variables=[];
 		foreach ($function->params as $param)
 		{
-			if ($index>=$count) //all args consumed, either defaults or error
+			if ($index>=$count) //all explicit arguments processed, remainder either defaults or error
 			{
 				if (isset($param->default))
 					$function_variables[$param->name]=$this->evaluate_expression($param->default);
 				else
 				{
 					$this->warning("Missing argument ".($index)." for {$name}()");
-					return null;
+					return false;
 				}
 
 			}
-			else //args still exist, copy to current symbol table
+			else //args still available, copy to current symbol table
 			{
 				if (current($args) instanceof Node)
 				{
@@ -365,6 +368,20 @@ class Emulator
 		$this->push();
 		$this->variables=$function_variables;
 		end($this->trace)->args=$function_variables;
+		return true;
+	}
+	/**
+	 * Runs a procedure (sub).
+	 * This is used by all function calling structures, such as run_function, run_method, run_static_method, etc.
+	 * This does the prologue and epilogue, sets up arguments and references, and starts execution
+	 * @param  Node $function the parsed declaration of function
+	 * @param  Node|array $args          args can be either an array of values, or a parsed Node 
+	 * @return mixed return value of function
+	 */
+	protected function run_function($function,$args)
+	{
+		if (!$this->function_prologue($function,$args))
+			return null;
 		$res=$this->run_code($function->code);
 		$this->pop();
 		return $res;
@@ -375,25 +392,24 @@ class Emulator
 	 * @param  Node $args should be a parsed node
 	 * @return mixed
 	 */
-	protected function run_function($name,$args)
+	protected function run_user_function($name,$args)
 	{
-		if ($this->verbose)
-			echo "\tRunning {$name}()...",PHP_EOL;
+		$this->verbose("\tRunning {$name}()...".PHP_EOL,2);
 		
 		$last_function=$this->current_function;
 		$this->current_function=$name;
 
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
 		array_push($this->trace, (object)array("type"=>"function","name"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
-
 		$last_file=$this->current_file;
 		$this->current_file=$this->functions[$name]->file;
 
-		$res=$this->run_sub($this->functions[$name],$args);
+		$res=$this->run_function($this->functions[$name],$args);
+		
 		array_pop($this->trace);
-
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
+		
 		if ($this->return)
 			$this->return=false;	
 		return $res;
@@ -407,7 +423,7 @@ class Emulator
 	public function call_function($name,$args)
 	{
 		if (isset($this->functions[$name])) //user function
-			return $this->run_function($name,$args); 
+			return $this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
 			$argValues=[];
@@ -463,8 +479,7 @@ class Emulator
 		if ($node->getLine()!=$this->current_line)
 		{
 			$this->current_line=$node->getLine();
-			if ($this->verbose) 
-				echo "\t\tLine {$this->current_line}",PHP_EOL;
+			$this->verbose("\t\tLine {$this->current_line}".PHP_EOL,2);
 		}	
 		if (false);
 		elseif (is_array($node))
@@ -769,7 +784,7 @@ class Emulator
 		{
 			
 			$this->eval_depth++;
-			echo "Now running Eval code...",PHP_EOL;
+			$this->verbose("Now running Eval code...".PHP_EOL);
 			
 			$code=$this->evaluate_expression($node->expr);
 			$ast=$this->parser->parse('<?php '.$code);
@@ -832,11 +847,7 @@ class Emulator
 		elseif ($node instanceof Node\Expr\New_)
 		{
 			$classname=$this->name($node->class);
-			if (isset($this->classes[$classname]))
-			{
-				return $this->new_object($classname,$node->args); //user function
-			}
-			elseif (class_exists($classname))
+			if (class_exists($classname))
 			{
 				$argValues=[];
 				foreach ($node->args as $arg)
@@ -852,7 +863,7 @@ class Emulator
 			}
 			else
 			{
-				$this->error("Class '{$classname}' not found",$node);
+				$this->error("Class '{$classname}' not built-in in PHP.",$node);
 			}
 		}
 		else
@@ -860,30 +871,19 @@ class Emulator
 		return null;
 	}
 	/**
-	 * Not implemented in procedural emulator
-	 * @param  [type] $name [description]
-	 * @param  array  $args [description]
-	 * @return [type]       [description]
-	 */
-	protected function new_object($name,array $args)
-	{
-		echo "Not implemented.";
-		print_r($args);
-	}
-	/**
-	 * A reference to this will be returned by 
-	 * symbol_table function whenever the variable is not found
-	 * because byref functions need to return something
+	 * Function used to return something when reference returning 
+	 * functions fail and have to return something.
+	 * Can set an input variable to null for ease too.
 	 * @var null
 	 */
-	private $null_reference=null; 
-	protected function &null_reference()
+	protected function &null_reference(&$var=null)
 	{
+		$var=null;
 		$this->null_reference=null;
 		return $this->null_reference;
 
 	}	
-	function variable_set($node,$value)
+	function variable_set($node,$value=null)
 	{
 		$r=&$this->symbol_table($node,$key,true);
 		if ($key!==null)
@@ -914,7 +914,7 @@ class Emulator
 	{
 		$r=&$this->symbol_table($node,$key,false);
 		if ($key===null) //not found or GLOBALS
-			return $this->null_reference=null;
+			return $this->null_reference();
 		elseif (is_array($r))
 			return $r[$key];
 		else
@@ -935,8 +935,7 @@ class Emulator
 		if ($node===null)
 		{
 			$this->notice("Undefined variable: {$node}");	
-			$key=null;
-			return $this->null_reference();
+			return $this->null_reference($key);
 		}
 		elseif (is_string($node))
 		{
@@ -966,8 +965,7 @@ class Emulator
 				else
 				{
 					$this->notice("Undefined variable: {$node}");	
-					$key=null;
-					return $this->null_reference();
+					return $this->null_reference($key);
 				}
 			}
 		}
@@ -993,10 +991,7 @@ class Emulator
 			//check if the array exists at all or not
 			$base=&$this->symbol_table($t,$key2,$create);
 			if ($key2===null) //the base arrayDimFetch variable not exists, e.g $a in $a[1][2]
-			{
-				$key=null;	
-				return $this->null_reference();
-			}
+				return $this->null_reference($key);
 			$base=&$base[$key2];
 			$key=array_pop($indexes);
 			foreach ($indexes as $index)
@@ -1010,14 +1005,11 @@ class Emulator
 				elseif (!isset($base[$index]))
 					if ($create)
 					{
-						echo "creating array index '{$index}'...",PHP_EOL;	
+						$this->verbose("creating array index '{$index}'...".PHP_EOL,3);	
 						$base[$index]=null;
 					}
 					else
-					{
-						$key=null;	
-						return $this->null_reference();
-					}
+						return $this->null_reference($key);
 
 				$base=&$base[$index];
 			}
@@ -1036,8 +1028,7 @@ class Emulator
 		else
 		{
 			$this->error("Can not find variable reference of this node type.",$node);
-			$key=null;
-			return $this->null_reference();
+			return $this->null_reference($key);
 		}
 	}
 	/**
@@ -1093,6 +1084,10 @@ class Emulator
 	{
 		$last_file=$this->current_file;
 		$this->current_file=realpath($file);
+		$tfolder=dirname($this->current_file)."/";
+		if (!isset($this->folder) or strlen($this->folder>$tfolder))
+			$this->folder=$tfolder;
+
 		printf("Now running %s...\n",substr($this->current_file,strlen($this->folder)) );
 		
 		$this->included_files[$this->current_file]=true;
@@ -1101,7 +1096,7 @@ class Emulator
 		$ast=$this->parser->parse($code);
 
 		$res=$this->run_code($ast);
-		echo "Running ".substr($this->current_file,strlen($this->folder))." finished.",PHP_EOL;
+		$this->verbose("\t\t\t".substr($this->current_file,strlen($this->folder))." finished.".PHP_EOL);
 		if ($this->return)
 			$this->return=false;
 		$this->current_file=$last_file;
@@ -1120,11 +1115,10 @@ class Emulator
 		$this->entry_file=realpath($file);
 		if (!$this->entry_file)
 		{
-			echo "File not found '{$file}'.",PHP_EOL;
+			$this->verbose("File not found '{$file}'.".PHP_EOL,0);
 			return false;
 		}
-		$this->folder=dirname($this->entry_file)."/";
-		chdir($this->folder);
+		chdir(dirname($this->entry_file));
 		$file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
@@ -1147,7 +1141,6 @@ class Emulator
 	// 	ini_set("memory_limit",-1);
 	// 	set_error_handler(array($this,"error_handler"));
 
-	// 	echo "Resuming from {$this->current_file}:{$this->current_line} instruction {$this->current_statement_index}...",PHP_EOL;
 	// 	$code=file_get_contents($this->current_file);
 	// 	$ast=$this->parser->parse($code);
 
@@ -1282,9 +1275,9 @@ class Emulator
 				if (isset($node->keyVar))
 				{
 					$keyed=true;	
-					$keyVar=&$this->reference($node->keyVar);
+					$keyVar=&$this->variable_reference($node->keyVar);
 				}
-				$valueVar=&$this->reference($node->valueVar);
+				$valueVar=&$this->variable_reference($node->valueVar);
 				$this->silenced--; //create two variables
 
 				$this->loop_depth++;
@@ -1434,7 +1427,6 @@ class Emulator
 		if (0);
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
-			// echo PHP_EOL;
 			$name=$this->name($node->name);
 			$this->functions[$name]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
 		}
@@ -1504,7 +1496,6 @@ class Emulator
 	// {
 	// 	if (strpos($comment,"emul::pause()")!==false)
 	// 	{
-	// 		echo "Emulator meta-command found: emul::pause(). Saving state...",PHP_EOL;
 	// 		$this->save_state();
 	// 	}
 	// }
@@ -1513,7 +1504,6 @@ class Emulator
 	// 	require_once __DIR__."/state.php";
 	// 		$state= new EmulatorState();
 	// 		$file=$state->save($this);
-	// 		echo "State saved into ",$file,PHP_EOL;
 	// 		die(0);
 	// }
 	function __destruct()

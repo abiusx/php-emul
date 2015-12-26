@@ -8,37 +8,46 @@ function apache_getenv()
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: internal classes, methods and etc.
-class EmulatorObjectProperty
-{
-	public $name;
-	public $value;
-	public $visibility;
-	function __construct($name,$value=null,$visibility=EmulatorObjectProperty::Visibility_Public)
-	{
-		$this->name=$name;
-		$this->value=$value;
-		$this->visibility=$visibility;
-	}
+// class EmulatorObjectProperty
+// {
+// 	public $name;
+// 	public $value;
+// 	public $visibility;
+// 	function __construct($name,$value=null,$visibility=EmulatorObjectProperty::Visibility_Public)
+// 	{
+// 		$this->name=$name;
+// 		$this->value=$value;
+// 		$this->visibility=$visibility;
+// 	}
 
+// 	const Visibility_Public=1;
+// 	const Visibility_Protected=2;
+// 	const Visibility_Private=4;
+// }
+class EmulatorObject
+{
 	const Visibility_Public=1;
 	const Visibility_Protected=2;
 	const Visibility_Private=4;
-}
-class EmulatorObject
-{
 	/**
 	 * Array of keys as propname, values as EmulatorObjectProperty
 	 * @var [type]
 	 */
 	public $properties;
 	/**
+	 * Visibility of properties
+	 * @var [type]
+	 */
+	public $visibilities;
+	/**
 	 * @var string
 	 */
 	public $classname;
-	public function __construct($classname,$properties=[])
+	public function __construct($classname,$properties=[],$visibilities=[])
 	{
 		$this->classname=$classname;
 		$this->properties=$properties;
+		$this->visibilities=$visibilities;
 	}
 
 }
@@ -47,7 +56,7 @@ class OOEmulator extends Emulator
 	function __construct()
 	{
 		parent::__construct();
-		$this->this_hack=array('this'=>&$this->this);
+		// $this->this_hack=array('this'=>&$this->this);
 	}
 	public $classes=[];
 	protected $current_class,$current_method,$current_trait;
@@ -60,7 +69,6 @@ class OOEmulator extends Emulator
 		{
 			//has type, implements (array), stmts (Array), name, extends
 			//type=0 is normal, type=16 is abstract
-			// print_r($node);
 			
 			$classtype=null;
 			if (isset($node->type))
@@ -92,16 +100,20 @@ class OOEmulator extends Emulator
 						else
 							$val=NULL;
 						if ($type & 4)
-							$visibility=EmulatorObjectProperty::Visibility_Private;
+							$visibility=EmulatorObject::Visibility_Private;
 						elseif ($type &2)
-							$visibility=EmulatorObjectProperty::Visibility_Protected;
+							$visibility=EmulatorObject::Visibility_Protected;
 						else
-							$visibility=EmulatorObjectProperty::Visibility_Public;
+							$visibility=EmulatorObject::Visibility_Public;
 
 						if ($type & 8 ) //static
-							$class->static[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
+						{
+							$class->static[$propname]=$val;
+							$class->static_visibility[$propername]=$visibility;
+						}
 						else
-							$class->properties[$propname]=new EmulatorObjectProperty($propname,$val,$visibility);
+							$class->properties[$propname]=$val;
+							$class->visibilities[$propname]=$visibility;
 					}
 				}
 				elseif ($part instanceof Node\Stmt\ClassMethod)
@@ -138,44 +150,72 @@ class OOEmulator extends Emulator
 			parent::get_declarations($node);
 
 	}
-
+	protected function new_user_object($classname,array $args)
+	{
+		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
+		$obj=new EmulatorObject($classname,$this->classes[$classname]->properties,$this->classes[$classname]->visibilities);
+		foreach ($this->ancestry($classname,true) as $class)
+		{
+			foreach ($this->classes[$class]->properties as $property_name=>$property)
+				// echo "Setting property {$property_name} from {$class}...",PHP_EOL;	
+				$obj->properties[$property_name]=$property;
+		}
+		foreach ($this->ancestry($classname) as $class)
+		{
+			if ($this->user_method_exists($class, "__construct"))
+			{
+				$this->run_user_method($obj,"__construct",$args);
+				break;
+			}
+			elseif ($this->user_method_exists($class,$class))
+			{
+				$this->run_user_method($obj,$class,$args);
+				break;
+			}
+		}
+		return $obj;
+	}
+	protected function new_core_object($classname,array $args)
+	{
+		$argValues=[];
+		foreach ($node->args as $arg)
+			$argValues[]=$this->evaluate_expression($arg->value);
+		
+		ob_start();	
+		$r = new ReflectionClass($classname);
+		$ret = $r->newInstanceArgs($argValues); #TODO: byref?
+		// $ret=new $classname($argValues); //core class
+		$output=ob_get_clean();
+		$this->output($output);
+		return $ret;
+	}
 	protected function new_object($classname,array $args)
 	{
-		if (array_key_exists($classname, $this->classes))
-		{
-			#TODO: bring properties of all parents too
-			$obj=new EmulatorObject($classname,$this->classes[$classname]->properties);
-			foreach ($this->ancestry($classname,true) as $class)
-			{
-				foreach ($this->classes[$class]->properties as $property_name=>$property)
-					// echo "Setting property {$property_name} from {$class}...",PHP_EOL;	
-					$obj->properties[$property_name]=$property;
-			}
-			// echo $classname,":";
-			// print_r($obj->properties);
-			foreach ($this->ancestry($classname) as $class)
-			{
-				if ($this->method_exists($class, "__construct"))
-				{
-					$this->run_method($obj,"__construct",$args);
-					break;
-				}
-				elseif ($this->method_exists($class,$class))
-				{
-					$this->run_method($obj,$class,$args);
-					break;
-				}
-			}
-			return $obj;
-		}
-		$this->error("Class '{$classname}' not found ");
+
+		if (array_key_exists($classname, $this->classes)) //user classes
+			return $this->new_user_object($classname,$args);
+		elseif (class_exists($classname)) //core classes
+			return $this->new_core_object($classname,$args);
+		else
+			$this->error("Class '{$classname}' not found ");
 	}
-	protected function method_exists($class_name,$method_name)
+	protected function user_method_exists($class_name,$method_name)
 	{
 		if (!isset($this->classes[$class_name])) return false;
 		return array_key_exists($method_name, $this->classes[$class_name]->methods);
 	}
 	protected function run_static_method($original_class_name,$method_name,$args)
+	{
+		$class_name=$this->real_class($original_class_name);
+		if (array_key_exists($class_name, $this->classes))
+			return $this->run_user_static_method($original_class_name,$method_name,$args);
+		elseif (class_exists($class_name))
+			return call_user_func_array($class_name."::".$method_name, $args);
+		else
+			$this->error("Can not call static method '{$class_name}::{$method_name}', class '{$original_class_name}' does not exist.\n");
+
+	}
+	protected function run_user_static_method($original_class_name,$method_name,$args)
 	{
 		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
@@ -187,14 +227,14 @@ class OOEmulator extends Emulator
 		$flag=false;
 		foreach ($this->ancestry($class_name) as $class)
 		{
-			if ($this->method_exists($class,$method_name))
+			if ($this->user_method_exists($class,$method_name))
 			{
 				$last_self=$this->self;
 				$this->self=$class;
 				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
 				$last_file=$this->current_file;
 				$this->current_file=$this->classes[$class_name]->file;
-				$res=$this->run_sub($this->classes[$class]->methods[$method_name],$args);
+				$res=$this->run_function($this->classes[$class]->methods[$method_name],$args);
 				array_pop($this->trace);
 				$this->self=$last_self;
 				$flag=true;
@@ -217,6 +257,15 @@ class OOEmulator extends Emulator
 	}
 	protected function run_method(&$object,$method_name,$args)
 	{
+		if ($object instanceof EmulatorObject)
+			return $this->run_user_method($object,$method_name,$args);
+		elseif (is_object($object))
+			return call_user_func_array(array($object,$method_name), $args);
+		else
+			$this->error("Can not call method '{$method_name}' on a non-object.\n",$object);
+	}
+	protected function run_user_method(&$object,$method_name,$args)
+	{
 		if (!($object instanceof EmulatorObject))
 		{
 			$this->error("Inconsistency in object oriented emulation. A malformed object detected.",$object);
@@ -225,7 +274,8 @@ class OOEmulator extends Emulator
 		$class_name=$object->classname;
 		$old_this=$this->this;
 		$this->this=&$object;
-		$res=$this->run_static_method($class_name,$method_name,$args);
+		
+		$res=$this->run_user_static_method($class_name,$method_name,$args);
 
 		$this->this=&$old_this;
 		return $res;
@@ -236,10 +286,18 @@ class OOEmulator extends Emulator
 		$this->current_node=$node;
 		if (false)
 			;
+		elseif ($node instanceof Node\Expr\New_)
+		{
+
+			$classname=$this->name($node->class);
+			return $this->new_object($classname,$node->args); //user function
+
+		}
 		elseif ($node instanceof Node\Expr\MethodCall)
 		{
 			$object=&$this->variable_reference($node->var);
 			$method_name=$this->name($node->name);
+			$this->verbose("Method call ".$object->classname."::".$method_name,3);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
 		}
@@ -281,8 +339,8 @@ class OOEmulator extends Emulator
 			$var=$this->variable_get($node->expr);
 			$var2=clone $var;
 			// $var2->properties=[];
-			foreach ($var->properties as $k=>$property)
-				$var2->properties[$k]=clone $property;
+			// foreach ($var->properties as $k=>$property)
+			// 	$var2->properties[$k]=clone $property;
 			return $var2;
 		}
 		elseif ($node instanceof Node\Expr\Instanceof_)
@@ -315,10 +373,16 @@ class OOEmulator extends Emulator
 		if (is_array($val))
 		{
 			foreach ($val as $k=>$v)
-				$obj->properties[$k]=new EmulatorObjectProperty($k,$v);
+			{
+				$obj->properties[$k]=$v;
+				$obj->visibilities[$k]=EmulatorObject::Visibility_Public;
+			}
 		}
 		else
+		{
 			$obj->properties['scalar']=$val;
+			$obj->visibilities['scalar']=EmulatorObject::Visibility_Public;
+		}
 
 		return $obj;
 	}
@@ -365,7 +429,7 @@ class OOEmulator extends Emulator
 		elseif ($node instanceof Node\Stmt\Static_)
 		{
 			//TODO: bind this static variable to the method being runned in the class it belongs to
-			if (end($this->trace)->type=="method" and  $this->method_exists(end($this->trace)->class,end($this->trace)->name)) //statc inside a method)
+			if (end($this->trace)->type=="method" and  $this->user_method_exists(end($this->trace)->class,end($this->trace)->name)) //statc inside a method)
 			{
 				$class=end($this->trace)->class;
 				$method=end($this->trace)->name;
@@ -393,26 +457,41 @@ class OOEmulator extends Emulator
 		{
 			$base=&$this->symbol_table($node->var,$key2,$create);
 			if ($key2===null)
-				return $this->null_reference=$key=null;
-				
+			{
+				$this->error("Variable not found: {$node->var}",$node->var);	
+				return $this->null_reference($key);
+			}
 			$var=&$base[$key2];
-			if (!($var instanceof EmulatorObject))
+			if ($var instanceof EmulatorObject)
+			{
+				$property_name=$this->name($node->name);
+
+				if (!array_key_exists($property_name, $var->properties))
+				{
+					$this->notice("Undefined property: {$var->classname}::\${$property_name}");
+					if (!$create)
+					{
+						return $this->null_reference($key);
+					}
+					else //dynamic properties, on all classes (FIXME: only notice if not stdClass?)
+						$var->properties[$property_name]=null;
+				}
+				$key=$property_name;
+				return $var->properties; //reference its value only!
+			}
+			elseif(is_object($var))
+			{
+				$property_name=$this->name($node->name);
+				$this->verbose(sprintf("Fetching object property: %s::%s\n",get_class($var),$property_name));
+				// if (!isset($var->{$property_name}))
+				// 	$this->notice("Undefined property: ".get_class($var)."::\${$property_name}");
+				return $var->{$property_name}; //self notice? #TEST
+			}
+			else 
 			{
 				$this->error("Trying to get property of non-object",$var);
-				return $this->null_reference=$key=null;
+				return $this->null_reference($key);
 			}
-			$property_name=$this->name($node->name);
-
-			if (!array_key_exists($property_name, $var->properties))
-			{
-				$this->notice("Undefined property: {$var->classname}::\${$property_name}");
-				if (!$create)
-					return $this->null_reference=$key=null;
-				else //dynamic properties, on all classes (FIXME: only notice if not stdClass?)
-					$var->properties[$property_name]=new EmulatorObjectProperty($property_name);
-			}
-			$key=$property_name;
-			return $var->properties; //reference its value only!
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
 		{
@@ -434,11 +513,13 @@ class OOEmulator extends Emulator
 			}
 			else
 				$this->error("Class '{$classname}' not found");
-			return $this->null_reference=$key=null;
+			return $this->null_reference($key);
 		}
 		elseif ($node instanceof Node\Expr\Variable and is_string($node->name) and $node->name=="this") //$this
 		{
 			$key='this';
+			$this->this_hack=array($key=>&$this->this);
+
 			return $this->this_hack;
 		}
 		else
@@ -458,7 +539,7 @@ class OOEmulator extends Emulator
 			$this->run_static_method($class,$method,$args);
 		}
 		else
-			return parent::call_function($name,$args);
+			return parent::call_function($name,$args); //non-OO
 	}
 
 }
