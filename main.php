@@ -14,7 +14,8 @@ require_once "emulator.php";
 if (isset($argc) and realpath($argv[0])==__FILE__)
 {
 	$x=new Emulator;
-	$entry_file="sample-stmts.php";
+	$x->direct_output=true;
+	$entry_file="sample-static-function.php";
 	// $entry_file="wordpress/index.php";
 
 	$x->start($entry_file);

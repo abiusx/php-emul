@@ -58,8 +58,8 @@ class OOEmulator extends Emulator
 			if (isset($node->type))
 				$classtype=$node->type;
 			$classname=$this->name($node->name);
-			$this->classes[$classname]=new stdClass;
-			$class=&$this->classes[$classname];
+			$this->classes[strtolower($classname)]=new stdClass;
+			$class=&$this->classes[strtolower($classname)];
 
 			$extends=null;
 			if ($node->extends)
@@ -69,6 +69,7 @@ class OOEmulator extends Emulator
 			$class->consts=[];
 			$class->methods=[];
 			$class->properties=[];
+			$class->visibilities=[];
 			$class->static=[];
 			$class->parent=$extends;
 			foreach ($node->stmts as $part)
@@ -136,10 +137,10 @@ class OOEmulator extends Emulator
 	protected function new_user_object($classname,array $args)
 	{
 		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
-		$obj=new EmulatorObject($classname,$this->classes[$classname]->properties,$this->classes[$classname]->visibilities);
+		$obj=new EmulatorObject($classname,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->visibilities);
 		foreach ($this->ancestry($classname,true) as $class)
 		{
-			foreach ($this->classes[$class]->properties as $property_name=>$property)
+			foreach ($this->classes[strtolower($class)]->properties as $property_name=>$property)
 				$obj->properties[$property_name]=$property;
 		}
 		foreach ($this->ancestry($classname) as $class)
@@ -174,7 +175,7 @@ class OOEmulator extends Emulator
 	protected function new_object($classname,array $args)
 	{
 
-		if (array_key_exists($classname, $this->classes)) //user classes
+		if (array_key_exists(strtolower($classname), $this->classes)) //user classes
 			return $this->new_user_object($classname,$args);
 		elseif (class_exists($classname)) //core classes
 			return $this->new_core_object($classname,$args);
@@ -183,13 +184,13 @@ class OOEmulator extends Emulator
 	}
 	protected function user_method_exists($class_name,$method_name)
 	{
-		if (!isset($this->classes[$class_name])) return false;
-		return array_key_exists($method_name, $this->classes[$class_name]->methods);
+		if (!isset($this->classes[strtolower($class_name)])) return false;
+		return array_key_exists($method_name, $this->classes[strtolower($class_name)]->methods);
 	}
 	protected function run_static_method($original_class_name,$method_name,$args)
 	{
 		$class_name=$this->real_class($original_class_name);
-		if (array_key_exists($class_name, $this->classes))
+		if (array_key_exists(strtolower($class_name), $this->classes))
 			return $this->run_user_static_method($original_class_name,$method_name,$args);
 		elseif (class_exists($class_name))
 			return call_user_func_array($class_name."::".$method_name, $args);
@@ -215,8 +216,8 @@ class OOEmulator extends Emulator
 				$this->self=$class;
 				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
 				$last_file=$this->current_file;
-				$this->current_file=$this->classes[$class_name]->file;
-				$res=$this->run_function($this->classes[$class]->methods[$method_name],$args);
+				$this->current_file=$this->classes[strtolower($class_name)]->file;
+				$res=$this->run_function($this->classes[strtolower($class)]->methods[$method_name],$args);
 				array_pop($this->trace);
 				$this->self=$last_self;
 				$flag=true;
@@ -311,8 +312,8 @@ class OOEmulator extends Emulator
 			$constant=$this->name($node->name);
 			foreach ($this->ancestry($class) as $cls)
 			{
-				if (array_key_exists($constant, $this->classes[$cls]->consts))
-					return $this->classes[$cls]->consts[$constant];
+				if (array_key_exists($constant, $this->classes[strtolower($cls)]->consts))
+					return $this->classes[strtolower($cls)]->consts[$constant];
 			}
 			$this->error("Undefined class constant '{$constant}'",$node);
 		}
@@ -375,7 +376,7 @@ class OOEmulator extends Emulator
 		elseif ($classname==="static")
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
-			$classname=$this->classes[$this->current_class]->parent;	
+			$classname=$this->classes[strtolower($this->current_class)]->parent;	
 
 		return $classname;
 	}
@@ -388,11 +389,11 @@ class OOEmulator extends Emulator
 	protected function ancestry($classname,$top_to_bottom=false)
 	{
 		$classname=$this->real_class($classname);
-		if (!isset($this->classes[$classname])) return null;
+		if (!isset($this->classes[strtolower($classname)])) return null;
 		$res=[$classname];
-		while ($this->classes[$classname]->parent)
+		while ($this->classes[strtolower($classname)]->parent)
 		{
-			$classname=$this->classes[$classname]->parent;
+			$classname=$this->classes[strtolower($classname)]->parent;
 			$res[]=$classname;
 		}
 		if ($top_to_bottom) $res=array_reverse($res);
@@ -417,7 +418,7 @@ class OOEmulator extends Emulator
 				$method=end($this->trace)->name;
 
 				//TODO
-				$statics=&$this->classes[$class]->methods[$method]->statics;// &$this->functions[$this->current_function]->statics;
+				$statics=&$this->classes[strtolower($class)]->methods[$method]->statics;// &$this->functions[$this->current_function]->statics;
 				foreach ($node->vars as $var)
 				{
 					$name=$this->name($var->name);
@@ -484,10 +485,10 @@ class OOEmulator extends Emulator
 			{
 				foreach($this->ancestry($classname)  as $class)
 				{
-					if (array_key_exists($property_name,$this->classes[$class]->static))
+					if (array_key_exists($property_name,$this->classes[strtolower($class)]->static))
 					{
 						$key=$property_name;	
-						return $this->classes[$class]->static; //only access its value #TODO: check for visibility
+						return $this->classes[strtolower($class)]->static; //only access its value #TODO: check for visibility
 					}
 				}
 				$this->error("Access to undeclared static property: {$classname}::\${$property_name}");

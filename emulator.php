@@ -4,6 +4,7 @@ use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 #TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
+#FIXME: classname and function names are not case sensitive, always check case insensitive
 class Emulator
 {	
 	/**
@@ -397,9 +398,9 @@ class Emulator
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
 		array_push($this->trace, (object)array("type"=>"function","name"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
 		$last_file=$this->current_file;
-		$this->current_file=$this->functions[$name]->file;
+		$this->current_file=$this->functions[strtolower($name)]->file;
 
-		$res=$this->run_function($this->functions[$name],$args);
+		$res=$this->run_function($this->functions[strtolower($name)],$args);
 		
 		array_pop($this->trace);
 		$this->current_function=$last_function;
@@ -442,17 +443,17 @@ class Emulator
 	 */
 	public function call_function($name,$args)
 	{
-		if (isset($this->functions[$name])) //user function
+		if (isset($this->functions[strtolower($name)])) //user function
 			return $this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
 			$argValues=$this->core_function_prologue($name,$args);
 			if (array_key_exists($name, $this->mock_functions)) //mocked
 			{
-				if (!function_exists($this->mock_functions[$name]))
+				if (!function_exists($this->mock_functions[strtolower($name)]))
 					$this->error("Mocked function '{$this->mock_functions[$name]}' not defined to mock '{$name}'.");
 				array_unshift($argValues, $this); //emulator is first argument in mock functions
-				$ret=call_user_func_array($this->mock_functions[$name],$argValues); //core function
+				$ret=call_user_func_array($this->mock_functions[strtolower($name)],$argValues); //core function
 			}
 			else //original core function
 			{
@@ -478,7 +479,7 @@ class Emulator
 		if ($this->terminated) return null;
 		$node=$ast;
 		$this->current_node=$node;
-		if ($node->getLine()!=$this->current_line)
+		if (is_object($node) and method_exists($node, "getLine") and $node->getLine()!=$this->current_line)
 		{
 			$this->current_line=$node->getLine();
 			$this->verbose("\t\tLine {$this->current_line}".PHP_EOL,2);
@@ -1392,9 +1393,9 @@ class Emulator
 			}
 			elseif ($node instanceof Node\Stmt\Static_)
 			{
-				if (end($this->trace)->type=="function" and  isset($this->functions[end($this->trace)->name])) //statc inside a function
+				if (end($this->trace)->type=="function" and  isset($this->functions[strtolower(end($this->trace)->name)])) //statc inside a function
 				{
-					$statics=&$this->functions[$this->current_function]->statics;
+					$statics=&$this->functions[strtolower($this->current_function)]->statics;
 					foreach ($node->vars as $var)
 					{
 						$name=$this->name($var->name);
@@ -1405,6 +1406,7 @@ class Emulator
 				}
 				else
 				{
+					#TODO:
 					$this->error("Global statics not yet supported");
 
 				}
@@ -1441,7 +1443,7 @@ class Emulator
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
 			$name=$this->name($node->name);
-			$this->functions[$name]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
+			$this->functions[strtolower($name)]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
 		}
 		elseif ($node instanceof Node\Stmt\Const_)
 		{
