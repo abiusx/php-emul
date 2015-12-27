@@ -4,7 +4,6 @@ use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 #TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
-#FIXME: classname and function names are not case sensitive, always check case insensitive
 class Emulator
 {	
 	/**

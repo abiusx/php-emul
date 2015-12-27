@@ -8,6 +8,9 @@ function apache_getenv()
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: internal classes, methods and etc.
+//FIXME: static method calls using call_user_func* fail, 
+//	e.g wordpress/wp-includes/class-http:324 			if ( !call_user_func( array( $class, 'test' ), $args, $url ) )
+
 class EmulatorObject
 {
 	const Visibility_Public=1;
