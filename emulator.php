@@ -168,7 +168,7 @@ class Emulator
 	function verbose($msg,$verbosity=1)
 	{
 		if ($this->verbose>=$verbosity)
-			echo str_repeat("\t",$verbosity).$msg;
+			echo str_repeat("-",$verbosity*3)." ".$msg;
 	}
 	/**
 	 * Initialize the emulator by setting environment variables (super globals)
