@@ -93,7 +93,7 @@ class OOEmulator extends Emulator
 						if ($type & 8 ) //static
 						{
 							$class->static[$propname]=$val;
-							$class->static_visibility[$propername]=$visibility;
+							$class->static_visibility[$propname]=$visibility;
 						}
 						else
 							$class->properties[$propname]=$val;
@@ -162,7 +162,7 @@ class OOEmulator extends Emulator
 	protected function new_core_object($classname,array $args)
 	{
 		$argValues=[];
-		foreach ($node->args as $arg)
+		foreach ($args as $arg)
 			$argValues[]=$this->evaluate_expression($arg->value);
 		
 		ob_start();	

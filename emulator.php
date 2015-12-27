@@ -3,7 +3,6 @@ require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
-#FIXME: the way silencing works now is stupid and just suppresses a lot of bugs. totally replace
 
 class Emulator
 {	
@@ -21,7 +20,7 @@ class Emulator
 	 * Configuration: Verbose messaging depth. -1 means no messages, even critical ones
 	 * @var integer
 	 */
-	public $verbose			=	2;
+	public $verbose			=	1;
 
 	/**
 	 * Whether to stop on all errors or not.
@@ -240,7 +239,7 @@ class Emulator
 		$this->verbose("PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)".PHP_EOL,0);
 		// if ($this->verbose)
 		// 	debug_print_backtrace();
-		if ($fatal) 
+		if ($fatal or $this->strict) 
 			$this->terminated=true;
 		return true;
 	}
@@ -468,6 +467,7 @@ class Emulator
 	 */
 	protected function evaluate_expression($ast)
 	{
+		if ($this->terminated) return null;
 		$node=$ast;
 		$this->current_node=$node;
 		if ($node->getLine()!=$this->current_line)
@@ -916,12 +916,18 @@ class Emulator
 	function &variable_reference($node)
 	{
 		$r=&$this->symbol_table($node,$key,false);
+		if ($this->current_file=='/Users/abiusx/Desktop/hybrid-ng/php-emul/wordpress/wp-includes/formatting.php')
+		{
+			var_dump("-------");
+			var_dump($r);
+			var_dump($key);
+		}
 		if ($key===null) //not found or GLOBALS
 			return $this->null_reference();
 		elseif (is_array($r))
 			return $r[$key];
 		else
-			$this->error("Could not retrive reference",$node);
+			$this->error("Could not retrieve reference",$node);
 	}
 
 	/**
@@ -1099,7 +1105,7 @@ class Emulator
 		$ast=$this->parser->parse($code);
 
 		$res=$this->run_code($ast);
-		$this->verbose("\t\t".substr($this->current_file,strlen($this->folder))." finished.".PHP_EOL);
+		$this->verbose(substr($this->current_file,strlen($this->folder))." finished.".PHP_EOL,2);
 		if ($this->return)
 			$this->return=false;
 		$this->current_file=$last_file;
@@ -1471,20 +1477,9 @@ class Emulator
 			{
 				$this->current_line=$node->getLine();
 				if ($this->verbose) 
-					printf("\t\t%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line);
+					$this->verbose(sprintf("\t\t%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line),2);
 			}
-			//comment meta-commands to the emulator. 
-			// if ($node->hasAttribute("comments") 
-			// 	and $index!==$start_index) //don't retake commands after resume
-			// {
-			// 	$comments=	$node->getAttribute("comments");
-			// 	foreach ($comments as $comment)
-			// 		if (strpos($comment->getText(),"emul::")!==false)
-			// 			if ($this->comment_command($comment->getText())) return;
-			// }
 			$this->statement_count++;
-			// if ($this->statement_count%200==0)
-			// 	$this->save_state();
 			$this->run_statement($node);
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;
@@ -1493,24 +1488,6 @@ class Emulator
 		}
 		$this->current_statement_index=null;
 	}	
-	// /**
-	//  * Process commands sent to the emulator using comments
-	//  * @param  string $comment 
-	//  */
-	// function comment_command($comment)
-	// {
-	// 	if (strpos($comment,"emul::pause()")!==false)
-	// 	{
-	// 		$this->save_state();
-	// 	}
-	// }
-	// function save_state()
-	// {
-	// 	require_once __DIR__."/state.php";
-	// 		$state= new EmulatorState();
-	// 		$file=$state->save($this);
-	// 		die(0);
-	// }
 	function __destruct()
 	{
 	}
