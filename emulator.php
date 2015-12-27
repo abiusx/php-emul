@@ -3,7 +3,7 @@ require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
-
+#TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
 class Emulator
 {	
 	/**
@@ -322,7 +322,7 @@ class Emulator
 		array_pop($this->variable_stack);
 		$this->_reference_variables_to_stack();
 	}
-	protected function function_prologue($function,$args)
+	protected function user_function_prologue($function,$args)
 	{
 		reset($args);
 		$count=count($args);
@@ -375,7 +375,7 @@ class Emulator
 	 */
 	protected function run_function($function,$args)
 	{
-		if (!$this->function_prologue($function,$args))
+		if (!$this->user_function_prologue($function,$args))
 			return null;
 		$res=$this->run_code($function->code);
 		$this->pop();
@@ -409,6 +409,31 @@ class Emulator
 			$this->return=false;	
 		return $res;
 	}
+	protected function core_function_prologue($name,$args)
+	{
+		$function_reflection=new ReflectionFunction($name);
+		$parameters_reflection=$function_reflection->getParameters();
+		$argValues=[];
+		foreach ($args as &$arg)
+		{
+			$parameter_reflection=current($parameters_reflection);
+			if ($arg instanceof Node)
+			{
+				if ($parameter_reflection->isPassedByReference()) //byref 
+				{
+					if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
+						$this->variable_set($arg->value);
+					$argValues[]=&$this->variable_reference($arg->value); 
+				}
+				else //byval
+					$argValues[]=$this->evaluate_expression($arg->value);
+			}
+			else //direct value
+				$argValues[]=&$arg; //byref or byval direct value (not Node)
+			next($parameters_reflection);
+		}
+		return $argValues;
+	}
 	/**
 	 * Runs a function, whether its internal or emulated.
 	 * @param  string $name [description]
@@ -421,28 +446,11 @@ class Emulator
 			return $this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
-			$argValues=[];
-			foreach ($args as &$arg)
-			{
-				if ($arg instanceof Node)
-				{
-					//FIXME: use another means to check if its byref, this is not right
-					if ($arg->value instanceof Node\Expr\Variable or $arg->value instanceof Node\Expr\ArrayDimFetch) //byref 
-					{
-						if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
-							$this->variable_set($arg->value);
-						$argValues[]=&$this->variable_reference($arg->value); 
-					}
-					else //byval
-						$argValues[]=$this->evaluate_expression($arg->value);
-				}
-				else //direct value
-					$argValues[]=&$arg; //byref or byval direct value (not Node)
-			}
+			$argValues=$this->core_function_prologue($name,$args);
 			if (array_key_exists($name, $this->mock_functions)) //mocked
 			{
 				if (!function_exists($this->mock_functions[$name]))
-					$this->error("Mocked function '{$this->mock_functions[$name]}' not defined to mock '{$name}'");
+					$this->error("Mocked function '{$this->mock_functions[$name]}' not defined to mock '{$name}'.");
 				array_unshift($argValues, $this); //emulator is first argument in mock functions
 				$ret=call_user_func_array($this->mock_functions[$name],$argValues); //core function
 			}
@@ -1091,7 +1099,7 @@ class Emulator
 		if (!isset($this->folder) or strlen($this->folder>$tfolder))
 			$this->folder=$tfolder;
 
-		printf("Now running %s...\n",substr($this->current_file,strlen($this->folder)) );
+		$this->verbose(sprintf("Now running %s...\n",substr($this->current_file,strlen($this->folder)) ));
 		
 		$this->included_files[$this->current_file]=true;
 		
