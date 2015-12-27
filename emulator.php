@@ -484,7 +484,8 @@ class Emulator
 			$this->current_line=$node->getLine();
 			$this->verbose("\t\tLine {$this->current_line}".PHP_EOL,2);
 		}	
-		if (false);
+		if ($node===null)
+			return null;
 		elseif (is_array($node))
 			die("array node!");
 		elseif ($node instanceof Node\Expr\FuncCall)
