@@ -449,12 +449,11 @@ class OOEmulator extends Emulator
 			if ($var instanceof EmulatorObject)
 			{
 				$property_name=$this->name($node->name);
-
 				if (!array_key_exists($property_name, $var->properties))
 				{
-					$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 					if (!$create)
 					{
+						$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 						return $this->null_reference($key);
 					}
 					else //dynamic properties, on all classes (FIXME: only notice if not stdClass?)
