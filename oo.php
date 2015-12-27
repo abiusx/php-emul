@@ -128,7 +128,6 @@ class OOEmulator extends Emulator
 			$class->interfaces=$interfaces;
 			// $class=(object)["properties"=>$properties,"static"=>$static_properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
 			// $this->classes[$classname]=$class;
-			// echo $classname,":";print_r($class);
 		}
 		else
 			parent::get_declarations($node);
@@ -141,7 +140,6 @@ class OOEmulator extends Emulator
 		foreach ($this->ancestry($classname,true) as $class)
 		{
 			foreach ($this->classes[$class]->properties as $property_name=>$property)
-				// echo "Setting property {$property_name} from {$class}...",PHP_EOL;	
 				$obj->properties[$property_name]=$property;
 		}
 		foreach ($this->ancestry($classname) as $class)
@@ -203,7 +201,7 @@ class OOEmulator extends Emulator
 	{
 		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
-			echo "\tRunning {$class_name}::{$method_name}()...",PHP_EOL;
+			$this->verbose("\tRunning {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$last_method=$this->current_method;
 		$last_class=$this->current_class;
 		$this->current_method=$method_name;

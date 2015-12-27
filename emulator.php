@@ -426,7 +426,7 @@ class Emulator
 			{
 				if ($arg instanceof Node)
 				{
-					//TODO: use another means to check if its byref, this is not right
+					//FIXME: use another means to check if its byref, this is not right
 					if ($arg->value instanceof Node\Expr\Variable or $arg->value instanceof Node\Expr\ArrayDimFetch) //byref 
 					{
 						if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
@@ -916,12 +916,6 @@ class Emulator
 	function &variable_reference($node)
 	{
 		$r=&$this->symbol_table($node,$key,false);
-		if ($this->current_file=='/Users/abiusx/Desktop/hybrid-ng/php-emul/wordpress/wp-includes/formatting.php')
-		{
-			var_dump("-------");
-			var_dump($r);
-			var_dump($key);
-		}
 		if ($key===null) //not found or GLOBALS
 			return $this->null_reference();
 		elseif (is_array($r))
