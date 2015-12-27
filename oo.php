@@ -8,9 +8,6 @@ function apache_getenv()
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: internal classes, methods and etc.
-//FIXME: static method calls using call_user_func* fail, 
-//	e.g wordpress/wp-includes/class-http:324 			if ( !call_user_func( array( $class, 'test' ), $args, $url ) )
-
 class EmulatorObject
 {
 	const Visibility_Public=1;
@@ -512,18 +509,28 @@ class OOEmulator extends Emulator
 	}
 	public function call_function($name,$args)
 	{
+		#http://php.net/manual/en/language.types.callable.php
 		if (is_array($name) and count($name)==2) //method call
 		{
-			$object=$name[0];
+			$class_or_obj=$name[0];
 			$method_name=$name[1];
-			$this->run_method($object,$method_name,$args);
+			if (is_string($class_or_obj)) //class, type 2
+			{
+				#TODO: handle type 5 here	
+				$this->run_static_method($class_or_obj,$method_name,$args);
+			}
+			elseif (is_object($class_or_obj)) //object, type 3
+				$this->run_method($class_or_obj,$method_name,$args);
+			else
+				$this->error("Unknown function call '{$name}'.");
 		}
 		elseif (is_string($name) and strpos($name,"::")!==false) //static call
 		{
-			list($class,$method)=explode("::",$name);
+			list($class,$method)=explode("::",$name); //type 4, static method call
 			$this->run_static_method($class,$method,$args);
 		}
 		else
+			#TODO: handle type 6 (invoke)
 			return parent::call_function($name,$args); //non-OO
 	}
 
