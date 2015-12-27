@@ -8,6 +8,8 @@ function apache_getenv()
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: internal classes, methods and etc.
+//FIXME: variable_* fails on instances such as 	return wp_scripts()->do_items( $handles );
+// wordpress/wp-includes/functions.wp-scripts.php
 class EmulatorObject
 {
 	const Visibility_Public=1;
