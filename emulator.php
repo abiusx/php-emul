@@ -4,6 +4,8 @@ use PhpParser\Node;
 #remaining for procedural completeness: closure,closureUse
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 #TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
+#TODO: make symbol_table return the actual variable instead of superset, and handle unset separately. 
+#	This is making things too complicated. (i.e, replace symbol_table with variable_get, variable_set and variable_reference functions)
 class Emulator
 {	
 	/**
