@@ -20,7 +20,7 @@ class Emulator
 	 * Configuration: Verbose messaging depth. -1 means no messages, even critical ones
 	 * @var integer
 	 */
-	public $verbose			=	2;
+	public $verbose			=	1;
 
 	/**
 	 * Whether to stop on all errors or not.
