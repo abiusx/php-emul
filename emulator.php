@@ -1037,6 +1037,13 @@ class Emulator
 		{
 			return $this->symbol_table($node->name,$key,$create);
 		}
+		elseif ($node instanceof Node\Expr)
+		{
+			#TODO: temporary variable for symbol table to return... think of a workaround?
+			$hack=array('temp'=>$this->evaluate_expression($node))	;
+			$key='temp';
+			return $hack;
+		}
 		else
 		{
 			$this->error("Can not find variable reference of this node type.",$node);

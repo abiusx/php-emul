@@ -1,6 +1,6 @@
 <?php
 
-require_once "emulator.php";
+require_once "oo.php";
 
 
 
@@ -13,13 +13,20 @@ require_once "emulator.php";
 
 if (isset($argc) and realpath($argv[0])==__FILE__)
 {
-	$x=new Emulator;
+	$x=new OOEmulator;
 	$x->direct_output=true;
-	$entry_file="sample-static-function.php";
+	$entry_file="sample-func-object.php";
 	// $entry_file="wordpress/index.php";
+	$entry_file="wordpress/wp-admin/install.php";
 
 	$x->start($entry_file);
-	
+	$x=new OOEmulator;
+// $x->start("wordpress/index.php");
+// $x->start("wordpress/wp-admin/install.php");
+// $x->start("sample-oo.php");
+// echo "Output of size ".strlen($x->output)." was generated:",PHP_EOL;
+// var_dump(substr($x->output,-200));
+// echo(($x->output));
 	// $x->start("sample-isset-empty.php");
 	// echo(($x->output));
 }
