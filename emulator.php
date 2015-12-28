@@ -1500,6 +1500,8 @@ class Emulator
 	}	
 	function __destruct()
 	{
+		echo memory_get_usage(),PHP_EOL;
+		echo memory_get_peak_usage(),PHP_EOL;
 	}
 
 

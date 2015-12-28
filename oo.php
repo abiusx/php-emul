@@ -7,6 +7,7 @@ function apache_getenv()
 }
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
+//TODO: handle visibilities
 class EmulatorObject
 {
 	const Visibility_Public=1;
