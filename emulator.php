@@ -511,15 +511,9 @@ class Emulator
 				foreach ($node->var->vars as $var)
 				{
 					//not necessarily a variable, can be an arrayDim or objectProperty
-					$base=$this->symbol_table($var,$key,true);
-					if ($key!==null)
-					{
-						// $outArray[]=$this->variable_set($var,current($resArray));
-						$outArray[]=$base[$key]=current($resArray);
-						next($resArray);
-					}
-					else
-						$this->error("Argument to list() is not referencable.");
+					$outArray[]=$this->variable_set($var,current($resArray));
+					// $outArray[]=$base[$key]=current($resArray);
+					next($resArray);
 				}
 				return $outArray;
 			}
