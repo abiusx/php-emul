@@ -15,7 +15,7 @@ if (isset($argc) and realpath($argv[0])==__FILE__)
 {
 	$x=new OOEmulator;
 	$x->direct_output=false;
-	$x->verbose=3;
+	$x->verbose=1;
 	$entry_file="sample-func-object.php";
 	// $entry_file="wordpress/index.php";
 	$entry_file="wordpress/wp-admin/install.php";

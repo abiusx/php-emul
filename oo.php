@@ -8,6 +8,7 @@ function apache_getenv()
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: handle visibilities
+//TODO: method name are case insensitive too, make sure its handled
 class EmulatorObject
 {
 	const Visibility_Public=1;
