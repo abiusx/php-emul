@@ -510,13 +510,16 @@ class Emulator
 				$outArray=[];
 				foreach ($node->var->vars as $var)
 				{
-					if ($var instanceof Node\Expr\Variable)
+					//not necessarily a variable, can be an arrayDim or objectProperty
+					$base=$this->symbol_table($var,$key,true);
+					if ($key!==null)
 					{
-						$outArray[]=$this->variable_set($var,current($resArray));
+						// $outArray[]=$this->variable_set($var,current($resArray));
+						$outArray[]=$base[$key]=current($resArray);
 						next($resArray);
 					}
 					else
-						$this->error("List() should have a variable as argument.",$node);
+						$this->error("Argument to list() is not referencable.");
 				}
 				return $outArray;
 			}
@@ -1039,6 +1042,7 @@ class Emulator
 		elseif ($node instanceof Node\Expr)
 		{
 			#TODO: temporary variable for symbol table to return... think of a workaround?
+			#Fatal error: Can't use function return value in write context
 			$hack=array('temp'=>$this->evaluate_expression($node))	;
 			$key='temp';
 			return $hack;

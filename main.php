@@ -8,7 +8,7 @@ require_once "oo.php";
 
 
 
-
+$_SERVER['HTTP_HOST']='localhost';
 // $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 
 if (isset($argc) and realpath($argv[0])==__FILE__)
