@@ -282,7 +282,7 @@ class OOEmulator extends Emulator
 		{
 			$object=&$this->variable_reference($node->var);
 			$method_name=$this->name($node->name);
-			$this->verbose("Method call ".$object->classname."::".$method_name,3);
+			$this->verbose("Method call ".$object->classname."::".$method_name.PHP_EOL,3);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
 		}

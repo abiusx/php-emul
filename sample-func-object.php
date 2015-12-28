@@ -30,3 +30,15 @@ echo f()->a(),"=3",PHP_EOL;
 echo f()->b()->a(),"=3",PHP_EOL;
 
 // echo f3(f2()),"=11",PHP_EOL;
+
+function wp_scripts() {
+	global $wp_scripts;
+	if ( ! ( $wp_scripts instanceof cls ) ) {
+		$wp_scripts = new cls();
+	}
+	return $wp_scripts;
+}
+$a=null;
+echo wp_scripts()->a( $a ),"=3",PHP_EOL;
+
+echo $wp_scripts->a(),"=3\n";

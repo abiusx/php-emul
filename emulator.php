@@ -20,7 +20,7 @@ class Emulator
 	 * Configuration: Verbose messaging depth. -1 means no messages, even critical ones
 	 * @var integer
 	 */
-	public $verbose			=	1;
+	public $verbose			=	2;
 
 	/**
 	 * Whether to stop on all errors or not.
@@ -389,18 +389,17 @@ class Emulator
 	 */
 	protected function run_user_function($name,$args)
 	{
-		$this->verbose("\tRunning {$name}()...".PHP_EOL,2);
+		$this->verbose("Running {$name}()...".PHP_EOL,2);
 		
 		$last_function=$this->current_function;
 		$this->current_function=$name;
-
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
 		array_push($this->trace, (object)array("type"=>"function","name"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
 		$last_file=$this->current_file;
 		$this->current_file=$this->functions[strtolower($name)]->file;
 
 		$res=$this->run_function($this->functions[strtolower($name)],$args);
-		
+
 		array_pop($this->trace);
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
@@ -481,12 +480,12 @@ class Emulator
 		if (is_object($node) and method_exists($node, "getLine") and $node->getLine()!=$this->current_line)
 		{
 			$this->current_line=$node->getLine();
-			$this->verbose("\t\tLine {$this->current_line}".PHP_EOL,2);
+			$this->verbose("Line {$this->current_line} (expression)".PHP_EOL,4);
 		}	
 		if ($node===null)
 			return null;
 		elseif (is_array($node))
-			die("array node!");
+			$this->error("Did not expect array node!",$node);
 		elseif ($node instanceof Node\Expr\FuncCall)
 		{
 			$name=$this->name($node);
@@ -1488,7 +1487,7 @@ class Emulator
 			{
 				$this->current_line=$node->getLine();
 				if ($this->verbose) 
-					$this->verbose(sprintf("\t\t%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line),2);
+					$this->verbose(sprintf("%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line),3);
 			}
 			$this->statement_count++;
 			$this->run_statement($node);
