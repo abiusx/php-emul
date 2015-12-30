@@ -106,7 +106,7 @@ class OOEmulator extends Emulator
 				{
 					$methodname=$this->name($part->name);
 					$type=$part->type;
-					$class->methods[$methodname]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,"file"=>$this->current_file,'type'=>$type,'statics'=>[]); 
+					$class->methods[strtolower($methodname)]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,"file"=>$this->current_file,'type'=>$type,'statics'=>[]); 
 				}
 				elseif ($part instanceof Node\Stmt\ClassConst)
 				{
@@ -185,7 +185,7 @@ class OOEmulator extends Emulator
 	protected function user_method_exists($class_name,$method_name)
 	{
 		if (!isset($this->classes[strtolower($class_name)])) return false;
-		return array_key_exists($method_name, $this->classes[strtolower($class_name)]->methods);
+		return array_key_exists(strtolower($method_name), $this->classes[strtolower($class_name)]->methods);
 	}
 	protected function run_static_method($original_class_name,$method_name,$args)
 	{
@@ -418,7 +418,7 @@ class OOEmulator extends Emulator
 				$method=end($this->trace)->name;
 
 				//TODO
-				$statics=&$this->classes[strtolower($class)]->methods[$method]->statics;// &$this->functions[$this->current_function]->statics;
+				$statics=&$this->classes[strtolower($class)]->methods[strtolower($method)]->statics;// &$this->functions[$this->current_function]->statics;
 				foreach ($node->vars as $var)
 				{
 					$name=$this->name($var->name);
