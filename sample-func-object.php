@@ -1,4 +1,13 @@
 <?php
+class the_class {
+	static function static_f()
+	{
+		return true;
+	}
+}
+echo(the_class::static_f()),"=1",PHP_EOL;
+echo (call_user_func(array("the_class","static_f"),[])), "=1",PHP_EOL;
+
 class cls
 {
 	function a()
