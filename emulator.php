@@ -63,6 +63,11 @@ class Emulator
 	 */
 	public $output;
 	/**
+	 * The output buffer
+	 * @var array
+	 */
+	public $output_buffer=[];
+	/**
 	 * Symbol table of the current scope (all variables)
 	 * @var array
 	 */
@@ -189,7 +194,7 @@ class Emulator
 		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives internal and user subarrays.
 		{
 			if (function_exists($function."_mock"))
-				$this->mock_functions[$function]=$function."_mock";
+				$this->mock_functions[strtolower($function)]=$function."_mock";
 		}
 	}
 	/**
@@ -448,15 +453,18 @@ class Emulator
 		elseif (function_exists($name)) //core function
 		{
 			$argValues=$this->core_function_prologue($name,$args);
-			if (array_key_exists($name, $this->mock_functions)) //mocked
+			if (array_key_exists(strtolower($name), $this->mock_functions)) //mocked
 			{
-				if (!function_exists($this->mock_functions[strtolower($name)]))
+				$mocked_name=$this->mock_functions[strtolower($name)];
+				if (!function_exists($mocked_name))
 					$this->error("Mocked function '{$this->mock_functions[$name]}' not defined to mock '{$name}'.");
+				$this->verbose("Calling core function '{$name}' mocked with '{$mocked_name}'...\n",4);
 				array_unshift($argValues, $this); //emulator is first argument in mock functions
-				$ret=call_user_func_array($this->mock_functions[strtolower($name)],$argValues); //core function
+				$ret=call_user_func_array($mocked_name,$argValues); //core function
 			}
 			else //original core function
 			{
+				$this->verbose("Calling core function '{$name}'...\n",4);
 				ob_start();	
 				$ret=call_user_func_array($name,$argValues); //core function
 				$output=ob_get_clean();
@@ -841,28 +849,28 @@ class Emulator
 			if ($this->evaluate_expression($node->cond)) return $this->evaluate_expression($node->if);
 			else return $this->evaluate_expression($node->else);
 		}
-		elseif ($node instanceof Node\Expr\New_)
-		{
-			$classname=$this->name($node->class);
-			if (class_exists($classname))
-			{
-				$argValues=[];
-				foreach ($node->args as $arg)
-					$argValues[]=$this->evaluate_expression($arg->value);
+		// elseif ($node instanceof Node\Expr\New_)
+		// {
+		// 	$classname=$this->name($node->class);
+		// 	if (class_exists($classname))
+		// 	{
+		// 		$argValues=[];
+		// 		foreach ($node->args as $arg)
+		// 			$argValues[]=$this->evaluate_expression($arg->value);
 				
-				ob_start();	
-				$r = new ReflectionClass($classname);
-				$ret = $r->newInstanceArgs($argValues); #TODO: byref?
-				// $ret=new $classname($argValues); //core class
-				$output=ob_get_clean();
-				$this->output($output);
-				return $ret;
-			}
-			else
-			{
-				$this->error("Class '{$classname}' not built-in in PHP.",$node);
-			}
-		}
+		// 		ob_start();	
+		// 		$r = new ReflectionClass($classname);
+		// 		$ret = $r->newInstanceArgs($argValues); #TODO: byref?
+		// 		// $ret=new $classname($argValues); //core class
+		// 		$output=ob_get_clean();
+		// 		$this->output($output);
+		// 		return $ret;
+		// 	}
+		// 	else
+		// 	{
+		// 		$this->error("Class '{$classname}' not built-in in PHP.",$node);
+		// 	}
+		// }
 		else
 			$this->error("Unknown expression node: ",$node);
 		return null;
@@ -1015,7 +1023,7 @@ class Emulator
 				elseif (!isset($base[$index]))
 					if ($create)
 					{
-						$this->verbose("creating array index '{$index}'...".PHP_EOL,3);	
+						$this->verbose("Creating array index '{$index}'...".PHP_EOL,5);	
 						$base[$index]=null;
 					}
 					else
@@ -1136,6 +1144,7 @@ class Emulator
 			$this->verbose("File not found '{$file}'.".PHP_EOL,0);
 			return false;
 		}
+		$this->original_dir=getcwd();
 		chdir(dirname($this->entry_file));
 		$file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
@@ -1143,6 +1152,7 @@ class Emulator
 		$res=$this->run_file($file);
 		restore_error_handler();
 		$this->shutdown();
+		chdir($this->original_dir);
 		return $res;
 	}
 	// /**

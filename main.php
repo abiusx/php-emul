@@ -4,10 +4,6 @@ require_once "oo.php";
 
 
 
-
-
-
-
 $_SERVER['HTTP_HOST']='localhost';
 // $_GET['url']='http://abiusx.com/blog/wp-content/themes/nano2/images/banner.jpg';
 
@@ -15,12 +11,14 @@ if (isset($argc) and realpath($argv[0])==__FILE__)
 {
 	$x=new OOEmulator;
 	$x->direct_output=false;
-	$x->verbose=1;
+	$x->verbose=5;
 	$entry_file="sample-func-object.php";
 	// $entry_file="wordpress/index.php";
 	$entry_file="wordpress/wp-admin/install.php";
 
 	$x->start($entry_file);
+
+	file_put_contents("output.txt",$x->output);
 // $x->start("wordpress/index.php");
 // $x->start("wordpress/wp-admin/install.php");
 // $x->start("sample-oo.php");

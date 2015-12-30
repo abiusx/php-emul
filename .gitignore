@@ -5,5 +5,5 @@
 
 */*
 
-!mocks/
-!test/
+!mocks/*.php
+!test/*.php

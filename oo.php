@@ -164,7 +164,6 @@ class OOEmulator extends Emulator
 		$argValues=[];
 		foreach ($args as $arg)
 			$argValues[]=$this->evaluate_expression($arg->value);
-		
 		ob_start();	
 		$r = new ReflectionClass($classname);
 		$ret = $r->newInstanceArgs($argValues); #TODO: byref?
