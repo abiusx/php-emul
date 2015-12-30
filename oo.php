@@ -202,7 +202,7 @@ class OOEmulator extends Emulator
 	{
 		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
-			$this->verbose("\tRunning {$class_name}::{$method_name}()...".PHP_EOL,2);
+			$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$last_method=$this->current_method;
 		$last_class=$this->current_class;
 		$this->current_method=$method_name;
@@ -216,8 +216,9 @@ class OOEmulator extends Emulator
 				$this->self=$class;
 				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
 				$last_file=$this->current_file;
-				$this->current_file=$this->classes[strtolower($class_name)]->file;
-				$res=$this->run_function($this->classes[strtolower($class)]->methods[$method_name],$args);
+				$this->current_file=$this->classes[strtolower($class)]->file;
+				$this->verbose("Found ancestor function {$class}::{$method_name}()...".PHP_EOL,3);
+				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args);
 				array_pop($this->trace);
 				$this->self=$last_self;
 				$flag=true;
@@ -233,7 +234,6 @@ class OOEmulator extends Emulator
 		$this->current_method=$last_method;
 		$this->current_file=$last_file;
 		$this->current_class=$last_class;
-
 		if ($this->return)
 			$this->return=false;	
 		return $res;
@@ -517,17 +517,17 @@ class OOEmulator extends Emulator
 			if (is_string($class_or_obj)) //class, type 2
 			{
 				#TODO: handle type 5 here	
-				$this->run_static_method($class_or_obj,$method_name,$args);
+				return $this->run_static_method($class_or_obj,$method_name,$args);
 			}
 			elseif (is_object($class_or_obj)) //object, type 3
-				$this->run_method($class_or_obj,$method_name,$args);
+				return $this->run_method($class_or_obj,$method_name,$args);
 			else
 				$this->error("Unknown function call '{$name}'.");
 		}
 		elseif (is_string($name) and strpos($name,"::")!==false) //static call
 		{
 			list($class,$method)=explode("::",$name); //type 4, static method call
-			$this->run_static_method($class,$method,$args);
+			return $this->run_static_method($class,$method,$args);
 		}
 		else
 			#TODO: handle type 6 (invoke)
