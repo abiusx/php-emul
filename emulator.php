@@ -1105,33 +1105,7 @@ class Emulator
 			$this->error("Can not determine name: ",$ast);
 	}
 
-	private $parsed=[];
-	private $parsed_modified=false;
-	protected function parse($file)
-	{
-		$mtime=filemtime($file);
-		if (isset($this->parsed[$file]) and $this->parsed[$file]['mtime']>=$mtime)
-			return $this->parsed[$file]['ast'];
-		else
-		{
-			$code=file_get_contents($file);
-			$this->parsed[$file]['mtime']=$mtime;
-			$this->parsed_modified=true;
-			return $this->parsed[$file]['ast']=$this->parser->parse($code);
-		}
-		// $md5=md5(file_get_contents($file));
-		// // @mkdir(__DIR__."/cache/parse",0777,true);
-		// $cache_file=__DIR__."/cache/parse/{$md5}";
-		// if (file_exists($cache_file))
-		// 	$ast=unserialize(file_get_contents($cache_file));
-		// else
-		// {
-		// 	$code=file_get_contents($file);
-		// 	$ast=$this->parser->parse($code);
-		// 	file_put_contents($cache_file,serialize($ast));
-		// }
-		// return $ast;
-	}
+	
 	/**
 	 * Runs a PHP file
 	 * Basically it sets up current file and other state variables, reads the file,
@@ -1541,28 +1515,57 @@ class Emulator
 		}
 		$this->current_statement_index=null;
 	}	
+
+
+	private $parsed=[];
+	private $parsed_modified=false;
+	protected function parse($file)
+	{
+		$mtime=filemtime($file);
+		// if (isset($this->parsed[$file]) and $this->parsed[$file]['mtime']==$mtime)
+		// 	return $this->parsed[$file]['ast'];
+		// else
+		// {
+		// 	$code=file_get_contents($file);
+		// 	$this->parsed[$file]['mtime']=$mtime;
+		// 	$this->parsed_modified=true;
+		// 	return $this->parsed[$file]['ast']=$this->parser->parse($code);
+		// }
+		$md5=md5($file);
+		// @mkdir(__DIR__."/cache/parse",0777,true);
+		$cache_file=__DIR__."/cache/parsetree-{$md5}-{$mtime}";
+		if (file_exists($cache_file))
+			$ast=unserialize(gzuncompress(file_get_contents($cache_file)));
+		else
+		{
+			$code=file_get_contents($file);
+			$ast=$this->parser->parse($code);
+			file_put_contents($cache_file,gzcompress(serialize($ast)));
+		}
+		return $ast;
+	}
 	function __construct()
 	{
 		$this->variable_stack['global']=array();
 		$this->variables=&$this->variable_stack['global'];
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
     	$this->init();
-    	if (file_exists(__DIR__."/cache/parsed"))
-    	{
-			$this->verbose("Parse-Tree cache found in file, restoring...");
-			$this->parsed=unserialize(gzuncompress(file_get_contents(__DIR__."/cache/parsed")));
-			$this->verbose("done.\n");
-    	}
+   //  	if (file_exists(__DIR__."/cache/parsed"))
+   //  	{
+			// $this->verbose("Parse-Tree cache found in file, restoring...");
+			// $this->parsed=unserialize(gzuncompress(file_get_contents(__DIR__."/cache/parsed")));
+			// $this->verbose("done.\n");
+   //  	}
 	}
 	function __destruct()
 	{
 		$this->verbose(sprintf("Memory usage: %.2fMB (%.2fMB)\n",memory_get_usage()/1024.0/1024.0,memory_get_peak_usage()/1024.0/1024.0));
-		if ($this->parsed_modified)
-		{
-			if (!file_exists(__DIR__."/cache")) mkdir(__DIR__."/cache");
-			file_put_contents(__DIR__."/cache/parsed",gzcompress(serialize($this->parsed)));
-			$this->verbose("Parse-Tree cached in file.\n");
-		}
+		// if ($this->parsed_modified)
+		// {
+		// 	if (!file_exists(__DIR__."/cache")) mkdir(__DIR__."/cache");
+		// 	file_put_contents(__DIR__."/cache/parsed",gzcompress(serialize($this->parsed)));
+		// 	$this->verbose("Parse-Tree cached in file.\n");
+		// }
 	}
 
 
