@@ -260,7 +260,7 @@ class OOEmulator extends Emulator
 		return $res;
 	}
 
-	public function user_method_exists($class_name,$method_name)
+	public function user_method_exists($classname,$methodname)
 	{
 		if (!$this->class_exists($classname)) return false;
 		#TODO: separate static/instance methods?
