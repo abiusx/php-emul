@@ -419,6 +419,7 @@ class Emulator
 	}
 	protected function core_function_prologue($name,$args)
 	{
+		#TODO: auto-wrap callables, they are used all over the place
 		$function_reflection=new ReflectionFunction($name);
 		$parameters_reflection=$function_reflection->getParameters();
 		$argValues=[];
