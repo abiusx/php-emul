@@ -2,5 +2,5 @@
 
 function header_remove_mock(Emulator $emul,$string)
 {
-	echo "\tHeader removed: {$string}",PHP_EOL;
+	$emul->verbose("Header removed: {$string}".PHP_EOL,4);
 }

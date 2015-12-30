@@ -1402,9 +1402,10 @@ class Emulator
 			}
 			elseif ($node instanceof Node\Expr\Exit_)
 			{
-				$res=$this->evaluate_expression($node);
+				$res=$this->evaluate_expression($node->expr);
 				if (!is_numeric($res))	
 					$this->output($res);
+				$this->terminated=true;
 				return $res;
 			}
 			elseif ($node instanceof Node\Stmt\Static_)
