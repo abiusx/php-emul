@@ -1521,18 +1521,11 @@ class Emulator
 	private $parsed_modified=false;
 	protected function parse($file)
 	{
+		#TODO: decide much better memory on single-file unserialize, runtime overhead is about 3-4 times
+		#350 mb vs 650 mb (baseline 250 mb), 12s (8 unserialize) vs 7s (3.5 unserialize+gc) (baseline 27s)
+		#maybe cache a few files? because the single file cache grows over time
 		$mtime=filemtime($file);
-		// if (isset($this->parsed[$file]) and $this->parsed[$file]['mtime']==$mtime)
-		// 	return $this->parsed[$file]['ast'];
-		// else
-		// {
-		// 	$code=file_get_contents($file);
-		// 	$this->parsed[$file]['mtime']=$mtime;
-		// 	$this->parsed_modified=true;
-		// 	return $this->parsed[$file]['ast']=$this->parser->parse($code);
-		// }
 		$md5=md5($file);
-		// @mkdir(__DIR__."/cache/parse",0777,true);
 		$cache_file=__DIR__."/cache/parsetree-{$md5}-{$mtime}";
 		if (file_exists($cache_file))
 			$ast=unserialize(gzuncompress(file_get_contents($cache_file)));
@@ -1550,22 +1543,10 @@ class Emulator
 		$this->variables=&$this->variable_stack['global'];
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
     	$this->init();
-   //  	if (file_exists(__DIR__."/cache/parsed"))
-   //  	{
-			// $this->verbose("Parse-Tree cache found in file, restoring...");
-			// $this->parsed=unserialize(gzuncompress(file_get_contents(__DIR__."/cache/parsed")));
-			// $this->verbose("done.\n");
-   //  	}
 	}
 	function __destruct()
 	{
 		$this->verbose(sprintf("Memory usage: %.2fMB (%.2fMB)\n",memory_get_usage()/1024.0/1024.0,memory_get_peak_usage()/1024.0/1024.0));
-		// if ($this->parsed_modified)
-		// {
-		// 	if (!file_exists(__DIR__."/cache")) mkdir(__DIR__."/cache");
-		// 	file_put_contents(__DIR__."/cache/parsed",gzcompress(serialize($this->parsed)));
-		// 	$this->verbose("Parse-Tree cached in file.\n");
-		// }
 	}
 
 
