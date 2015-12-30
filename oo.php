@@ -182,11 +182,7 @@ class OOEmulator extends Emulator
 		else
 			$this->error("Class '{$classname}' not found ");
 	}
-	protected function user_method_exists($class_name,$method_name)
-	{
-		if (!isset($this->classes[strtolower($class_name)])) return false;
-		return array_key_exists(strtolower($method_name), $this->classes[strtolower($class_name)]->methods);
-	}
+
 	protected function run_static_method($original_class_name,$method_name,$args)
 	{
 		$class_name=$this->real_class($original_class_name);
@@ -264,6 +260,59 @@ class OOEmulator extends Emulator
 		return $res;
 	}
 
+	public function user_method_exists($class_name,$method_name)
+	{
+		if (!$this->class_exists($classname)) return false;
+		#TODO: separate static/instance methods?
+		return isset($this->classes[strtolower($classname)]->methods[strtolower($methodname)]);
+	}
+	public function class_exists($classname)
+	{
+		return class_exists($classname) or isset($this->classes[strtolower($classname)]);
+	}
+	public function is_object($obj)
+	{
+		return is_object($obj) or $obj instanceof EmulatorObject;
+	}
+	public function static_method_exists($classname,$methodname)
+	{
+		return method_exists($classname, $methodname) or $this->user_method_exists($classname,$methodname);
+	}	
+	public function method_exists($obj,$methodname)
+	{
+		if ($obj instanceof EmulatorObject)
+			$class=$obj->classname;
+		else
+			$class=get_class($obj);
+		return $this->static_method_exists($class,$methodname);
+	}
+	/**
+	 * Whether or not an argument is callable, i.e valid syntax and valid function/method/class names
+	 * @param  [type]  $x [description]
+	 * @return boolean    [description]
+	 */
+	public function is_callable($x)
+	{
+		if (is_string($x))
+		{
+			if (strpos($x,"::")!==false)
+			{
+				list($classname,$methodname)=explode("::",$x);
+				return ($this->class_exists($classname) and $this->static_method_exists($classname, $methodname));
+			}
+			else
+				return $this->function_exists($x);
+		}
+		elseif (is_array($x) and count($x)==2)
+		{
+			if (is_string($x[0]))
+				return $this->class_exists($x[0]) and $this->static_method_exists($x[0], $x[1]);
+			else
+				return $this->is_object($x[0]) and $this->method_exists($x[0],$x[1]);
+		}
+		else 
+			return false;
+	}
 	protected function evaluate_expression($node)
 	{
 		$this->current_node=$node;

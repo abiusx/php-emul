@@ -331,6 +331,15 @@ class Emulator
 		array_pop($this->variable_stack);
 		$this->_reference_variables_to_stack();
 	}
+
+	public function user_function_exists($f)
+	{
+		return isset($this->functions[strtolower($f)]);	
+	}
+	public function function_exists($f)
+	{
+		return function_exists($f) or isset($this->functions[strtolower($f)]);
+	}
 	protected function user_function_prologue($function,$args)
 	{
 		reset($args);
