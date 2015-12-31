@@ -7,3 +7,6 @@
 
 !mocks/*.php
 !test/*.php
+!samples/
+output.txt
+

@@ -1,4 +1,13 @@
 <?php
+if (!function_exists("apache_getenv"))
+{
+	
+	function apache_getenv()
+	{
+		return "";
+	}
+}
+
 ini_set("memory_limit",-1);
 require_once "oo.php";
 

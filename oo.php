@@ -1,14 +1,15 @@
 <?php
 require_once __DIR__."/emulator.php";
 use PhpParser\Node;
-function apache_getenv()
-{
-	return "";
-}
+#TODO: closure,closureUse
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: handle visibilities
-//TODO: method name are case insensitive too, make sure its handled
+
+require_once "oo-methods.php";
+/**
+ * The user defined objects are wrapped in this class.
+ */
 class EmulatorObject
 {
 	const Visibility_Public=1;
@@ -38,16 +39,29 @@ class EmulatorObject
 }
 class OOEmulator extends Emulator
 {
+	use OOEmulatorMethods;
 	function __construct()
 	{
 		parent::__construct();
-		// $this->this_hack=array('this'=>&$this->this);
 	}
+	/**
+	 * Holds the class definitions
+	 * @var array
+	 */
 	public $classes=[];
 	protected $current_class,$current_method,$current_trait;
 	protected $current_namespace;
+	/**
+	 * Holds $this and self object and class pointers
+	 * @var null
+	 */
 	protected $this=null,$self=null;
 
+	/**
+	 * Extract ClassLike declarations from files.
+	 * @param  [type] $node [description]
+	 * @return [type]       [description]
+	 */
 	protected function get_declarations($node)
 	{
 		if ($node instanceof Node\Stmt\ClassLike)
@@ -135,6 +149,12 @@ class OOEmulator extends Emulator
 			parent::get_declarations($node);
 
 	}
+	/**
+	 * Create an object from a user defined class
+	 * @param  string $classname 
+	 * @param  array  $args  		constructor args   
+	 * @return EmulatorObject            
+	 */
 	protected function new_user_object($classname,array $args)
 	{
 		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
@@ -159,6 +179,12 @@ class OOEmulator extends Emulator
 		}
 		return $obj;
 	}
+	/**
+	 * Instantiate a core class into a native php object
+	 * @param  string $classname 
+	 * @param  array  $args      
+	 * @return object            
+	 */
 	protected function new_core_object($classname,array $args)
 	{
 		$argValues=[];
@@ -172,9 +198,14 @@ class OOEmulator extends Emulator
 		$this->output($output);
 		return $ret;
 	}
+	/**
+	 * Instantiate a class into an object (native or user defined)
+	 * @param  string $classname 
+	 * @param  array  $args      
+	 * @return object            
+	 */
 	protected function new_object($classname,array $args)
 	{
-
 		if (array_key_exists(strtolower($classname), $this->classes)) //user classes
 			return $this->new_user_object($classname,$args);
 		elseif (class_exists($classname)) //core classes
@@ -182,137 +213,11 @@ class OOEmulator extends Emulator
 		else
 			$this->error("Class '{$classname}' not found ");
 	}
-
-	protected function run_static_method($original_class_name,$method_name,$args)
-	{
-		$class_name=$this->real_class($original_class_name);
-		if (array_key_exists(strtolower($class_name), $this->classes))
-			return $this->run_user_static_method($original_class_name,$method_name,$args);
-		elseif (class_exists($class_name))
-			return call_user_func_array($class_name."::".$method_name, $args);
-		else
-			$this->error("Can not call static method '{$class_name}::{$method_name}', class '{$original_class_name}' does not exist.\n");
-
-	}
-	protected function run_user_static_method($original_class_name,$method_name,$args)
-	{
-		$class_name=$this->real_class($original_class_name);
-		if ($this->verbose)
-			$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
-		$last_method=$this->current_method;
-		$last_class=$this->current_class;
-		$this->current_method=$method_name;
-		$this->current_class=$class_name;
-		$flag=false;
-		foreach ($this->ancestry($class_name) as $class)
-		{
-			if ($this->user_method_exists($class,$method_name))
-			{
-				$last_self=$this->self;
-				$this->self=$class;
-				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
-				$last_file=$this->current_file;
-				$this->current_file=$this->classes[strtolower($class)]->file;
-				$this->verbose("Found ancestor function {$class}::{$method_name}()...".PHP_EOL,3);
-				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args);
-				array_pop($this->trace);
-				$this->self=$last_self;
-				$flag=true;
-				break;	
-			}
-
-		}
-		if (!$flag)
-		{
-			$this->error("Call to undefined method {$class_name}::{$method_name}()");
-			$res=null;
-		}
-		$this->current_method=$last_method;
-		$this->current_file=$last_file;
-		$this->current_class=$last_class;
-		if ($this->return)
-			$this->return=false;	
-		return $res;
-	}
-	protected function run_method(&$object,$method_name,$args)
-	{
-		if ($object instanceof EmulatorObject)
-			return $this->run_user_method($object,$method_name,$args);
-		elseif (is_object($object))
-			return call_user_func_array(array($object,$method_name), $args);
-		else
-			$this->error("Can not call method '{$method_name}' on a non-object.\n",$object);
-	}
-	protected function run_user_method(&$object,$method_name,$args)
-	{
-		if (!($object instanceof EmulatorObject))
-		{
-			$this->error("Inconsistency in object oriented emulation. A malformed object detected.",$object);
-			return null;
-		}
-		$class_name=$object->classname;
-		$old_this=$this->this;
-		$this->this=&$object;
-		
-		$res=$this->run_user_static_method($class_name,$method_name,$args);
-
-		$this->this=&$old_this;
-		return $res;
-	}
-
-	public function user_method_exists($classname,$methodname)
-	{
-		if (!$this->class_exists($classname)) return false;
-		#TODO: separate static/instance methods?
-		return isset($this->classes[strtolower($classname)]->methods[strtolower($methodname)]);
-	}
-	public function class_exists($classname)
-	{
-		return class_exists($classname) or isset($this->classes[strtolower($classname)]);
-	}
-	public function is_object($obj)
-	{
-		return is_object($obj) or $obj instanceof EmulatorObject;
-	}
-	public function static_method_exists($classname,$methodname)
-	{
-		return method_exists($classname, $methodname) or $this->user_method_exists($classname,$methodname);
-	}	
-	public function method_exists($obj,$methodname)
-	{
-		if ($obj instanceof EmulatorObject)
-			$class=$obj->classname;
-		else
-			$class=get_class($obj);
-		return $this->static_method_exists($class,$methodname);
-	}
 	/**
-	 * Whether or not an argument is callable, i.e valid syntax and valid function/method/class names
-	 * @param  [type]  $x [description]
-	 * @return boolean    [description]
+	 * Evaluate expressions specific to object orientation
+	 * @param  Node $node 
+	 * @return mixed       
 	 */
-	public function is_callable($x)
-	{
-		if (is_string($x))
-		{
-			if (strpos($x,"::")!==false)
-			{
-				list($classname,$methodname)=explode("::",$x);
-				return ($this->class_exists($classname) and $this->static_method_exists($classname, $methodname));
-			}
-			else
-				return $this->function_exists($x);
-		}
-		elseif (is_array($x) and count($x)==2)
-		{
-			if (is_string($x[0]))
-				return $this->class_exists($x[0]) and $this->static_method_exists($x[0], $x[1]);
-			else
-				return $this->is_object($x[0]) and $this->method_exists($x[0],$x[1]);
-		}
-		else 
-			return false;
-	}
 	protected function evaluate_expression($node)
 	{
 		$this->current_node=$node;
@@ -395,9 +300,9 @@ class OOEmulator extends Emulator
 
 	}	
 	/**
-	 * Converts any value to object
-	 * @param  mixed $val [description]
-	 * @return EmulatorObject      [description]
+	 * Converts any value to an emulator object
+	 * @param  mixed $val 
+	 * @return EmulatorObject      
 	 */
 	protected function to_object($val)
 	{
@@ -418,6 +323,11 @@ class OOEmulator extends Emulator
 
 		return $obj;
 	}
+	/**
+	 * Finds the real class name of a class reference (e.g self, parent, static, etc.)
+	 * @param  string $classname 
+	 * @return string            
+	 */
 	protected function real_class($classname)
 	{
 		if ($classname==="self")
@@ -432,8 +342,8 @@ class OOEmulator extends Emulator
 	/**
 	 * Returns all parents, including self, of a class, ordered from youngest
 	 * Looks up self and static keywords
-	 * @param  [type] $classname [description]
-	 * @return [type]            [description]
+	 * @param  string $classname 
+	 * @return array            
 	 */
 	protected function ancestry($classname,$top_to_bottom=false)
 	{
@@ -448,15 +358,14 @@ class OOEmulator extends Emulator
 		if ($top_to_bottom) $res=array_reverse($res);
 		return $res;
 	}
-	function name($node)
-	{
-		return parent::name($node);
-	}
+	/**
+	 * Run object oriented statements
+	 * @param  Node $node 
+	 * @return null       
+	 */
 	protected function run_statement($node)
 	{
-		if (0)
-			;
-		elseif ($node instanceof Node\Stmt\ClassLike)
+		if ($node instanceof Node\Stmt\ClassLike)
 			return;
 		elseif ($node instanceof Node\Stmt\Static_)
 		{
@@ -483,6 +392,14 @@ class OOEmulator extends Emulator
 			parent::run_statement($node);
 	}
 
+	/**
+	 * Symbol table lookup specific to object orientation
+	 * See Emulator::symbol_table for more
+	 * @param  Node  $node   
+	 * @param  string  &$key   if null lookup failed
+	 * @param  boolean $create create variable if not exists
+	 * @return array base array          
+	 */
 	protected function &symbol_table($node,&$key,$create=true)
 	{
 		if ($node instanceof Node\Expr\PropertyFetch)
@@ -556,6 +473,13 @@ class OOEmulator extends Emulator
 		else
 			return parent::symbol_table($node,$key,$create);
 	}
+	/**
+	 * Call a function. This does the same thing as call_user_func_array
+	 * but for emulator. Can handle all 6 types of dynamic function call
+	 * @param  mixed $name array of object/method or class/method, or string of static method or function name
+	 * @param  array $args 
+	 * @return mixed       function return value
+	 */
 	public function call_function($name,$args)
 	{
 		#http://php.net/manual/en/language.types.callable.php

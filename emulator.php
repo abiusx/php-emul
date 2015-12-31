@@ -1,15 +1,22 @@
 <?php
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
-#remaining for procedural completeness: closure,closureUse
 #major TODO: do not use function calls in emulator, instead have stacks of operations and have a central 
 #	function that loops over them and executes them. That way state can be saved and termination and other conditions are easy to control.
 #TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
 #TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
 #TODO: make symbol_table return the actual variable instead of superset, and handle unset separately. 
 #	This is making things too complicated. (i.e, replace symbol_table with variable_get, variable_set and variable_reference functions)
+
+require_once "emulator-variables.php";
+require_once "emulator-functions.php";
+require_once "emulator-errors.php";
+
 class Emulator
 {	
+	use EmulatorVariables;
+	use EmulatorErrors;
+	use EmulatorFunctions;
 	/**
 	 * Configuration: inifite loop limit
 	 * @var integer
@@ -69,11 +76,7 @@ class Emulator
 	 * @var array
 	 */
 	public $output_buffer=[];
-	/**
-	 * Symbol table of the current scope (all variables)
-	 * @var array
-	 */
-	public $variables=[]; 
+
 	/**
 	 * Super global variables (e.g $GLOBALS, $_GET, etc.)
 	 * @var array
@@ -167,6 +170,11 @@ class Emulator
 	 */
 	public $shutdown_functions=[]; 
 
+	/**
+	 * Output status messages of the emulator
+	 * @param  string  $msg       
+	 * @param  integer $verbosity 1 is basic messages, 0 is always shown, higher means less important
+	 */
 	function verbose($msg,$verbosity=1)
 	{
 		if ($this->verbose>=$verbosity)
@@ -200,7 +208,6 @@ class Emulator
 	{
 
 		$this->verbose("Shutting down...".PHP_EOL);
-		return false;
 		//FIXME TODO
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
@@ -209,86 +216,7 @@ class Emulator
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
 	}
-	/**
-	 * The emulator error handler (in case an error happens in the emulation, that is not handled)
-	 * @param  [type] $errno   [description]
-	 * @param  [type] $errstr  [description]
-	 * @param  [type] $errfile [description]
-	 * @param  [type] $errline [description]
-	 * @return [type]          [description]
-	 */
-	function error_handler($errno, $errstr, $errfile, $errline)
-	{
-		$file=$errfile;
-		$line=$errline;
-		$file2=$line2=null;
-		if (isset($this->current_file)) $file2=$this->current_file;
-		if (isset($this->current_node)) $line2=$this->current_node->getLine();
-		$fatal=false;
-		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
-		{
-			case E_ERROR:
-				$fatal=true;
-				$str="Error";
-				break;
-			case E_WARNING:
-				$str="Warning";
-				break;
-			default:
-				$str="Error";
-		}
-
-		$this->verbose("PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)".PHP_EOL,0);
-		// if ($this->verbose)
-		// 	debug_print_backtrace();
-		if ($fatal or $this->strict) 
-			$this->terminated=true;
-		return true;
-	}
-	/**
-	 * Used by emulator to mark emulation errors
-	 * @param  [type] $msg  [description]
-	 * @param  [type] $node [description]
-	 * @return [type]       [description]
-	 */
-	protected function error($msg,$node=null)
-	{
-		$this->verbose("Emulation Error: ",0);
-		$this->_error($msg,$node);
-		$this->terminated=true;
-	}
-	/**
-	 * Core function used by all types of error (warning, error, notice, etc.)
-	 * @param  [type]  $msg     [description]
-	 * @param  [type]  $node    [description]
-	 * @param  boolean $details [description]
-	 * @return [type]           [description]
-	 */
-	protected function _error($msg,$node=null,$details=true)
-	{
-		$this->verbose($msg." in ".$this->current_file." on line ".$this->current_line.PHP_EOL,0);
-		if ($details)
-		{
-			print_r($node);
-			if ($this->verbose)
-				debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-		}
-		if ($this->strict) $this->terminated=true;
-	}
-	protected function notice($msg,$node=null)
-	{
-		if ($this->error_suppression) return false;
-		$this->verbose("Emulation Notice: ",0);
-		$this->_error($msg,$node,false or $this->strict);
-	}
-
-	protected function warning($msg,$node=null)
-	{
-		if ($this->error_suppression) return false;
-		$this->verbose("Emulation Warning: ",0);
-		$this->_error($msg,$node);
-		// trigger_error($msg);
-	}
+	
 	/**
 	 * Outputs the args
 	 * @return [type] [description]
@@ -317,169 +245,13 @@ class Emulator
 	}
 	/**
 	 * Pop off the variable stack
-	 * @return array
 	 */
 	protected function pop()
 	{
 		array_pop($this->variable_stack);
 		$this->_reference_variables_to_stack();
 	}
-
-	public function user_function_exists($f)
-	{
-		return isset($this->functions[strtolower($f)]);	
-	}
-	public function function_exists($f)
-	{
-		return function_exists($f) or isset($this->functions[strtolower($f)]);
-	}
-	protected function user_function_prologue($function,$args)
-	{
-		reset($args);
-		$count=count($args);
-		$index=0;
-		$function_variables=[];
-		foreach ($function->params as $param)
-		{
-			if ($index>=$count) //all explicit arguments processed, remainder either defaults or error
-			{
-				if (isset($param->default))
-					$function_variables[$param->name]=$this->evaluate_expression($param->default);
-				else
-				{
-					$this->warning("Missing argument ".($index)." for {$name}()");
-					return false;
-				}
-
-			}
-			else //args still available, copy to current symbol table
-			{
-				if (current($args) instanceof Node)
-				{
-					$argVal=current($args)->value;
-					if ($param->byRef)	// byref handle
-						$function_variables[$this->name($param)]=&$this->variable_reference($argVal);
-					else //byval
-						$function_variables[$this->name($param)]=$this->evaluate_expression($argVal);
-				}
-				else //direct value, not a Node
-				{
-					$function_variables[$this->name($param)]=&$args[key($args)]; //byref
-					// $t=current($args); //byval, not desired
-				}
-				next($args);
-			}
-			$index++;
-		}
-		$this->push();
-		$this->variables=$function_variables;
-		end($this->trace)->args=$function_variables;
-		return true;
-	}
-	/**
-	 * Runs a procedure (sub).
-	 * This is used by all function calling structures, such as run_function, run_method, run_static_method, etc.
-	 * This does the prologue and epilogue, sets up arguments and references, and starts execution
-	 * @param  Node $function the parsed declaration of function
-	 * @param  Node|array $args          args can be either an array of values, or a parsed Node 
-	 * @return mixed return value of function
-	 */
-	protected function run_function($function,$args)
-	{
-		if (!$this->user_function_prologue($function,$args))
-			return null;
-		$res=$this->run_code($function->code);
-		$this->pop();
-		return $res;
-	}
-	/**
-	 * Runs a user-defined (emulated) function
-	 * @param  string $name [description]
-	 * @param  Node $args should be a parsed node
-	 * @return mixed
-	 */
-	protected function run_user_function($name,$args)
-	{
-		$this->verbose("Running {$name}()...".PHP_EOL,2);
-		
-		$last_function=$this->current_function;
-		$this->current_function=$name;
-		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
-		array_push($this->trace, (object)array("type"=>"function","name"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
-		$last_file=$this->current_file;
-		$this->current_file=$this->functions[strtolower($name)]->file;
-
-		$res=$this->run_function($this->functions[strtolower($name)],$args);
-
-		array_pop($this->trace);
-		$this->current_function=$last_function;
-		$this->current_file=$last_file;
-		
-		if ($this->return)
-			$this->return=false;	
-		return $res;
-	}
-	protected function core_function_prologue($name,$args)
-	{
-		#TODO: auto-wrap callables, they are used all over the place
-		$function_reflection=new ReflectionFunction($name);
-		$parameters_reflection=$function_reflection->getParameters();
-		$argValues=[];
-		foreach ($args as &$arg)
-		{
-			$parameter_reflection=current($parameters_reflection);
-			if ($arg instanceof Node)
-			{
-				if ($parameter_reflection->isPassedByReference()) //byref 
-				{
-					if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
-						$this->variable_set($arg->value);
-					$argValues[]=&$this->variable_reference($arg->value); 
-				}
-				else //byval
-					$argValues[]=$this->evaluate_expression($arg->value);
-			}
-			else //direct value
-				$argValues[]=&$arg; //byref or byval direct value (not Node)
-			next($parameters_reflection);
-		}
-		return $argValues;
-	}
-	/**
-	 * Runs a function, whether its internal or emulated.
-	 * @param  string $name [description]
-	 * @param  array $args parsed node or array of values
-	 * @return mixed
-	 */
-	public function call_function($name,$args)
-	{
-		if (isset($this->functions[strtolower($name)])) //user function
-			return $this->run_user_function($name,$args); 
-		elseif (function_exists($name)) //core function
-		{
-			$argValues=$this->core_function_prologue($name,$args);
-			if (array_key_exists(strtolower($name), $this->mock_functions)) //mocked
-			{
-				$mocked_name=$this->mock_functions[strtolower($name)];
-				if (!function_exists($mocked_name))
-					$this->error("Mocked function '{$this->mock_functions[$name]}' not defined to mock '{$name}'.");
-				$this->verbose("Calling core function '{$name}' mocked with '{$mocked_name}'...\n",4);
-				array_unshift($argValues, $this); //emulator is first argument in mock functions
-				$ret=call_user_func_array($mocked_name,$argValues); //core function
-			}
-			else //original core function
-			{
-				$this->verbose("Calling core function '{$name}'...\n",4);
-				ob_start();	
-				$ret=call_user_func_array($name,$argValues); //core function
-				$output=ob_get_clean();
-				$this->output($output);
-			}
-			return $ret;
-		}
-		else
-			$this->error("Call to undefined function {$name}()",$node);
-	}
+	
 
 	/**
 	 * Evaluate all nodes of type Node\Expr and return appropriate value
@@ -891,58 +663,6 @@ class Emulator
 		$this->error_suppression--;
 	}
 
-	/**
-	 * Function used to return something when reference returning 
-	 * functions fail and have to return something.
-	 * Can set an input variable to null for ease too.
-	 * @var null
-	 */
-	protected function &null_reference(&$var=null)
-	{
-		$var=null;
-		$this->null_reference=null;
-		return $this->null_reference;
-
-	}	
-	function variable_set($node,$value=null)
-	{
-		$r=&$this->symbol_table($node,$key,true);
-		if ($key!==null)
-			return $r[$key]=$value;
-		else 
-			return null;
-	}
-	function variable_get($node)
-	{
-		$r=&$this->symbol_table($node,$key,false);
-		if ($key!==null)
-			return $r[$key];
-		else 
-			return null;
-	}
-	function variable_isset($node)
-	{
-		$this->error_silence();
-		$r=$this->symbol_table($node,$key,false);
-		$this->error_restore();
-		return $key!==null and isset($r[$key]);
-	}
-	function variable_unset($node)
-	{
-		$base=&$this->symbol_table($node,$key,false);
-		if ($key!==null)
-			unset($base[$key]);
-	}
-	function &variable_reference($node)
-	{
-		$r=&$this->symbol_table($node,$key,false);
-		if ($key===null) //not found or GLOBALS
-			return $this->null_reference();
-		elseif (is_array($r))
-			return $r[$key];
-		else
-			$this->error("Could not retrieve reference",$node);
-	}
 
 	/**
 	 * Returns the base array (symbol table) that the variable exists in, as well as the key in that array for the variable
@@ -1161,31 +881,6 @@ class Emulator
 		chdir($this->original_dir);
 		return $res;
 	}
-	// /**
-	//  * Resume emulation from a saved state.
-	//  * This function does not restore state, the state has to be restored to the emulator
-	//  * before calling this function.
-	//  * @param  string $file        the file to resume emulation from
-	//  * @param  int $instruction index of the instruction in the file
-	//  * @return mixed
-	//  */
-	// function resume()
-	// {
-	// 	chdir(dirname($this->entry_file));
-	// 	ini_set("memory_limit",-1);
-	// 	set_error_handler(array($this,"error_handler"));
-
-	// 	$code=file_get_contents($this->current_file);
-	// 	$ast=$this->parser->parse($code);
-
-	// 	$res=$this->run_code($ast,$this->current_statement_index);
-	// 	if ($this->return)
-	// 		$this->return=false;
-		
-	// 	restore_error_handler();
-	// 	$this->shutdown();
-	// 	return $res;
-	// }
 	/**
 	 * Used to check if loop condition is still valid
 	 * @return boolean
