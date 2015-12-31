@@ -11,12 +11,16 @@ use PhpParser\Node;
 require_once "emulator-variables.php";
 require_once "emulator-functions.php";
 require_once "emulator-errors.php";
+require_once "emulator-expression.php";
+require_once "emulator-statement.php";
 
 class Emulator
 {	
 	use EmulatorVariables;
 	use EmulatorErrors;
 	use EmulatorFunctions;
+	use EmulatorExpression;
+	use EmulatorStatement;
 	/**
 	 * Configuration: inifite loop limit
 	 * @var integer
@@ -186,13 +190,13 @@ class Emulator
 	 */
 	function init()
 	{
+		$this->variable_stack['global']=array();
+		$this->variables=&$this->variable_stack['global'];
 		foreach ($GLOBALS as $k=>$v)
 		{
 			// if ($k=="GLOBALS") continue; 
 			$this->super_globals[$k]=$v;
 		}
-		// $this->super_globals["GLOBALS"]=&$this->super_globals;
-		// $this->variables['_POST']=isset($_POST)?$_POST:array();
 		if ($this->auto_mock)
 		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives internal and user subarrays.
 		{
@@ -237,6 +241,9 @@ class Emulator
 		array_push($this->variable_stack,array());
 		$this->_reference_variables_to_stack();
 	}
+	/**
+	 * References $this->variables to the top of the variable_stack, instead of copying it
+	 */
 	private function _reference_variables_to_stack()
 	{
 		unset($this->variables);
@@ -252,412 +259,21 @@ class Emulator
 		$this->_reference_variables_to_stack();
 	}
 	
-
 	/**
-	 * Evaluate all nodes of type Node\Expr and return appropriate value
-	 * This is the core of the emulator/interpreter.
-	 * @param  Node $ast Abstract Syntax Tree node
-	 * @return mixed      value
+	 * The depth of error suppression
+	 * @var integer
 	 */
-	protected function evaluate_expression($ast)
-	{
-		if ($this->terminated) return null;
-		$node=$ast;
-		$this->current_node=$node;
-		if (is_object($node) and method_exists($node, "getLine") and $node->getLine()!=$this->current_line)
-		{
-			$this->current_line=$node->getLine();
-			$this->verbose("Line {$this->current_line} (expression)".PHP_EOL,4);
-		}	
-		if ($node===null)
-			return null;
-		elseif (is_array($node))
-			$this->error("Did not expect array node!",$node);
-		elseif ($node instanceof Node\Expr\FuncCall)
-		{
-			$name=$this->name($node);
-			return $this->call_function($name,$node->args);
-			
-		}
-		elseif ($node instanceof Node\Expr\AssignRef)
-		{
-			// $originalVar=$this->name($node->expr);
-			$originalVar=&$this->variable_reference($node->expr);
-			$this->variable_set($node->var,$originalVar);
-			$var=$originalVar;
-		}
-		elseif ($node instanceof Node\Expr\Assign)
-		{
-			if ($node->var instanceof Node\Expr\List_) //list(x,y)=f()
-			{
-				$resArray=$this->evaluate_expression($node->expr);
-				if (count($resArray)!=count($node->var->vars))
-					$this->warning("list() used but number of arguments do not match");
-				reset($resArray);
-				$outArray=[];
-				foreach ($node->var->vars as $var)
-				{
-					//not necessarily a variable, can be an arrayDim or objectProperty
-					$outArray[]=$this->variable_set($var,current($resArray));
-					// $outArray[]=$base[$key]=current($resArray);
-					next($resArray);
-				}
-				return $outArray;
-			}
-			else
-			{
-				return $this->variable_set($node->var,$this->evaluate_expression($node->expr));
-			}
-		}
-		elseif ($node instanceof Node\Expr\ArrayDimFetch) //access multidimensional arrays $x[...][..][...]
-			return $this->variable_get($node); //should not create
-		elseif ($node instanceof Node\Expr\Array_)
-		{
-			$out=[];
-			foreach ($node->items as $item)
-				if (isset($item->key))
-					$out[$this->evaluate_expression($item->key)]=$this->evaluate_expression($item->value);
-				else
-					$out[]=$this->evaluate_expression($item->value);
-			return $out;
-		}
-		elseif ($node instanceof Node\Expr\Cast)
-		{
-			if ($node instanceof Node\Expr\Cast\Int_)
-				return (int)$this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\Cast\Array_)
-				return (array)$this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\Cast\Double)
-				return (double)$this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\Cast\Bool_)
-				return (bool)$this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\Cast\String_)
-				return (string)$this->evaluate_expression($node->expr);
-			// elseif ($node instanceof Node\Expr\Cast\Object_)
-			// 	return (object)$this->evaluate_expression($node->expr);
-			else
-				$this->error("Unknown cast: ",$node);
-		}
-		elseif ($node instanceof Node\Expr\BooleanNot)
-			return !$this->evaluate_expression($node->expr);
-
-		elseif ($node instanceof Node\Expr\BitwiseNot)
-			return ~$this->evaluate_expression($node->expr);
-		
-		elseif ($node instanceof Node\Expr\UnaryMinus)
-			return -$this->evaluate_expression($node->expr);
-		elseif ($node instanceof Node\Expr\UnaryPlus)
-			return +$this->evaluate_expression($node->expr);
-
-		elseif ($node instanceof Node\Expr\PreInc)
-		{
-			return $this->variable_set($node->var,$this->variable_get($node->var)+1);	
-		}
-		elseif ($node instanceof Node\Expr\PostInc)
-		{
-			$t=$this->variable_get($node->var);
-			$this->variable_set($node->var,$t+1);
-			return $t;
-		}
-		elseif ($node instanceof Node\Expr\PreDec)
-		{
-			return $this->variable_set($node->var,$this->variable_get($node->var)-1);	
-		}
-		elseif ($node instanceof Node\Expr\PostDec)
-		{
-			$t=$this->variable_get($node->var);
-			$this->variable_set($node->var,$t-1);
-			return $t;
-		}
-		elseif ($node instanceof Node\Expr\AssignOp)
-		{
-			$var=&$this->variable_reference($node->var); //TODO: use variable_set and get here instead
-			$val=$this->evaluate_expression($node->expr);
-			if ($node instanceof Node\Expr\AssignOp\Plus)
-				return $var+=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\Minus)
-				return $var-=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\Mod)
-				return $var%=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\Mul)
-				return $var*=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\Div)
-				return $var/=$val;
-			// elseif ($node instanceof Node\Expr\AssignOp\Pow)
-			// 	return $this->variables[$this->name($node->var)]**=$this->evaluate_expression($node->expr);
-			elseif ($node instanceof Node\Expr\AssignOp\ShiftLeft)
-				return $var<<=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\ShiftRight)
-				return $var>>=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\Concat)
-				return $var.=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\BitwiseAnd)
-				return $var&=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\BitwiseOr)
-				return $var|=$val;
-			elseif ($node instanceof Node\Expr\AssignOp\BitwiseXor)
-				return $var^=$val;
-		}
-		elseif ($node instanceof Node\Expr\BinaryOp)
-		{
-			
-			$l=$this->evaluate_expression($node->left);
-			// $r=$this->evaluate_expression($node->right);
-			if ($node instanceof Node\Expr\BinaryOp\Plus)
-				return $l+$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\Div)
-				return $l/$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\Minus)
-				return $l-$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\Mul)
-				return $l*$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\Mod)
-				return $l%$this->evaluate_expression($node->right);
-			// elseif ($node instanceof Node\Expr\BinaryOp\Pow)
-			// 	return $this->evaluate_expression($node->left)**$this->evaluate_expression($node->right);
-			
-			elseif ($node instanceof Node\Expr\BinaryOp\Identical)
-				return $l===$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\NotIdentical)
-				return $l!==$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\Equal)
-				return $l==$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\NotEqual)
-				return $l!=$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\Smaller)
-				return $l<$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\SmallerOrEqual)
-				return $l<=$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\Greater)
-				return $l>$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\GreaterOrEqual)
-				return $l>=$this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\LogicalAnd)
-				return $l and $this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\LogicalOr)
-				return $l or $this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\LogicalXor)
-				return $l xor $this->evaluate_expression($node->right);
-
-			elseif ($node instanceof Node\Expr\BinaryOp\BooleanOr)
-				return $l || $this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\BooleanAnd)
-				return $l && $this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseAnd)
-				return $l & $this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseOr)
-				return $l | $this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\BitwiseXor)
-				return $l ^ $this->evaluate_expression($node->right);
-
-			elseif ($node instanceof Node\Expr\BinaryOp\ShiftLeft)
-				return $l << $this->evaluate_expression($node->right);
-			elseif ($node instanceof Node\Expr\BinaryOp\ShiftRight)
-				return $l >> $this->evaluate_expression($node->right);
-
-			elseif ($node instanceof Node\Expr\BinaryOp\Concat)
-				return $l . $this->evaluate_expression($node->right);
-			// elseif ($node instanceof Node\Expr\BinaryOp\Spaceship)
-			// 	return $this->evaluate_expression($node->left)<=>$this->evaluate_expression($node->right);
-
-
-			else
-				$this->error("Unknown binary op: ",$node);
-		}
-		elseif ($node instanceof Node\Scalar)
-		{
-			if ($node instanceof Node\Scalar\String_)
-				return $node->value;
-			elseif ($node instanceof Node\Scalar\DNumber)
-				return $node->value;
-			elseif ($node instanceof Node\Scalar\LNumber)
-				return $node->value;
-			elseif ($node instanceof Node\Scalar\Encapsed)
-			{
-				$res="";
-				foreach ($node->parts as $part)	
-					if (is_string($part))
-						$res.=$part;
-					else
-						$res.=$this->evaluate_expression($part);
-
-				return $res;
-			}
-			elseif ($node instanceof Node\Scalar\MagicConst)
-			{
-				if ($node instanceof Node\Scalar\MagicConst\File)
-					return $this->current_file;
-				elseif ($node instanceof Node\Scalar\MagicConst\Dir)
-					return dirname($this->current_file);
-				elseif ($node instanceof Node\Scalar\MagicConst\Line)
-					return $node->getLine();
-				elseif ($node instanceof Node\Scalar\MagicConst\Function_)
-					return $this->current_function;
-				elseif ($node instanceof Node\Scalar\MagicConst\Class_)
-					return $this->current_class;
-				elseif ($node instanceof Node\Scalar\MagicConst\Method_)
-					return $this->current_method;
-				elseif ($node instanceof Node\Scalar\MagicConst\Namespace_)
-					return $this->current_namespace;
-				elseif ($node instanceof Node\Scalar\MagicConst\Trait_)
-					return $this->current_trait;
-			}
-			else
-				$this->error("Unknown scalar node: ",$node);
-		}
-		// elseif ($node instanceof Node\Expr\ArrayItem); //this is handled in Array_ implicitly
-		
-		elseif ($node instanceof Node\Expr\Variable)
-		{
-			return $this->variable_get($node); //should not be created on access
-		}
-		elseif ($node instanceof Node\Expr\ConstFetch)
-		{
-			$name=$this->name($node->name);
-			if (array_key_exists($name, $this->constants))
-				return $this->constants[$name];
-			elseif (defined($name))
-				return constant($name);
-			else
-				$this->error("Undefined constant {$name}");
-
-		}
-		elseif ($node instanceof Node\Expr\ErrorSuppress)
-		{
-			// $error_reporting=error_reporting();
-			// error_reporting(0);
-			$this->error_silence();
-			$res=$this->evaluate_expression($node->expr);
-			$this->error_restore(); 
-			return $res;
-		} 
-		elseif ($node instanceof Node\Expr\Exit_)
-		{
-			$this->terminated=true;	
-			if (isset($node->expr))
-				return $this->evaluate_expression($node->expr);
-			else
-				return NULL;
-		}
-		elseif ($node instanceof Node\Expr\Empty_)
-		{
-			//return true if not isset, or if false
-			$this->error_silence();
-			$res=(!$this->variable_isset($node->expr) or ($this->evaluate_expression($node->expr)==false));
-			$this->error_restore();
-			return $res;
-		}
-		elseif ($node instanceof Node\Expr\Isset_)
-		{
-			#FIXME: if the name expression is multipart, and one part of it also doesn't exist this warns. Does PHP too?
-			//return false if not isset, or if null
-			$res=true;
-			foreach ($node->vars as $var)
-			{
-				if (!$this->variable_isset($var) or $this->evaluate_expression($var)===null)
-				{
-					$res=false;
-					break;
-				}
-			}
-			return $res;
-		}
-		elseif ($node instanceof Node\Expr\Eval_)
-		{
-			
-			$this->eval_depth++;
-			$this->verbose("Now running Eval code...".PHP_EOL);
-			
-			$code=$this->evaluate_expression($node->expr);
-			$ast=$this->parser->parse('<?php '.$code);
-
-			$res=$this->run_code($ast);
-			$this->eval_depth--;
-			return $res;
-		}
-		elseif ($node instanceof Node\Expr\ShellExec)
-		{
-				$res="";
-				foreach ($node->parts as $part)	
-					if (is_string($part))
-						$res.=$part;
-					else
-						$res.=$this->evaluate_expression($part);
-
-				return shell_exec($res);
-		}
-		elseif ($node instanceof Node\Expr\Instanceof_)
-		{
-			$var=$this->evaluate_expression($node->expr);
-			$classname=$this->name($node->class);
-			return $var instanceof $classname;
-		}
-		elseif ($node instanceof Node\Expr\Print_)
-		{
-			$out=$this->evaluate_expression($node->expr);
-			$this->output($out);	
-			return $out;
-		}
-		elseif ($node instanceof Node\Expr\Include_)
-		{
-			$type=$node->type; //1:include,2:include_once,3:require,4:require_once
-			$file=$this->evaluate_expression($node->expr);
-			
-			$realfile =realpath(dirname($this->current_file)."/".$file); //first check the directory of the file using include (as per php)
-			if (!file_exists($realfile) or !is_file($realfile)) //second check current dir
-				$realfile=realpath($file);
-			if ($type%2==0) //once
-				if (isset($this->included_files[$realfile])) return true;
-			if (!file_exists($realfile) or !is_file($realfile))
-				if ($type<=2) //include
-				{
-					$this->warning("include({$file}): failed to open stream: No such file or directory");
-					return false;
-				}
-				else
-				{
-					$this->error("require({$file}): failed to open stream: No such file or directory");
-					return false;
-				}
-			$this->run_file($realfile);
-		}
-		elseif ($node instanceof Node\Expr\Ternary)
-		{
-			if ($this->evaluate_expression($node->cond)) return $this->evaluate_expression($node->if);
-			else return $this->evaluate_expression($node->else);
-		}
-		// elseif ($node instanceof Node\Expr\New_)
-		// {
-		// 	$classname=$this->name($node->class);
-		// 	if (class_exists($classname))
-		// 	{
-		// 		$argValues=[];
-		// 		foreach ($node->args as $arg)
-		// 			$argValues[]=$this->evaluate_expression($arg->value);
-				
-		// 		ob_start();	
-		// 		$r = new ReflectionClass($classname);
-		// 		$ret = $r->newInstanceArgs($argValues); #TODO: byref?
-		// 		// $ret=new $classname($argValues); //core class
-		// 		$output=ob_get_clean();
-		// 		$this->output($output);
-		// 		return $ret;
-		// 	}
-		// 	else
-		// 	{
-		// 		$this->error("Class '{$classname}' not built-in in PHP.",$node);
-		// 	}
-		// }
-		else
-			$this->error("Unknown expression node: ",$node);
-		return null;
-	}
-
 	protected $error_suppression=0;
+	/**
+	 * Suppress errors one more level
+	 */
 	function error_silence()
 	{
 		$this->error_suppression++;
 	}
+	/**
+	 * Remove error suppression
+	 */
 	function error_restore()
 	{
 		$this->error_suppression--;
@@ -907,249 +523,7 @@ class Emulator
 			return true;
 		return false;
 	}
-	/**
-	 * Runs a single statement
-	 * If input is a statement, it will be run. If its an expression, it will be runned like an statement.
-	 * @param  Node $node 
-	 */
-	protected function run_statement($node)
-	{
-			if ($node instanceof Node\Stmt\Echo_)
-				foreach ($node->exprs as $expr)
-					$this->output($this->evaluate_expression($expr));
-				// $this->output_array($this->evaluate_expression_array($node->exprs));
-			elseif ($node instanceof Node\Stmt\Const_)
-				return;
-			elseif ($node instanceof Node\Stmt\Function_)
-				return;
-			elseif ($node instanceof Node\Stmt\If_)
-			{
-				$done=false;
-				if ($this->evaluate_expression($node->cond))
-				{
-					$done=true;
-					$this->run_code($node->stmts);
-				}
-				else
-				{
-					if (is_array($node->elseifs))
-						foreach ($node->elseifs as $elseif)
-						{
-							if ($this->evaluate_expression($elseif->cond))
-							{
-								$done=true;
-								$this->run_code($elseif->stmts);
-								break;
-							}
-						}
-					if (!$done and isset($node->else))
-						$this->run_code($node->else->stmts);
-				}
-			}
-			elseif ($node instanceof Node\Stmt\Return_)
-			{
-				// print_r($node);
-				if ($node->expr)
-					$this->return_value=$this->evaluate_expression($node->expr);
-				else
-					$this->return_value=null;
-				$this->return=true;
-				return $this->return_value;
-			}
-			elseif ($node instanceof Node\Stmt\For_) //Loop 1
-			{
-				$i=0;
-				$this->loop_depth++;
-				for ($this->run_code($node->init);$this->evaluate_expression($node->cond[0]);$this->run_code($node->loop))
-				{
-					$i++;	
-					$this->run_code($node->stmts);
-					if ($this->loop_condition($i))
-						break;
-				}
-				$this->loop_depth--;
-			}
-			elseif ($node instanceof Node\Stmt\While_) //Loop 2
-			{
-				$i=0;
-				$this->loop_depth++;
-				while ($this->evaluate_expression($node->cond))
-				{
-					$i++;
-					$this->run_code($node->stmts);
-					if ($this->loop_condition($i))
-						break;
-				}
-				$this->loop_depth--;
-			}
-			elseif ($node instanceof Node\Stmt\Do_) //Loop 3
-			{
-				$i=0;
-				$this->loop_depth++;
-				do
-				{
-					$i++;
-					$this->run_code($node->stmts);
-					if ($this->loop_condition($i))
-						break;
-				}
-				while ($this->evaluate_expression($node->cond));
-				$this->loop_depth--;
-			}
-			elseif ($node instanceof Node\Stmt\Foreach_) //Loop 4
-			{
-				$list=$this->evaluate_expression($node->expr);
-				$keyed=false;
-				if (isset($node->keyVar))
-				{
-					$keyed=true;	
-					if (!$this->variable_isset($node->keyVar))
-						$this->variable_set($node->keyVar);
-					$keyVar=&$this->variable_reference($node->keyVar);
-				}
-				if (!$this->variable_isset($node->valueVar))
-					$this->variable_set($node->valueVar);
-				$valueVar=&$this->variable_reference($node->valueVar);
-
-				$this->loop_depth++;
-				foreach ($list as $k=>$v)
-				{
-					if ($keyed)
-						$keyVar=$k;
-					$valueVar=$v;
-					$this->run_code($node->stmts);
-					
-					if ($this->loop_condition())
-						break;
-				}
-				$this->loop_depth--;
-			}
-			elseif ($node instanceof Node\Stmt\Declare_)
-			{
-				//TODO: handle tick function here, by wrapping it
-				$data=[];
-				$code="declare(";
-				foreach ($node->declares as $declare)
-				{
-					$data[$declare->key]=$this->evaluate_expression($declare->value);
-					$code.="{$declare->key}='".$this->evaluate_expression($declare->value)."',";
-				}
-				$code=substr($code,0,-1).");"; 
-				eval($code);
-			}
-			elseif ($node instanceof Node\Stmt\Switch_)
-			{
-				$arg=$this->evaluate_expression($node->cond);
-				foreach ($node->cases as $case)
-				{
-					if ($case->cond===NULL /* default case*/ or $this->evaluate_expression($case->cond)==$arg)
-						$this->run_code($case->stmts);
-					if ($this->loop_condition())
-						break;
-				}
-			} 
-			elseif ($node instanceof Node\Stmt\Break_)
-			{
-				if (isset($node->num))
-					$this->break+=$this->evaluate_expression($node->num);
-				else
-					$this->break++;
-			}
-			elseif ($node instanceof Node\Stmt\Continue_)
-			{
-				//basically, continue 3 means break 2 inner loops and continue on the outer loop
-				if (isset($node->num))
-					$num=$this->evaluate_expression($node->num);
-				else
-					$num=1;
-				$this->continue+=$num;
-			}
-			elseif ($node instanceof Node\Stmt\Unset_)
-			{
-				foreach ($node->vars as $var)
-					$this->variable_unset($var);
-			}
-			elseif ($node instanceof Node\Stmt\Throw_)
-			{
-				if ($this->try>0)
-					throw $this->evaluate_expression($node->expr);
-				else
-					$this->error("Throw that is not catched");
-
-			}
-			elseif ($node instanceof Node\Stmt\TryCatch)
-			{
-				$this->try++;
-				try {
-					$this->run_code($node->stmts);
-				}
-				catch (Exception $e)
-				{
-					$this->try--; //no longer in the try
-					foreach ($node->catches as $catch)
-					{
-						//each has type, the exception type, var, the exception variable, and stmts
-						$type=$this->name($catch->type);
-						if ($e instanceof $type)
-						{
-							$this->variable_set($catch->var,$e);
-							$this->run_code($catch->stmts);
-							break;
-						}
-					}
-					$this->try++; //balance off with the one below
-				}
-				$this->try--;
-			}
-			elseif ($node instanceof Node\Expr\Exit_)
-			{
-				$res=$this->evaluate_expression($node->expr);
-				if (!is_numeric($res))	
-					$this->output($res);
-				$this->terminated=true;
-				return $res;
-			}
-			elseif ($node instanceof Node\Stmt\Static_)
-			{
-				if (end($this->trace)->type=="function" and  isset($this->functions[strtolower(end($this->trace)->name)])) //statc inside a function
-				{
-					$statics=&$this->functions[strtolower($this->current_function)]->statics;
-					foreach ($node->vars as $var)
-					{
-						$name=$this->name($var->name);
-						if (!array_key_exists($name,$statics))
-							$statics[$name]=$this->evaluate_expression($var->default);
-						$this->variables[$name]=&$statics[$name];
-					}
-				}
-				else
-				{
-					#TODO:
-					$this->error("Global statics not yet supported");
-
-				}
-			}
-			elseif ($node instanceof Node\Stmt\InlineHTML)
-				$this->output($node->value); 
-			elseif ($node instanceof Node\Stmt\Global_)
-			{
-				foreach ($node->vars as $var)
-				{
-					$name=$this->name($var->name);
-					$globals_=&$this->variable_reference("GLOBALS");
-
-					if (!isset($globals_[$name]))
-						$globals_[$name]=null; //create
-					$this->variables[$name]=&$globals_[$name];
-				}
-			}
-			elseif ($node instanceof Node\Expr)
-				$this->evaluate_expression($node);
-			else
-			{
-				$this->error("Unknown node type: ",$node);	
-			}
-	}
+	
 	/**
 	 * Extracts declarations in AST node
 	 * Constants and function definitions are extracted before code is executed
@@ -1211,9 +585,12 @@ class Emulator
 		$this->current_statement_index=null;
 	}	
 
-
-	private $parsed=[];
-	private $parsed_modified=false;
+	/**
+	 * Returns the AST of a PHP file to emulator
+	 * attempts to cache the AST and re-use
+	 * @param  string $file 
+	 * @return array       
+	 */
 	protected function parse($file)
 	{
 		#TODO: decide much better memory on single-file unserialize, runtime overhead is about 3-4 times
@@ -1232,13 +609,18 @@ class Emulator
 		}
 		return $ast;
 	}
+	/**
+	 * Emulator constructor
+	 * init the emulator
+	 */
 	function __construct()
 	{
-		$this->variable_stack['global']=array();
-		$this->variables=&$this->variable_stack['global'];
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
     	$this->init();
 	}
+	/**
+	 * Emulator destructor
+	 */
 	function __destruct()
 	{
 		$this->verbose(sprintf("Memory usage: %.2fMB (%.2fMB)\n",memory_get_usage()/1024.0/1024.0,memory_get_peak_usage()/1024.0/1024.0));
@@ -1248,10 +630,9 @@ class Emulator
 
 
 }
-//this loads all functions, so that auto-mock will replace them
+//this loads all mock functions, so that auto-mock will replace them
 foreach (glob(__DIR__."/mocks/*.php") as $mock)
 	require_once $mock;
-
 
 
 
