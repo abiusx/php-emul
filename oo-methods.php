@@ -1,4 +1,6 @@
 <?php
+use PhpParser\Node;
+
 trait OOEmulatorMethodExistence {
 	/**
 	 * Whether or not a user defined class exists

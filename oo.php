@@ -36,6 +36,11 @@ class EmulatorObject
 		$this->visibilities=$visibilities;
 	}
 
+	function __toString()
+	{
+		return $this->classname;
+	}
+
 }
 class OOEmulator extends Emulator
 {

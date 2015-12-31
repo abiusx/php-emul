@@ -16,6 +16,7 @@ require_once "emulator-statement.php";
 
 class Emulator
 {	
+
 	use EmulatorVariables;
 	use EmulatorErrors;
 	use EmulatorFunctions;
@@ -215,8 +216,12 @@ class Emulator
 		//FIXME TODO
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
-			$this->verbose( "Calling shutdown function: ");
-			print_r($shutdown_function);
+			if (is_array($shutdown_function->callback))
+				$name=implode("::",$shutdown_function->callback);
+			else
+				$name=$shutdown_function->callback;
+			$this->verbose( "Calling shutdown function: {$name}\n");
+			// print_r($shutdown_function);
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
 	}

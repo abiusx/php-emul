@@ -1,4 +1,5 @@
 <?php
+use PhpParser\Node;
 trait EmulatorVariables
 {
 	/**
