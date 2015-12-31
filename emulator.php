@@ -1,12 +1,12 @@
 <?php
-require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
-use PhpParser\Node;
+
 #major TODO: do not use function calls in emulator, instead have stacks of operations and have a central 
 #	function that loops over them and executes them. That way state can be saved and termination and other conditions are easy to control.
-#TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
-#TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
 #TODO: make symbol_table return the actual variable instead of superset, and handle unset separately. 
 #	This is making things too complicated. (i.e, replace symbol_table with variable_get, variable_set and variable_reference functions)
+
+require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
+use PhpParser\Node;
 
 require_once "emulator-variables.php";
 require_once "emulator-functions.php";

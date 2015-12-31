@@ -1,4 +1,6 @@
 <?php
+#TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
+
 use PhpParser\Node;
 
 trait EmulatorFunctions

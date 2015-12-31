@@ -1,4 +1,6 @@
 <?php
+#TODO: PhpParser\Node\Stmt\StaticVar vs PhpParser\Node\Stmt\Static_
+
 use PhpParser\Node;
 /**
  * Runs a single statement in the emulator

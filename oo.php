@@ -35,6 +35,10 @@ class EmulatorObject
 		$this->properties=$properties;
 		$this->visibilities=$visibilities;
 	}
+	function __destruct()
+	{
+		#TODO: call the internal destructor
+	}
 
 	function __toString()
 	{
