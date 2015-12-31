@@ -155,12 +155,12 @@ trait EmulatorFunctions
 	 */
 	public function call_function($name,$args)
 	{
-		if (isset($this->functions[strtolower($name)])) //user function
+		if ($this->user_function_exists($name)) //user function
 			return $this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
 			$argValues=$this->core_function_prologue($name,$args);
-			if (array_key_exists(strtolower($name), $this->mock_functions)) //mocked
+			if (isset($this->mock_functions[strtolower($name)])) //mocked
 			{
 				$mocked_name=$this->mock_functions[strtolower($name)];
 				if (!function_exists($mocked_name))
