@@ -172,6 +172,8 @@ trait EmulatorFunctions
 			else //original core function
 			{
 				$this->verbose("Calling core function {$name}()...\n",4);
+				#FIXME: not all output in the duration of core function execution is that functions output,
+				#		control might come back to emulator and verbose and others used. Do something.
 				ob_start();	
 				$ret=call_user_func_array($name,$argValues); //core function
 				$output=ob_get_clean();
