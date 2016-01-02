@@ -182,8 +182,27 @@ class Emulator
 	 */
 	function verbose($msg,$verbosity=1)
 	{
+		static $lastVerbosity=1;
+		static $verbosities=[0];
+		$number="";
+		if ($verbosity>0)
+		{
+			if ($verbosity>$lastVerbosity)
+				for ($i=0;$i<$verbosity-$lastVerbosity;++$i)
+					$verbosities[]=1;
+			else
+			{
+				if ($verbosity<$lastVerbosity)
+					for ($i=0;$i<$lastVerbosity-$verbosity;++$i)
+						array_pop($verbosities);
+				$verbosities[count($verbosities)-1]++;
+			}
+			$lastVerbosity=$verbosity;
+			$number=implode(".",$verbosities);
+		}
+
 		if ($this->verbose>=$verbosity)
-			echo str_repeat("-",$verbosity*3)." ".$msg;
+			echo str_repeat("---",$verbosity)." ".$number." ".$msg;
 	}
 	/**
 	 * Initialize the emulator by setting environment variables (super globals)
