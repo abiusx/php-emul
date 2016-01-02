@@ -48,8 +48,12 @@ trait EmulatorExpression {
 				$outArray=[];
 				foreach ($node->var->vars as $var)
 				{
-					//not necessarily a variable, can be an arrayDim or objectProperty
-					$outArray[]=$this->variable_set($var,current($resArray));
+					//not necessarily a variable, can be an arrayDim or objectProperty, or even null!
+					//yes, list can be used like list($a,,$b)=[1,2,3,4]
+					if ($var===null)
+						$outArray[]=current($resArray);
+					else
+						$outArray[]=$this->variable_set($var,current($resArray));
 					// $outArray[]=$base[$key]=current($resArray);
 					next($resArray);
 				}

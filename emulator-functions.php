@@ -164,14 +164,14 @@ trait EmulatorFunctions
 			{
 				$mocked_name=$this->mock_functions[strtolower($name)];
 				if (!function_exists($mocked_name))
-					$this->error("Mocked function '{$this->mock_functions[$name]}' not defined to mock '{$name}'.");
-				$this->verbose("Calling core function '{$name}' mocked with '{$mocked_name}'...\n",4);
+					$this->error("Mocked function '{$this->mock_functions[$name]}()' not defined to mock '{$name}()'.");
+				$this->verbose("Calling core function {$name}() mocked as {$mocked_name}()...\n",4);
 				array_unshift($argValues, $this); //emulator is first argument in mock functions
 				$ret=call_user_func_array($mocked_name,$argValues); //core function
 			}
 			else //original core function
 			{
-				$this->verbose("Calling core function '{$name}'...\n",4);
+				$this->verbose("Calling core function {$name}()...\n",4);
 				ob_start();	
 				$ret=call_user_func_array($name,$argValues); //core function
 				$output=ob_get_clean();

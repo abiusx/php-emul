@@ -220,7 +220,7 @@ class Emulator
 				$name=implode("::",$shutdown_function->callback);
 			else
 				$name=$shutdown_function->callback;
-			$this->verbose( "Calling shutdown function: {$name}\n");
+			$this->verbose( "Calling shutdown function: {$name}()\n");
 			// print_r($shutdown_function);
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}

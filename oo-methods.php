@@ -161,7 +161,11 @@ trait OOEmulatorMethods {
 				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
 				$last_file=$this->current_file;
 				$this->current_file=$this->classes[strtolower($class)]->file;
-				$this->verbose("Found ancestor function {$class}::{$method_name}()...".PHP_EOL,3);
+				if ($class==$class_name)
+					$word="direct";
+				else
+					$word="ancestor";
+				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
 				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args);
 				array_pop($this->trace);
 				$this->self=$last_self;
