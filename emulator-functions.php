@@ -69,6 +69,7 @@ trait EmulatorFunctions
 		}
 		$this->push();
 		$this->variables=$function_variables;
+		var_dump($function_variables);
 		end($this->trace)->args=$function_variables;
 		return true;
 	}
@@ -96,7 +97,7 @@ trait EmulatorFunctions
 	 */
 	protected function run_user_function($name,$args)
 	{
-		$this->verbose("Running {$name}()...".PHP_EOL,2);
+		$this->verbose("Running {$name}() with ".count($args)." args...".PHP_EOL,2);
 		
 		$last_function=$this->current_function;
 		$this->current_function=$name;

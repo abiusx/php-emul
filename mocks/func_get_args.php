@@ -7,5 +7,9 @@ function func_get_args_mock(Emulator $emul)
 		return false;
 	}
 	else
+	{
+		$emul->verbose("func_get_args called:");
+		var_dump(end($emul->trace)->args);	
 		return end($emul->trace)->args;
+	}
 }

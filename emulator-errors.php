@@ -32,10 +32,12 @@ trait EmulatorErrors
 		}
 
 		$this->verbose("PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)".PHP_EOL,0);
-		// if ($this->verbose)
-		// 	debug_print_backtrace();
 		if ($fatal or $this->strict) 
+		{
 			$this->terminated=true;
+			if ($this->verbose>=2)
+				debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		}
 		return true;
 	}
 	/**
