@@ -155,8 +155,10 @@ trait EmulatorFunctions
 	 */
 	public function call_function($name,$args)
 	{
+		$ob=ob_get_level()!=0;
+		if ($ob) $this->output(ob_get_clean());
 		if ($this->user_function_exists($name)) //user function
-			return $this->run_user_function($name,$args); 
+			$ret=$this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
 			$argValues=$this->core_function_prologue($name,$args);
@@ -174,14 +176,14 @@ trait EmulatorFunctions
 				$this->verbose("Calling core function {$name}()...\n",4);
 				#FIXME: not all output in the duration of core function execution is that functions output,
 				#		control might come back to emulator and verbose and others used. Do something.
-				ob_start();	
+				if (ob_get_level()==0) ob_start();	
 				$ret=call_user_func_array($name,$argValues); //core function
-				$output=ob_get_clean();
-				$this->output($output);
+				if (ob_get_level()>0) $this->output(ob_get_clean());
 			}
-			return $ret;
 		}
 		else
 			$this->error("Call to undefined function {$name}()",$node);
+		if ($ob) ob_start();
+		return $ret;
 	}
 }
