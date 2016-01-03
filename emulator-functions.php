@@ -74,9 +74,12 @@ trait EmulatorFunctions
 			$index++;
 		}
 		//process the rest of the arguments passed (i.e variadic arguments)
-		while ( ($r=each($args))!==false)
+		for (;$index<$count;++$index)
 		{
-			$processed_args[]=$this->evaluate_expression($r['value']->value);
+			if (current($args) instanceof Node) //emulator node
+				$processed_args[]=$this->evaluate_expression(current($args)->value);
+			else //direct value
+				$processed_args[]=&$args[key($args)];
 			next($args);
 		}
 		$this->push();
