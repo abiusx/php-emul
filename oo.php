@@ -491,6 +491,7 @@ class OOEmulator extends Emulator
 	 */
 	public function call_function($name,$args)
 	{
+		#FIXME: handle the same output buffering issue that is handled in Emulator::call_function
 		#http://php.net/manual/en/language.types.callable.php
 		if (is_array($name) and count($name)==2) //method call
 		{
