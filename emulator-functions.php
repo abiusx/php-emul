@@ -35,9 +35,6 @@ trait EmulatorFunctions
 		$index=0;
 		$function_variables=[];
 		$processed_args=[];
-		foreach ($args as $arg)
-			$processed_args[]=$this->evaluate_expression($arg->value);
-		// echo "Processed args:";var_dump($processed_args);
 		
 		reset($args);
 		foreach ($function->params as $param)
@@ -59,9 +56,13 @@ trait EmulatorFunctions
 				{
 					$argVal=current($args)->value;
 					if ($param->byRef)	// byref handle
-						$function_variables[$this->name($param)]=&$this->variable_reference($argVal);
+					{
+						$ref=&$this->variable_reference($argVal);
+						$function_variables[$this->name($param)]=$ref;
+						$processed_args[]=$ref;
+					}
 					else //byval
-						$function_variables[$this->name($param)]=$this->evaluate_expression($argVal);
+						$processed_args[]=$function_variables[$this->name($param)]=$this->evaluate_expression($argVal);
 				}
 				else //direct value, not a Node
 				{
@@ -72,9 +73,14 @@ trait EmulatorFunctions
 			}
 			$index++;
 		}
+		//process the rest of the arguments passed (i.e variadic arguments)
+		while ( ($r=each($args))!==false)
+		{
+			$processed_args[]=$this->evaluate_expression($r['value']->value);
+			next($args);
+		}
 		$this->push();
 		$this->variables=$function_variables;
-		// echo "Variables:";var_dump($function_variables);
 
 		end($this->trace)->args=$processed_args;
 		return true;
