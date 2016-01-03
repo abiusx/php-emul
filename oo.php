@@ -491,7 +491,9 @@ class OOEmulator extends Emulator
 	 */
 	public function call_function($name,$args)
 	{
-		#FIXME: handle the same output buffering issue that is handled in Emulator::call_function
+		$ob=ob_get_level()!=0; #with respect to commit b62cb45c932a8f8360bf6956451d21682cafad6f
+		if ($ob) $this->output(ob_get_clean());
+
 		#http://php.net/manual/en/language.types.callable.php
 		if (is_array($name) and count($name)==2) //method call
 		{
@@ -500,21 +502,23 @@ class OOEmulator extends Emulator
 			if (is_string($class_or_obj)) //class, type 2
 			{
 				#TODO: handle type 5 here	
-				return $this->run_static_method($class_or_obj,$method_name,$args);
+				$ret=$this->run_static_method($class_or_obj,$method_name,$args);
 			}
 			elseif (is_object($class_or_obj)) //object, type 3
-				return $this->run_method($class_or_obj,$method_name,$args);
+				$ret=$this->run_method($class_or_obj,$method_name,$args);
 			else
 				$this->error("Unknown function call '{$name}'.");
 		}
 		elseif (is_string($name) and strpos($name,"::")!==false) //static call
 		{
 			list($class,$method)=explode("::",$name); //type 4, static method call
-			return $this->run_static_method($class,$method,$args);
+			$ret=$this->run_static_method($class,$method,$args);
 		}
 		else
 			#TODO: handle type 6 (invoke)
-			return parent::call_function($name,$args); //non-OO
+			$ret=parent::call_function($name,$args); //non-OO
+		if ($ob) ob_start();
+		return $ret;
 	}
 
 }
