@@ -31,10 +31,15 @@ trait EmulatorFunctions
 	 */
 	protected function user_function_prologue($function,$args)
 	{
-		reset($args);
 		$count=count($args);
 		$index=0;
 		$function_variables=[];
+		$processed_args=[];
+		foreach ($args as $arg)
+			$processed_args[]=$this->evaluate_expression($arg->value);
+		// echo "Processed args:";var_dump($processed_args);
+		
+		reset($args);
 		foreach ($function->params as $param)
 		{
 			if ($index>=$count) //all explicit arguments processed, remainder either defaults or error
@@ -69,8 +74,9 @@ trait EmulatorFunctions
 		}
 		$this->push();
 		$this->variables=$function_variables;
-		var_dump($function_variables);
-		end($this->trace)->args=$function_variables;
+		// echo "Variables:";var_dump($function_variables);
+
+		end($this->trace)->args=$processed_args;
 		return true;
 	}
 	/**
