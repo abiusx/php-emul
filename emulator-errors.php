@@ -76,6 +76,7 @@ trait EmulatorErrors
 	 */
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
+		$this->stash_ob();
 		$file=$errfile;
 		$line=$errline;
 		$file2=$line2=null;
@@ -107,6 +108,7 @@ trait EmulatorErrors
 				echo $this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 			}
 		}
+		$this->restore_ob();
 		return true;
 	}
 	/**

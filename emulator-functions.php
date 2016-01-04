@@ -177,8 +177,7 @@ trait EmulatorFunctions
 	 */
 	public function call_function($name,$args)
 	{
-		$ob=ob_get_level()!=0;
-		if ($ob) $this->output(ob_get_clean());
+		$this->stash_ob();
 		if ($this->user_function_exists($name)) //user function
 			$ret=$this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
@@ -207,7 +206,7 @@ trait EmulatorFunctions
 		}
 		else
 			$this->error("Call to undefined function {$name}()",$node);
-		if ($ob) ob_start();
+		$this->restore_ob();
 		return $ret;
 	}
 }

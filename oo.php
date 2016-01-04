@@ -492,8 +492,7 @@ class OOEmulator extends Emulator
 	 */
 	public function call_function($name,$args)
 	{
-		$ob=ob_get_level()!=0; #with respect to commit b62cb45c932a8f8360bf6956451d21682cafad6f
-		if ($ob) $this->output(ob_get_clean());
+		$this->stash_ob();
 
 		#http://php.net/manual/en/language.types.callable.php
 		if (is_array($name) and count($name)==2) //method call
@@ -518,7 +517,7 @@ class OOEmulator extends Emulator
 		else
 			#TODO: handle type 6 (invoke)
 			$ret=parent::call_function($name,$args); //non-OO
-		if ($ob) ob_start();
+		$this->restore_ob();
 		return $ret;
 	}
 

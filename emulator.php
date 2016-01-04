@@ -183,6 +183,7 @@ class Emulator
 	 */
 	function verbose($msg,$verbosity=1)
 	{
+		$this->stash_ob(); #don't really need it here, handled at a higher level
 		static $lastVerbosity=1;
 		static $verbosities=[0];
 		$number="";
@@ -204,6 +205,18 @@ class Emulator
 
 		if ($this->verbose>=$verbosity)
 			echo str_repeat("---",$verbosity)." ".$number." ".$msg;
+		$this->restore_ob();
+	}
+
+	private $isob=false;
+	function stash_ob()
+	{
+		$this->isob=ob_get_level()!=0;
+		if ($this->isob) $this->output(ob_get_clean());
+	}
+	function restore_ob()
+	{
+		if ($this->isob) ob_start();
 	}
 	/**
 	 * Initialize the emulator by setting environment variables (super globals)
