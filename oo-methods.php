@@ -142,7 +142,7 @@ trait OOEmulatorMethods {
 	 * @param  array $args                
 	 * @return mixed                      
 	 */
-	protected function run_user_static_method($original_class_name,$method_name,$args)
+	protected function run_user_static_method($original_class_name,$method_name,$args,$isStatic=true)
 	{
 		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
@@ -158,7 +158,12 @@ trait OOEmulatorMethods {
 			{
 				$last_self=$this->self;
 				$this->self=$class;
-				array_push($this->trace, (object)array("type"=>"method","name"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
+				array_push($this->trace, (object)array("type"=>"::","function"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
+				if (!$isStatic)
+				{
+					end($this->trace)->type="->";
+					end($this->trace)->object=$this->this;
+				}
 				$last_file=$this->current_file;
 				$this->current_file=$this->classes[strtolower($class)]->file;
 				if ($class==$class_name)
@@ -220,7 +225,7 @@ trait OOEmulatorMethods {
 		$old_this=$this->this;
 		$this->this=&$object;
 		
-		$res=$this->run_user_static_method($class_name,$method_name,$args);
+		$res=$this->run_user_static_method($class_name,$method_name,$args,false);
 
 		$this->this=&$old_this;
 		return $res;

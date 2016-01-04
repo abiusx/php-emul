@@ -135,6 +135,7 @@ class Emulator
 	/**
 	 * Stack trace.
 	 * Used to see if we're inside a function or a method or etc.
+	 * Obeys the structure of debug_backtrace()
 	 * @var array
 	 */
 	public $trace=[];

@@ -2,6 +2,67 @@
 
 trait EmulatorErrors
 {
+	private function object_to_array($obj) 
+	{
+	    if(is_object($obj)) $obj = (array) $obj;
+	    if(is_array($obj)) 
+	    {
+	        $new = array();
+	        foreach($obj as $key => $val) 
+	            $new[$key] = $this->object_to_array($val);
+	    }
+	    else $new = $obj;
+	    return $new;       
+	}
+	/**
+	 * Returns backtrace equal to that of debug_backtrace
+	 * @param  int  $options 
+	 * @param  integer $limit   
+	 * @return array
+	 */
+	function backtrace($options=DEBUG_BACKTRACE_PROVIDE_OBJECT,$limit=0)
+	{
+		#TODO; possible options values : DEBUG_BACKTRACE_PROVIDE_OBJECT, DEBUG_BACKTRACE_IGNORE_ARGS
+		#TODO: this returns EmulatorObject
+		$t=$this->trace;
+		while (count($t) and end($t)->function=="debug_backtrace" or end($t)->function=="debug_print_backtrace")
+			array_pop($t);
+		$t=array_reverse($t);
+		if (! ($options&DEBUG_BACKTRACE_PROVIDE_OBJECT))
+			return $this->object_to_array($t);
+		return $t;
+	}
+	/**
+	 * Prints the backtrace equal to debug_print_backtrace
+	 * @param  int  $options 
+	 * @param  integer $limit   
+	 * @return [type]           [description]
+	 */
+	function print_backtrace($options=DEBUG_BACKTRACE_PROVIDE_OBJECT ,$limit=0)
+	{
+		$noArgs=($options&DEBUG_BACKTRACE_IGNORE_ARGS);
+		$trace=$this->backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT,$limit);
+		$count=count($trace);
+		for ($i=0;$i<$count;++$i)
+		{
+			$t=$trace[$i];
+			$function=$args=$file=$line="";
+			if (isset($t->function))
+				$function=$t->function;
+			if (isset($t->type))
+				$function=$t->class.$t->type.$function;
+			if (isset($t->file))
+				$file=$t->file;
+			if (isset($t->line))
+				$line=$t->line;
+			if ( isset($t->args))
+				if (!$noArgs or $function=="require_once" or $function=="include_once" or $function=="include" or $function=="require")
+					@$args=implode(", ",$t->args);
+
+			printf ("#%d %s(%s) called at [%s:%d]\n",$i,$function,$args,$file,$line);
+		}
+
+	}
 	/**
 	 * The emulator error handler (in case an error happens in the emulation, that is not intended)
 	 * @param  [type] $errno   [description]
@@ -36,7 +97,12 @@ trait EmulatorErrors
 		{
 			$this->terminated=true;
 			if ($this->verbose>=2)
+			{
+				$this->verbose("Emulator Backtrace:\n");
 				debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+				$this->verbose("Emulation Backtrace:\n");
+				$this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+			}
 		}
 		return true;
 	}
@@ -65,8 +131,13 @@ trait EmulatorErrors
 		if ($details)
 		{
 			print_r($node);
-			if ($this->verbose)
+			if ($this->verbose>=2)
+			{
+				$this->verbose("Emulator Backtrace:\n");
 				debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+				$this->verbose("Emulation Backtrace:\n");
+				$this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+			}
 		}
 		if ($this->strict) $this->terminated=true;
 	}

@@ -379,10 +379,11 @@ class OOEmulator extends Emulator
 		elseif ($node instanceof Node\Stmt\Static_)
 		{
 			//TODO: bind this static variable to the method being runned in the class it belongs to
-			if (end($this->trace)->type=="method" and  $this->user_method_exists(end($this->trace)->class,end($this->trace)->name)) //statc inside a method)
+			$isMethod=end($this->trace)->type=="::" or end($this->trace)->type=="->";
+			if ($isMethod and  $this->user_method_exists(end($this->trace)->class,end($this->trace)->function)) //statc inside a method)
 			{
 				$class=end($this->trace)->class;
-				$method=end($this->trace)->name;
+				$method=end($this->trace)->function;
 
 				//TODO
 				$statics=&$this->classes[strtolower($class)]->methods[strtolower($method)]->statics;// &$this->functions[$this->current_function]->statics;

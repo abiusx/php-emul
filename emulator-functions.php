@@ -117,7 +117,7 @@ trait EmulatorFunctions
 		$last_function=$this->current_function;
 		$this->current_function=$name;
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
-		array_push($this->trace, (object)array("type"=>"function","name"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
+		array_push($this->trace, (object)array("type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
 		$last_file=$this->current_file;
 		$this->current_file=$this->functions[strtolower($name)]->file;
 
@@ -178,6 +178,7 @@ trait EmulatorFunctions
 		elseif (function_exists($name)) //core function
 		{
 			$argValues=$this->core_function_prologue($name,$args);
+			array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
 			if (isset($this->mock_functions[strtolower($name)])) //mocked
 			{
 				$mocked_name=$this->mock_functions[strtolower($name)];
@@ -196,6 +197,7 @@ trait EmulatorFunctions
 				$ret=call_user_func_array($name,$argValues); //core function
 				if (ob_get_level()>0) $this->output(ob_get_clean());
 			}
+			array_pop($this->trace);
 		}
 		else
 			$this->error("Call to undefined function {$name}()",$node);

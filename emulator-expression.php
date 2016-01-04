@@ -361,6 +361,8 @@ trait EmulatorExpression {
 		elseif ($node instanceof Node\Expr\Include_)
 		{
 			$type=$node->type; //1:include,2:include_once,3:require,4:require_once
+			$names=[null,'include','include_once','require','require_once'];
+			$name=$names[$type];
 			$file=$this->evaluate_expression($node->expr);
 			
 			$realfile =realpath(dirname($this->current_file)."/".$file); //first check the directory of the file using include (as per php)
@@ -371,15 +373,18 @@ trait EmulatorExpression {
 			if (!file_exists($realfile) or !is_file($realfile))
 				if ($type<=2) //include
 				{
-					$this->warning("include({$file}): failed to open stream: No such file or directory");
+					$this->warning("{$name}({$file}): failed to open stream: No such file or directory");
 					return false;
 				}
 				else
 				{
-					$this->error("require({$file}): failed to open stream: No such file or directory");
+					$this->error("{$name}({$file}): failed to open stream: No such file or directory");
 					return false;
 				}
+			array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,
+				"args"=>[$realfile]));
 			$this->run_file($realfile);
+			array_pop($this->trace);
 		}
 		elseif ($node instanceof Node\Expr\Ternary)
 		{

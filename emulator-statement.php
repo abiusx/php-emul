@@ -210,7 +210,7 @@ trait EmulatorStatement {
 			}
 			elseif ($node instanceof Node\Stmt\Static_)
 			{
-				if (end($this->trace)->type=="function" and  isset($this->functions[strtolower(end($this->trace)->name)])) //statc inside a function
+				if (end($this->trace)->type==="" and  isset($this->functions[strtolower(end($this->trace)->function)])) //statc inside a function
 				{
 					$statics=&$this->functions[strtolower($this->current_function)]->statics;
 					foreach ($node->vars as $var)
