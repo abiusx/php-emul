@@ -158,12 +158,6 @@ trait OOEmulatorMethods {
 			{
 				$last_self=$this->self;
 				$this->self=$class;
-				array_push($this->trace, (object)array("type"=>"::","function"=>$method_name,"class"=>$class,"file"=>$this->current_file,"line"=>$this->current_line));
-				if (!$isStatic)
-				{
-					end($this->trace)->type="->";
-					end($this->trace)->object=$this->this;
-				}
 				$last_file=$this->current_file;
 				$this->current_file=$this->classes[strtolower($class)]->file;
 				if ($class==$class_name)
@@ -171,8 +165,10 @@ trait OOEmulatorMethods {
 				else
 					$word="ancestor";
 				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
-				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args);
-				array_pop($this->trace);
+				$trace_args=array("type"=>$isStatic?"::":"->","function"=>$method_name,"class"=>$class);
+				if (!$isStatic)
+					$trace_args['object']=$this->this;
+				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args, $trace_args);
 				$this->self=$last_self;
 				$flag=true;
 				break;	

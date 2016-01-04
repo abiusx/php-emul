@@ -85,8 +85,7 @@ trait EmulatorFunctions
 		$this->push();
 		$this->variables=$function_variables;
 
-		end($this->trace)->args=$processed_args;
-		return true;
+		return $processed_args;
 	}
 	/**
 	 * Runs a procedure (sub).
@@ -96,11 +95,20 @@ trait EmulatorFunctions
 	 * @param  Node|array $args          args can be either an array of values, or a parsed Node 
 	 * @return mixed return value of function
 	 */
-	protected function run_function($function,$args)
+	protected function run_function($function,$args,$trace_args=array())
 	{
-		if (!$this->user_function_prologue($function,$args))
+		$processed_args=$this->user_function_prologue($function,$args);
+		if ($processed_args===false)
 			return null;
+		
+		array_push($this->trace, (object)array("args"=>$processed_args, "type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
+		foreach ($trace_args as $k=>$v)
+			end($this->trace)->$k=$v;
+		
 		$res=$this->run_code($function->code);
+		
+		array_pop($this->trace);
+		
 		$this->pop();
 		return $res;
 	}
@@ -117,13 +125,11 @@ trait EmulatorFunctions
 		$last_function=$this->current_function;
 		$this->current_function=$name;
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
-		array_push($this->trace, (object)array("type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
 		$last_file=$this->current_file;
 		$this->current_file=$this->functions[strtolower($name)]->file;
 
 		$res=$this->run_function($this->functions[strtolower($name)],$args);
 
-		array_pop($this->trace);
 		$this->current_function=$last_function;
 		$this->current_file=$last_file;
 		
