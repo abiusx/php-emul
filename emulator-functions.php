@@ -183,7 +183,7 @@ trait EmulatorFunctions
 			$ret=$this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
-			$argValues=$this->core_function_prologue($name,$args);
+			$argValues=$this->core_function_prologue($name,$args); #this has to be before the trace line, 
 			array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
 			if (isset($this->mock_functions[strtolower($name)])) //mocked
 			{

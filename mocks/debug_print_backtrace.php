@@ -2,5 +2,5 @@
 
 function debug_print_backtrace_mock(Emulator $emul)
 {
-	return $emul->print_backtrace();
+	$emul->output($emul->print_backtrace());
 }

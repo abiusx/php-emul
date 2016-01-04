@@ -199,6 +199,7 @@ trait OOEmulatorMethods {
 		if ($object instanceof EmulatorObject)
 			return $this->run_user_method($object,$method_name,$args);
 		elseif (is_object($object))
+			#TODO: add mocked class/methods, and also add trace here.
 			return call_user_func_array(array($object,$method_name), $args);
 		else
 			$this->error("Can not call method '{$method_name}' on a non-object.\n",$object);

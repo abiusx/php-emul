@@ -34,22 +34,24 @@ trait EmulatorErrors
 	}
 	/**
 	 * Prints the backtrace equal to debug_print_backtrace
+	 * This function does not actually print the backtrace, it just returns it as a string.
 	 * @param  int  $options 
 	 * @param  integer $limit   
-	 * @return [type]           [description]
+	 * @return string           backtrace print.
 	 */
 	function print_backtrace($options=DEBUG_BACKTRACE_PROVIDE_OBJECT ,$limit=0)
 	{
 		$noArgs=($options&DEBUG_BACKTRACE_IGNORE_ARGS);
 		$trace=$this->backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT,$limit);
 		$count=count($trace);
+		$out="";
 		for ($i=0;$i<$count;++$i)
 		{
 			$t=$trace[$i];
 			$function=$args=$file=$line="";
 			if (isset($t->function))
 				$function=$t->function;
-			if (isset($t->type))
+			if ($t->type) //not function, method or static-method
 				$function=$t->class.$t->type.$function;
 			if (isset($t->file))
 				$file=$t->file;
@@ -59,8 +61,9 @@ trait EmulatorErrors
 				if (!$noArgs or $function=="require_once" or $function=="include_once" or $function=="include" or $function=="require")
 					@$args=implode(", ",$t->args);
 
-			printf ("#%d %s(%s) called at [%s:%d]\n",$i,$function,$args,$file,$line);
+			$out.=sprintf ("#%d %s(%s) called at [%s:%d]\n",$i,$function,$args,$file,$line);
 		}
+		return $out;
 
 	}
 	/**
@@ -101,7 +104,7 @@ trait EmulatorErrors
 				$this->verbose("Emulator Backtrace:\n");
 				debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 				$this->verbose("Emulation Backtrace:\n");
-				$this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+				echo $this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 			}
 		}
 		return true;
@@ -136,7 +139,7 @@ trait EmulatorErrors
 				$this->verbose("Emulator Backtrace:\n");
 				debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 				$this->verbose("Emulation Backtrace:\n");
-				$this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+				echo $this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 			}
 		}
 		if ($this->strict) $this->terminated=true;
