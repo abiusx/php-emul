@@ -19,7 +19,7 @@ trait OOEmulatorMethodExistence {
 	 */
 	public function user_method_exists($classname,$methodname)
 	{
-		if (!$this->class_exists($classname)) return false;
+		if (!$this->user_class_exists($classname)) return false;
 		#TODO: separate static/instance methods?
 		return isset($this->classes[strtolower($classname)]->methods[strtolower($methodname)]);
 	}
