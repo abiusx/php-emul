@@ -57,6 +57,8 @@ trait EmulatorFunctions
 					$argVal=current($args)->value;
 					if ($param->byRef)	// byref handle
 					{
+						if (!$this->variable_isset($argVal))
+							$this->variable_set($argVal);
 						$ref=&$this->variable_reference($argVal);
 						$function_variables[$this->name($param)]=$ref;
 						$processed_args[]=$ref;
