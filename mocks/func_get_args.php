@@ -7,5 +7,5 @@ function func_get_args_mock(Emulator $emul)
 		return false;
 	}
 	else
-		return end($emul->trace)->args;
+		return $emul->trace[count($emul->trace)-2]->args;
 }

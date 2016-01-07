@@ -84,7 +84,6 @@ trait EmulatorFunctions
 		}
 		$this->push();
 		$this->variables=$function_variables;
-
 		return $processed_args;
 	}
 	/**

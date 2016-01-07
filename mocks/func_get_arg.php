@@ -13,5 +13,5 @@ function func_get_arg_mock(Emulator $emul,$arg_num)
 		return false;
 	}
 	else
-		return array_slice(end($emul->trace)->args,$arg_num,1);
+		return array_slice($emul->trace[count($emul->trace)-2]->args,$arg_num,1);
 }

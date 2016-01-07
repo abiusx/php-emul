@@ -230,6 +230,11 @@ class OOEmulator extends Emulator
 	protected function evaluate_expression($node)
 	{
 		$this->current_node=$node;
+		if (is_object($node) and method_exists($node, "getLine") and $node->getLine()!=$this->current_line)
+		{
+			$this->current_line=$node->getLine();
+			$this->verbose("Line {$this->current_line} (expression)".PHP_EOL,4);
+		}	
 		if (false)
 			;
 		elseif ($node instanceof Node\Expr\New_)
