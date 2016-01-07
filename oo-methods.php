@@ -139,37 +139,34 @@ trait OOEmulatorMethods {
 	 * Runs a static method of a user defined class
 	 * @param  string $original_class_name 
 	 * @param  string $method_name         
-	 * @param  array $args                
+	 * @param  array $args    
+	 * @param  object &$object optional whether or not an object ($this) should be set.
 	 * @return mixed                      
 	 */
-	protected function run_user_static_method($original_class_name,$method_name,$args,$isStatic=true)
+	protected function run_user_static_method($original_class_name,$method_name,$args,&$object=null)
 	{
 		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
 			$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
-		$last_method=$this->current_method;
-		$last_class=$this->current_class;
-		$this->current_method=$method_name;
-		$this->current_class=$class_name;
 		$flag=false;
 		foreach ($this->ancestry($class_name) as $class)
 		{
 			if ($this->user_method_exists($class,$method_name))
 			{
-				$last_self=$this->self;
-				$this->self=$class;
-				$last_file=$this->current_file;
-				$this->current_file=$this->classes[strtolower($class)]->file;
 				if ($class==$class_name)
 					$word="direct";
 				else
 					$word="ancestor";
 				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
-				$trace_args=array("type"=>$isStatic?"::":"->","function"=>$method_name,"class"=>$class);
-				if (!$isStatic)
-					$trace_args['object']=$this->this;
-				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args, $trace_args);
-				$this->self=$last_self;
+				$trace_args=array("type"=>"::","function"=>$method_name,"class"=>$class);
+				$wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file];
+				if ($object!==null)
+				{
+					$trace_args['object']=&$object;
+					$trace_args['type']="->";
+					$wrappings['this']=&$object;
+				}
+				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args, $wrappings, $trace_args);
 				$flag=true;
 				break;	
 			}
@@ -180,9 +177,6 @@ trait OOEmulatorMethods {
 			$this->error("Call to undefined method {$class_name}::{$method_name}()");
 			$res=null;
 		}
-		$this->current_method=$last_method;
-		$this->current_file=$last_file;
-		$this->current_class=$last_class;
 		if ($this->return)
 			$this->return=false;	
 		return $res;
@@ -219,12 +213,9 @@ trait OOEmulatorMethods {
 			return null;
 		}
 		$class_name=$object->classname;
-		$old_this=$this->this;
-		$this->this=&$object;
 		
-		$res=$this->run_user_static_method($class_name,$method_name,$args,false);
+		$res=$this->run_user_static_method($class_name,$method_name,$args,$object);
 
-		$this->this=&$old_this;
 		return $res;
 	}
 

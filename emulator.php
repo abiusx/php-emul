@@ -57,8 +57,8 @@ class Emulator
 	 * mostly used for error reporting
 	 * @var string
 	 */
-	protected $current_node,$current_file,$current_line;
-	protected $current_function,$current_statement_index;
+	protected $current_node,$current_statement_index;
+	protected $current_function,$current_file,$current_line;
 	
 	/**
 	 * Number of statements executed so far

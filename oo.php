@@ -64,7 +64,7 @@ class OOEmulator extends Emulator
 	 * Holds $this and self object and class pointers
 	 * @var null
 	 */
-	protected $this=null,$self=null;
+	protected $current_this=null,$current_self=null;
 
 	/**
 	 * Extract ClassLike declarations from files.
@@ -345,7 +345,7 @@ class OOEmulator extends Emulator
 	protected function real_class($classname)
 	{
 		if ($classname==="self")
-			$classname=$this->self;
+			$classname=$this->current_self;
 		elseif ($classname==="static")
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
@@ -481,9 +481,8 @@ class OOEmulator extends Emulator
 		elseif ($node instanceof Node\Expr\Variable and is_string($node->name) and $node->name=="this") //$this
 		{
 			$key='this';
-			$this->this_hack=array($key=>&$this->this);
-
-			return $this->this_hack;
+			$t=array($key=>&$this->current_this);
+			return $t;
 		}
 		else
 			return parent::symbol_table($node,$key,$create);

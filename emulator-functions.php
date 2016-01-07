@@ -92,22 +92,35 @@ trait EmulatorFunctions
 	 * This does the prologue and epilogue, sets up arguments and references, and starts execution
 	 * @param  Node $function the parsed declaration of function
 	 * @param  Node|array $args          args can be either an array of values, or a parsed Node 
+	 * @param  array $wrappings 	the parameters to wrap the function call in. An array of key/value pairs that will become current_$key=$value
+	 *                           	for the duration of the function call
+	 * @param  array $trace_args 	the parameters to be set for the trace of this function call (used in backtrace)
 	 * @return mixed return value of function
 	 */
-	protected function run_function($function,$args,$trace_args=array())
+	protected function run_function($function,$args,$wrappings=array(),$trace_args=array())
 	{
 		$processed_args=$this->user_function_prologue($function,$args);
 		if ($processed_args===false)
 			return null;
-		
-		array_push($this->trace, (object)array("args"=>$processed_args, "type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
+		$backups=[];
+		foreach ($wrappings as $k=>$v)
+		{
+			if (!property_exists($this, "current_{$k}"))
+				$this->error("Invalid wrapping '{$k}'=>'{$v}'.\n");
+			$backups[$k]=$this->{"current_{$k}"};
+			$this->{"current_{$k}"}=$v;
+		}
+		array_push($this->trace, (object)array("args"=>$processed_args, 
+			"type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
 		foreach ($trace_args as $k=>$v)
 			end($this->trace)->$k=$v;
 		
 		$res=$this->run_code($function->code);
 		
 		array_pop($this->trace);
-		
+		foreach ($backups as $k=>$v)
+			$this->{"current_{$k}"}=$v;
+
 		$this->pop();
 		return $res;
 	}
@@ -121,16 +134,11 @@ trait EmulatorFunctions
 	{
 		$this->verbose("Running {$name}() with ".count($args)." args...".PHP_EOL,2);
 		
-		$last_function=$this->current_function;
-		$this->current_function=$name;
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
-		$last_file=$this->current_file;
-		$this->current_file=$this->functions[strtolower($name)]->file;
 
-		$res=$this->run_function($this->functions[strtolower($name)],$args);
+		$res=$this->run_function($this->functions[strtolower($name)],$args,
+			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name]);
 
-		$this->current_function=$last_function;
-		$this->current_file=$last_file;
 		
 		if ($this->return)
 			$this->return=false;	

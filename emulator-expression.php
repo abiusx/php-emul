@@ -161,7 +161,7 @@ trait EmulatorExpression {
 		elseif ($node instanceof Node\Expr\BinaryOp)
 		{
 			
-			$l=$this->evaluate_expression($node->left);
+			$l=$this->evaluate_expression($node->left); #can't eval right here, prevents short circuit reliant code
 			// $r=$this->evaluate_expression($node->right);
 			if ($node instanceof Node\Expr\BinaryOp\Plus)
 				return $l+$this->evaluate_expression($node->right);
