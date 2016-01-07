@@ -165,7 +165,7 @@ trait EmulatorFunctions
 			$parameter_reflection=current($parameters_reflection);
 			if ($arg instanceof Node)
 			{
-				if ($parameter_reflection->isPassedByReference()) //byref 
+				if ($parameter_reflection!==false and $parameter_reflection->isPassedByReference()) //byref 
 				{
 					if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
 						$this->variable_set($arg->value);
