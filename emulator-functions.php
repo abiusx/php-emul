@@ -103,6 +103,8 @@ trait EmulatorFunctions
 		if ($processed_args===false)
 			return null;
 		$backups=[];
+		//IMPORTANT: these wrappings and backtrace should be set AFTER prologue and BEFORE function execution,
+		//because prologue might have expressions that reference the current context.
 		foreach ($wrappings as $k=>$v)
 		{
 			if (!property_exists($this, "current_{$k}"))
