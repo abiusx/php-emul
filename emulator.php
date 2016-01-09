@@ -539,32 +539,7 @@ class Emulator
 		chdir($this->original_dir);
 		return $res;
 	}
-	/**
-	 * Used to check if loop condition is still valid
-	 * @return boolean
-	 */
-	private function loop_condition($i=0)
-	{
-		if ($this->break)
-		{
-			$this->break--;
-			return true;
-		}
-		if ($this->continue)
-		{
-			$this->continue--;
-			if ($this->continue)
-				return true; 
-		}
-		if ($i>$this->infinite_loop)
-		{
-			$this->error("Infinite loop");
-			return true; 
-		}
-		if ($this->terminated)
-			return true;
-		return false;
-	}
+
 	
 	/**
 	 * Extracts declarations in AST node

@@ -8,6 +8,32 @@ use PhpParser\Node;
 trait EmulatorStatement 
 {
 	/**
+	 * Used to check if loop condition is still valid
+	 * @return boolean
+	 */
+	private function loop_condition($i=0)
+	{
+		if ($this->break)
+		{
+			$this->break--;
+			return true;
+		}
+		if ($this->continue)
+		{
+			$this->continue--;
+			if ($this->continue)
+				return true; 
+		}
+		if ($i>$this->infinite_loop)
+		{
+			$this->error("Infinite loop");
+			return true; 
+		}
+		if ($this->terminated)
+			return true;
+		return false;
+	}
+	/**
 	 * Runs a single statement
 	 * If input is a statement, it will be run. If its an expression, it will be runned like an statement.
 	 * @param  Node $node 
