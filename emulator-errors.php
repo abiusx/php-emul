@@ -59,7 +59,15 @@ trait EmulatorErrors
 				$line=$t->line;
 			if ( isset($t->args))
 				if (!$noArgs or $function=="require_once" or $function=="include_once" or $function=="include" or $function=="require")
-					@$args=implode(", ",$t->args);
+					$args=implode(", ",array_map(
+						function ($x){ 
+							$t=gettype($x);
+							if ($t=="boolean" or $t=="integer" or $t=="duoble" or $t=="string")
+								return $x;
+							else 
+								return $t;
+						}
+						,$t->args));
 
 			$out.=sprintf ("#%d %s(%s) called at [%s:%d]\n",$i,$function,$args,$file,$line);
 		}
