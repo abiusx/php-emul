@@ -2,6 +2,25 @@
 
 trait EmulatorErrors
 {
+	protected $error_reporting=-1;
+	/**
+	 * Same as PHP's error_reporting
+	 * @param  int $level 
+	 * @return int
+	 */
+	public function error_reporting($level=null)
+	{
+		if ($level===null)
+			return $this->error_reporting;
+		$r=$this->error_reporting;
+		$this->error_reporting=$level;
+		return $r;
+	}
+	/**
+	 * Used to output args of debug_print_backtrace
+	 * @param  [type] $obj [description]
+	 * @return [type]      [description]
+	 */
 	private function object_to_array($obj) 
 	{
 	    if(is_object($obj)) $obj = (array) $obj;
@@ -163,8 +182,13 @@ trait EmulatorErrors
 	protected function notice($msg,$node=null)
 	{
 		if ($this->error_suppression) return false;
-		$this->verbose("Emulation Notice: ",0);
-		$this->_error($msg,$node,false or $this->strict);
+		if ($this->error_reporting & E_NOTICE or (defined("E_USER_NOTICE") and $this->error_reporting & E_USER_NOTICE))
+		{
+			$this->verbose("Emulation Notice: ",0);
+			$this->_error($msg,$node,false or $this->strict);
+			return true;
+		}
+		return false;
 	}
 	/**
 	 * Warnings
@@ -175,8 +199,12 @@ trait EmulatorErrors
 	protected function warning($msg,$node=null)
 	{
 		if ($this->error_suppression) return false;
-		$this->verbose("Emulation Warning: ",0);
-		$this->_error($msg,$node);
-		// trigger_error($msg);
+		if ($this->error_reporting & E_WARNING or (defined("E_USER_WARNING") and $this->error_reporting & E_USER_WARNING))
+		{
+			$this->verbose("Emulation Warning: ",0);
+			$this->_error($msg,$node);
+			return true;
+		}
+		return false;
 	}
 }

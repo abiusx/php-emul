@@ -5,6 +5,7 @@ use PhpParser\Node;
  */
 trait EmulatorExpression {
 
+	
 	protected function expression_preprocess($node)
 	{
 		$this->current_node=$node;

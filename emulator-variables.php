@@ -44,7 +44,13 @@ trait EmulatorVariables
 	{
 		$r=&$this->symbol_table($node,$key,false);
 		if ($key!==null)
-			return $r[$key];
+			if (!isset($r[$key]))
+			{
+				$this->notice("Undefined index: {$key}");
+				return null;
+			}
+			else
+				return $r[$key];
 		else 
 			return null;
 	}
@@ -82,7 +88,7 @@ trait EmulatorVariables
 		if ($key===null) //not found or GLOBALS
 			return $this->null_reference();
 		elseif (is_array($r))
-			return $r[$key];
+			return $r[$key]; //if $r[$key] does not exist, will be created in byref use.
 		else
 			$this->error("Could not retrieve reference",$node);
 	}
