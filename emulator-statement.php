@@ -13,6 +13,10 @@ trait EmulatorStatement
 	 */
 	private function loop_condition($i=0)
 	{
+		if ($this->terminated)
+			return true;
+		if ($this->return)
+			return true;
 		if ($this->break)
 		{
 			$this->break--;
@@ -29,10 +33,6 @@ trait EmulatorStatement
 			$this->error("Infinite loop");
 			return true; 
 		}
-		if ($this->terminated)
-			return true;
-		if ($this->return)
-			return true;
 		return false;
 	}
 	/**
