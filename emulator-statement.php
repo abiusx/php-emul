@@ -140,9 +140,12 @@ trait EmulatorStatement
 		elseif ($node instanceof Node\Stmt\Switch_)
 		{
 			$arg=$this->evaluate_expression($node->cond);
+			$condition=false;
 			foreach ($node->cases as $case)
 			{
 				if ($case->cond===NULL /* default case*/ or $this->evaluate_expression($case->cond)==$arg)
+					$condition=true; //run all cases from now forward, until break.
+				if ($condition)
 					$this->run_code($case->stmts);
 				if ($this->loop_condition())
 					break;
