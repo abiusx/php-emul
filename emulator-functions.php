@@ -108,7 +108,7 @@ trait EmulatorFunctions
 		//IMPORTANT: these wrappings and backtrace should be set AFTER prologue and BEFORE function execution,
 		//because prologue might have expressions that reference the current context.
 		array_push($this->trace, (object)array("args"=>$processed_args, 
-			"type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
+			"type"=>"","file"=>$this->current_file,"line"=>$this->current_line));
 		foreach ($trace_args as $k=>$v)
 			end($this->trace)->$k=$v;
 		
@@ -143,7 +143,9 @@ trait EmulatorFunctions
 
 		$res=$this->run_function($this->functions[strtolower($name)],$args,
 			["file"=>$this->functions[strtolower($name)]->file,
-			"function"=>$name]);
+			"function"=>$name], //wrappings
+			["function"=>$name] //trace
+			);
 
 		
 		if ($this->return)
