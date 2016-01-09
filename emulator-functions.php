@@ -35,7 +35,7 @@ trait EmulatorFunctions
 		$index=0;
 		$function_variables=[];
 		$processed_args=[];
-		
+		$line=$this->current_line;
 		reset($args);
 		foreach ($function->params as $param)
 		{
@@ -86,6 +86,7 @@ trait EmulatorFunctions
 		}
 		$this->push();
 		$this->variables=$function_variables;
+		$this->current_line=$line;
 		return $processed_args;
 	}
 	/**
@@ -142,8 +143,7 @@ trait EmulatorFunctions
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
 
 		$res=$this->run_function($this->functions[strtolower($name)],$args,
-			["file"=>$this->functions[strtolower($name)]->file,
-			"function"=>$name], //wrappings
+			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name,"line"=>$this->current_line], //wrappings
 			["function"=>$name] //trace
 			);
 

@@ -4,22 +4,26 @@ use PhpParser\Node;
  * Evaluates an expression for the emulator
  */
 trait EmulatorExpression {
-	/**
-	 * Evaluate all nodes of type Node\Expr and return appropriate value
-	 * This is the core of the emulator/interpreter.
-	 * @param  Node $ast Abstract Syntax Tree node
-	 * @return mixed      value
-	 */
-	protected function evaluate_expression($ast)
+
+	protected function expression_preprocess($node)
 	{
-		if ($this->terminated) return null;
-		$node=$ast;
 		$this->current_node=$node;
 		if (is_object($node) and method_exists($node, "getLine") and $node->getLine()!=$this->current_line)
 		{
 			$this->current_line=$node->getLine();
 			$this->verbose("Line {$this->current_line} (expression)".PHP_EOL,4);
 		}	
+	}
+	/**
+	 * Evaluate all nodes of type Node\Expr and return appropriate value
+	 * This is the core of the emulator/interpreter.
+	 * @param  Node $ast Abstract Syntax Tree node
+	 * @return mixed      value
+	 */
+	protected function evaluate_expression($node)
+	{
+		if ($this->terminated) return null;
+		$this->expression_preprocess($node);		
 		if ($node===null)
 			return null;
 		elseif (is_array($node))
