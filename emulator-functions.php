@@ -107,6 +107,11 @@ trait EmulatorFunctions
 		$backups=[];
 		//IMPORTANT: these wrappings and backtrace should be set AFTER prologue and BEFORE function execution,
 		//because prologue might have expressions that reference the current context.
+		array_push($this->trace, (object)array("args"=>$processed_args, 
+			"type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
+		foreach ($trace_args as $k=>$v)
+			end($this->trace)->$k=$v;
+		
 		foreach ($wrappings as $k=>$v)
 		{
 			if (!property_exists($this, "current_{$k}"))
@@ -114,16 +119,12 @@ trait EmulatorFunctions
 			$backups[$k]=$this->{"current_{$k}"};
 			$this->{"current_{$k}"}=$v;
 		}
-		array_push($this->trace, (object)array("args"=>$processed_args, 
-			"type"=>"","function"=>$this->current_function,"file"=>$this->current_file,"line"=>$this->current_line));
-		foreach ($trace_args as $k=>$v)
-			end($this->trace)->$k=$v;
-		
 		$res=$this->run_code($function->code);
 		
-		array_pop($this->trace);
 		foreach ($backups as $k=>$v)
 			$this->{"current_{$k}"}=$v;
+
+		array_pop($this->trace);
 
 		$this->pop();
 		return $res;
@@ -141,7 +142,8 @@ trait EmulatorFunctions
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
 
 		$res=$this->run_function($this->functions[strtolower($name)],$args,
-			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name]);
+			["file"=>$this->functions[strtolower($name)]->file,
+			"function"=>$name]);
 
 		
 		if ($this->return)
