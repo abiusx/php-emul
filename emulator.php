@@ -411,8 +411,12 @@ class Emulator
 				$base=&$base[$index];
 			}
 			if ($create and !isset($base[$key]))
-				if ($key===null)
+				if ($key===null) #$a[...][...][]=x
+				{
 					$base[]=null;
+					end($base);
+					$key=key($base);
+				}
 				else
 					$base[$key]=null;
 
@@ -530,8 +534,8 @@ class Emulator
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
 		$res=$this->run_file($file);
-		restore_error_handler();
 		$this->shutdown();
+		restore_error_handler();
 		chdir($this->original_dir);
 		return $res;
 	}
