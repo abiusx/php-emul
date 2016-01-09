@@ -46,25 +46,26 @@ trait EmulatorExpression {
 			if ($node->var instanceof Node\Expr\List_) //list(x,y)=f()
 			{
 				$resArray=$this->evaluate_expression($node->expr);
-				// if (count($resArray)!=count($node->var->vars))
-				// 	$this->warning("list() used but number of arguments do not match");
-				reset($resArray);
+				// 	PHP's list uses numeric iteration over the resArray. 
+				// 	This means that list($a,$b)=[1,'a'=>'b'] will error "Undefined offset: 1"
+				// 	because it wants to assign $resArray[1] to $b. Thus we use index here.
+				$index=0;
 				$outArray=[];
 				foreach ($node->var->vars as $var)
 				{
-					//not necessarily a variable, can be an arrayDim or objectProperty, or even null!
-					//yes, list can be used like list($a,,$b)=[1,2,3,4]
-					$r=next($resArray);
+					if (!isset($resArray[$index]))
+						$this->notice("Undefined offset: {$index}");
 					if ($var===null)
-						$outArray[]=$r;
+						$outArray[]=$resArray[$index++];
 					else
-						$outArray[]=$this->variable_set($var,$r);
+						$outArray[]=$this->variable_set($var,$resArray[$index++]);
 				}
-				//return the rest of offsets
-				while ( ($r=each($resArray))!==false )
+				//return the rest of offsets, they are not assigned to anything by list, but still returned.
+				while ( $index<count($resArray))
 				{
-					$outArray[]=$r['value'];
-					next($resArray);
+					if (!isset($resArray[$index]))
+						$this->notice("Undefined offset: {$index}");
+					$outArray[]=$resArray[$index++];
 				}
 				return $outArray;
 			}

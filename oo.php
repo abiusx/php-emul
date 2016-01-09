@@ -16,6 +16,10 @@ class EmulatorObject
 	const Visibility_Protected=2;
 	const Visibility_Private=4;
 	/**
+	 * @var string
+	 */
+	public $classname;
+	/**
 	 * Array of keys as propname, values as EmulatorObjectProperty
 	 * @var [type]
 	 */
@@ -25,10 +29,6 @@ class EmulatorObject
 	 * @var [type]
 	 */
 	public $visibilities;
-	/**
-	 * @var string
-	 */
-	public $classname;
 	public function __construct($classname,$properties=[],$visibilities=[])
 	{
 		$this->classname=$classname;

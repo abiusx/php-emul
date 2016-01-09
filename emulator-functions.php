@@ -35,7 +35,7 @@ trait EmulatorFunctions
 		$index=0;
 		$function_variables=[];
 		$processed_args=[];
-		$line=$this->current_line;
+		$line=$this->current_line; #TODO: this means of preserving line (also in wrappings), is not very robust
 		reset($args);
 		foreach ($function->params as $param)
 		{
