@@ -31,6 +31,8 @@ trait EmulatorStatement
 		}
 		if ($this->terminated)
 			return true;
+		if ($this->return)
+			return true;
 		return false;
 	}
 	/**
