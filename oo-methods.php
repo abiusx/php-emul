@@ -167,6 +167,12 @@ trait OOEmulatorMethods {
 					$wrappings['this']=&$object;
 				}
 				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args, $wrappings, $trace_args);
+				if ($method_name=="query")
+				{
+					var_dump($res);
+					echo "---XXX---",PHP_EOL;
+				}
+
 				$flag=true;
 				break;	
 			}
@@ -215,7 +221,6 @@ trait OOEmulatorMethods {
 		$class_name=$object->classname;
 		
 		$res=$this->run_user_static_method($class_name,$method_name,$args,$object);
-
 		return $res;
 	}
 

@@ -595,10 +595,9 @@ class Emulator
 	 * It basically loops over statements and runs them.
 	 * @param  Node $ast 
 	 */
-	protected function run_code($ast,$start_index=null)
+	protected function run_code($ast)
 	{
 		//first pass, get all definitions
-		if ($start_index===null)
 		foreach ($ast as $node)
 			$this->get_declarations($node);
 
@@ -606,9 +605,6 @@ class Emulator
 		//second pass, execute
 		foreach ($ast as $index=>$node)
 		{
-			if ($index<$start_index) 
-				continue;
-			$this->current_node=$node;
 			$this->current_statement_index=$index;
 
 			if ($node->getLine()!=$this->current_line)
