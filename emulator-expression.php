@@ -299,17 +299,19 @@ trait EmulatorExpression {
 		} 
 		elseif ($node instanceof Node\Expr\Exit_)
 		{
-			$this->terminated=true;	
 			$this->verbose(sprintf("Terminated at %s:%d.\n",substr($this->current_file,strlen($this->folder)),$this->current_line));
 			if (isset($node->expr))
 			{
 				$res=$this->evaluate_expression($node->expr);	
-				if (!is_numeric($res))
+				if (!is_int($res))
 					$this->output($res);
-				return $res;
+				else
+					$this->termination_value=$res;
 			}
 			else
-				return NULL;
+				$res=null;
+			$this->terminated=true;	
+			return $res;
 		}
 		elseif ($node instanceof Node\Expr\Empty_)
 		{
