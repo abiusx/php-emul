@@ -20,9 +20,9 @@ if (isset($argc) and realpath($argv[0])==__FILE__)
 	$x=new OOEmulator;
 	$x->direct_output=false;
 	$x->verbose=5;
-	$entry_file="samples/sample-switch.php";
+	$entry_file="samples/sample-function-advanced.php";
 	// $entry_file="wordpress/index.php";
-	$entry_file="wordpress/wp-admin/install.php";
+	// $entry_file="wordpress/wp-admin/install.php";
 
 	$x->start($entry_file);
 

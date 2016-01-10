@@ -29,7 +29,7 @@ trait EmulatorFunctions
 	 * @param  array $args     
 	 * @return bool           
 	 */
-	protected function user_function_prologue($function,$args)
+	protected function user_function_prologue($name,$function,$args)
 	{
 		$count=count($args);
 		$index=0;
@@ -46,7 +46,7 @@ trait EmulatorFunctions
 				else
 				{
 					$this->warning("Missing argument ".($index)." for {$name}()");
-					return false;
+					$function_variables[$param->name]=null;
 				}
 
 			}
@@ -102,7 +102,10 @@ trait EmulatorFunctions
 	 */
 	protected function run_function($function,$args,$wrappings=array(),$trace_args=array())
 	{
-		$processed_args=$this->user_function_prologue($function,$args);
+		$name=$trace_args['function'];
+		if (isset($trace_args['class']))
+			$name=$trace_args['class'].$trace_args['type'].$name;
+		$processed_args=$this->user_function_prologue($name,$function,$args);
 		if ($processed_args===false)
 			return null;
 		$backups=[];

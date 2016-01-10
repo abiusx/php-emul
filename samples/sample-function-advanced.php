@@ -1,4 +1,13 @@
 <?php
+class CLS{
+
+function f($a,$b)
+{
+
+}
+}
+$c=new CLS;
+$c->f();
 
 function f1($a,$b)
 {

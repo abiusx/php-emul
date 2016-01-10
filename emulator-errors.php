@@ -44,7 +44,7 @@ trait EmulatorErrors
 		#TODO; possible options values : DEBUG_BACKTRACE_PROVIDE_OBJECT, DEBUG_BACKTRACE_IGNORE_ARGS
 		#TODO: this returns EmulatorObject
 		$t=$this->trace;
-		while (count($t) and end($t)->function=="debug_backtrace" or end($t)->function=="debug_print_backtrace")
+		while (count($t) and (end($t)->function=="debug_backtrace" or end($t)->function=="debug_print_backtrace") )
 			array_pop($t);
 		$t=array_reverse($t);
 		if (! ($options&DEBUG_BACKTRACE_PROVIDE_OBJECT))
