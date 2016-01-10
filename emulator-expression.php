@@ -300,8 +300,14 @@ trait EmulatorExpression {
 		elseif ($node instanceof Node\Expr\Exit_)
 		{
 			$this->terminated=true;	
+			$this->verbose(sprintf("Terminated at %s:%d.\n",substr($this->current_file,strlen($this->folder)),$this->current_line));
 			if (isset($node->expr))
-				return $this->evaluate_expression($node->expr);
+			{
+				$res=$this->evaluate_expression($node->expr);	
+				if (!is_numeric($res))
+					$this->output($res);
+				return $res;
+			}
 			else
 				return NULL;
 		}

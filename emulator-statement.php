@@ -232,14 +232,14 @@ trait EmulatorStatement
 			}
 			$this->try--;
 		}
-		elseif ($node instanceof Node\Expr\Exit_)
-		{
-			$res=$this->evaluate_expression($node->expr);
-			if (!is_numeric($res))	
-				$this->output($res);
-			$this->terminated=true;
-			return $res;
-		}
+		// elseif ($node instanceof Node\Expr\Exit_)
+		// {
+		// 	$res=$this->evaluate_expression($node->expr);
+		// 	if (!is_numeric($res))	
+		// 		$this->output($res);
+		// 	$this->terminated=true;
+		// 	return $res;
+		// }
 		elseif ($node instanceof Node\Stmt\Static_)
 		{
 			if (end($this->trace)->type==="" and  isset($this->functions[strtolower(end($this->trace)->function)])) //statc inside a function
