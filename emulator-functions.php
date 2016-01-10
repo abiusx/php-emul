@@ -60,8 +60,8 @@ trait EmulatorFunctions
 						if (!$this->variable_isset($argVal))
 							$this->variable_set($argVal);
 						$ref=&$this->variable_reference($argVal);
-						$function_variables[$this->name($param)]=$ref;
-						$processed_args[]=$ref;
+						$function_variables[$this->name($param)]=&$ref;
+						$processed_args[]=&$ref;
 					}
 					else //byval
 						$processed_args[]=$function_variables[$this->name($param)]=$this->evaluate_expression($argVal);
