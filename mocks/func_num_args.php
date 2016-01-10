@@ -8,5 +8,5 @@ function func_num_args_mock(Emulator $emul)
 		return -1;
 	}
 	else
-		return count(end($emul->trace)->args);
+		return count($emul->trace[count($emul->trace)-2]->args);
 }
