@@ -1,6 +1,6 @@
 <?php
 
-function debug_backtrace_mock(Emulator $emul)
+function debug_backtrace_mock(Emulator $emul,$options=0,$limit=0)
 {
-	return $emul->backtrace();
+	return $emul->backtrace($options,$limit);
 }

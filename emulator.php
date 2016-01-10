@@ -26,7 +26,7 @@ class Emulator
 	 * Configuration: inifite loop limit
 	 * @var integer
 	 */
-	public $infinite_loop	=	100; 
+	public $infinite_loop	=	1000; 
 	/**
 	 * Configuration: whether to output directly, or just store it in $output
 	 * @var boolean
