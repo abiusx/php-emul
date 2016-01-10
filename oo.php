@@ -438,7 +438,7 @@ class OOEmulator extends Emulator
 			elseif(is_object($var))
 			{
 				$property_name=$this->name($node->name);
-				$this->verbose(sprintf("Fetching object property: %s::%s\n",get_class($var),$property_name));
+				$this->verbose(sprintf("Fetching object property: %s::%s\n",get_class($var),$property_name),4);
 				// if (!isset($var->{$property_name}))
 				// 	$this->notice("Undefined property: ".get_class($var)."::\${$property_name}");
 				return $var->{$property_name}; //self notice? #TEST

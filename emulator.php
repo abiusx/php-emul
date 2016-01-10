@@ -257,6 +257,14 @@ class Emulator
 			// print_r($shutdown_function);
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
+		$r="";
+		if (count($this->output_buffer))
+		{
+			$this->verbose("Dumping buffered output...".PHP_EOL);		
+			while (count($this->output_buffer))
+				$r.=array_shift($this->output_buffer);
+			$this->output($r);
+		}
 	}
 	
 	/**
@@ -267,9 +275,14 @@ class Emulator
 	{
 		$args=func_get_args();
 		$data=implode("",$args);
-		$this->output.=$data;
-		if ($this->direct_output)
-			echo $data;
+		if (count($this->output_buffer))
+			$this->output_buffer[0].=$data;
+		else
+		{
+			$this->output.=$data;
+			if ($this->direct_output)
+				echo $data;
+		}
 	}
 	/**
 	 * Push current variables on var stack

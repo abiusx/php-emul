@@ -5,9 +5,9 @@ function ob_start_mock($emul, $callback=null,$chunk_size=0,$flags=null)
 	array_unshift($emul->output_buffer,"");
 	return true;
 }
-function ob_clean_mock($emul)
+function ob_get_level_mock($emul)
 {
-	$emul->output_buffer[0]="";
+	return count($emul->output_buffer);
 }
 function ob_end_clean_mock($emul)
 {
@@ -15,41 +15,51 @@ function ob_end_clean_mock($emul)
 	array_shift($emul->output_buffer);
 	return true;
 }
-function ob_end_flush_mock($emul)
-{
-	$emul->output($emul->output_buffer[0]);
-	return ob_end_clean_mock($emul);
-}
-function ob_flush_mock($emul)
-{
-	$emul->output($emul->output_buffer[0]);
-	ob_clean_mock($emul);
-}
-function ob_get_clean_mock($emul)
-{
-	$r=$emul->output_buffer[0];
-	ob_end_clean_mock($emul);
-	return $r;
-}
-function ob_get_contents_mock($emul)
-{
-	$r=$emul->output_buffer[0];
-	ob_clean_mock($emul);
-	return $r;
-}
+
+
 function ob_get_flush_mock($emul)
 {
 	$r=$emul->output_buffer[0];
 	ob_end_flush_mock($emul);
 	return $r;
 }
+function ob_end_flush_mock($emul)
+{
+	if (!ob_get_level_mock($emul)) return false;
+	$r=ob_get_flush_mock($emul);
+	$emul->output($r);
+	return true;
+}
+
+function ob_clean_mock($emul)
+{
+	if (ob_get_level_mock($emul))
+		$emul->output_buffer[0]="";
+}
+function ob_flush_mock($emul)
+{
+	if (ob_get_level_mock($emul))
+	$emul->output($emul->output_buffer[0]);
+	ob_clean_mock($emul);
+}
+
+function ob_get_clean_mock($emul)
+{
+	if (!ob_get_level_mock($emul)) return false;
+	$r=$emul->output_buffer[0];
+	ob_end_clean_mock($emul);
+	return $r;
+}
+function ob_get_contents_mock($emul)
+{
+	if (!ob_get_level_mock($emul)) return false;
+	$r=$emul->output_buffer[0];
+	return $r;
+}
 function ob_get_length_mock($emul)
 {
+	if (!ob_get_level_mock($emul)) return false;
 	return strlen($emul->output_buffer[0]);
-}
-function ob_get_level_mock($emul)
-{
-	return count($emul->output_buffer);
 }
 function ob_get_status_mock($emul,$full_status=false)
 {
