@@ -176,7 +176,10 @@ trait EmulatorFunctions
 				{
 					if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
 						$this->variable_set($arg->value);
-					$argValues[]=&$this->variable_reference($arg->value); 
+					#has to assign to this, otherwise GC will remove ref before it is used by call_function
+					$this->ref=&$this->variable_reference($arg->value); 
+					$argValues[]=&$this->ref;
+
 				}
 				else //byval
 					$argValues[]=$this->evaluate_expression($arg->value);
@@ -200,6 +203,7 @@ trait EmulatorFunctions
 			$ret=$this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
+			// $argValues=[];
 			$argValues=$this->core_function_prologue($name,$args); #this has to be before the trace line, 
 			array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
 			if (isset($this->mock_functions[strtolower($name)])) //mocked

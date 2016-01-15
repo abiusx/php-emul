@@ -1,4 +1,4 @@
-zend_version                  emul
+zend_version                  
 func_num_args                 emul
 func_get_arg                  emul
 func_get_args                 
@@ -920,7 +920,7 @@ usleep
 time_nanosleep                
 time_sleep_until              
 strptime                      
-flush                         emul
+flush                         
 wordwrap                      
 htmlspecialchars              
 htmlentities                  
@@ -1140,8 +1140,8 @@ var_dump                      emul
 var_export                    emul
 debug_zval_dump               
 print_r                       emul
-memory_get_usage              emul
-memory_get_peak_usage         emul
+memory_get_usage              
+memory_get_peak_usage         
 register_shutdown_function    emul
 register_tick_function        emul
 unregister_tick_function      emul

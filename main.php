@@ -1,4 +1,5 @@
 <?php
+
 if (!function_exists("apache_getenv"))
 {
 	
@@ -21,6 +22,7 @@ if (isset($argc) and realpath($argv[0])==__FILE__)
 	$x->direct_output=false;
 	$x->verbose=5;
 	$entry_file="samples/sample-mocks.php";
+	$entry_file="samples/sample-reference.php";
 	// $entry_file="wordpress/wp-admin/install.php";
 	// $entry_file="wordpress/index.php";
 
