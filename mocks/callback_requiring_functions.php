@@ -1,7 +1,7 @@
 <?php
 function callback_requiring_functions()
 {
-  return array (
+  static $x=array (
     'preg_replace_callback' =>
     array (
       1 => 'callback',
@@ -89,4 +89,5 @@ function callback_requiring_functions()
       0 => 'callback',
     ),
   );
+  return $x;
 }
