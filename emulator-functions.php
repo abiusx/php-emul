@@ -177,14 +177,17 @@ trait EmulatorFunctions
 		$function_reflection=new ReflectionFunction($name);
 		$parameters_reflection=$function_reflection->getParameters();
 		$argValues=[];
+		$index=0;
 		foreach ($args as &$arg)
 		{
-			$parameter_reflection=current($parameters_reflection);
+			if (isset($parameters_reflection[$index]))
+				$parameter_reflection=$parameters_reflection[$index];
+			else
+				$parameter_reflection=null;
 			if ($arg instanceof Node)
 			{
-				if ($parameter_reflection!==false and $parameter_reflection->isPassedByReference()) //byref 
+				if ($parameter_reflection!==null and $parameter_reflection->isPassedByReference()) //byref 
 				{
-
 					if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
 						$this->variable_set($arg->value);
 					#has to assign to this, otherwise GC will remove ref before it is used by call_function
@@ -194,16 +197,30 @@ trait EmulatorFunctions
 				else
 				{
 				 	$val=$this->evaluate_expression($arg->value);
-				 	//	if ($this->is_callable($val))
-					// 	#auto-wrap. note: ReflectionParameter::isCallable always returns false as of PHP 5.4
-					// 	$argValues[]=new EmulatorCallableString($this,$val);
-					// else //byval
+					#auto-wrap. note: ReflectionParameter::isCallable always returns false , either in PHP 5.4 or 7.0.2
+				 	if ( function_exists("callback_requiring_functions") and isset(callback_requiring_functions()[strtolower($name)]) 
+				 		and isset(callback_requiring_functions()[strtolower($name)][$index]) ) //its a callback, wrap it!
+					{
+						$this->verbose("Found a callback in argument {$index} of {$name}(). Wrapping it...\n",5);
+						$emul=$this;
+						#FIXME: check to see if the callback needs byref/byval args. byref forced now!
+						$callback=function(&$arg1=null,&$arg2=null,&$arg3=null,&$arg4=null,&$arg5=null,&$arg6=null,
+							&$arg7=null,&$arg8=null,&$arg9=null,&$arg10=null) 
+							use ($emul,$val)  
+							{
+								$argz=debug_backtrace()[0]['args']; //byref hack
+								return $emul->call_function($val,$argz);
+							};
+						$argValues[]=$callback;
+
+					}
+					else //byval
 						$argValues[]=$val;
 				}
 			}
 			else //direct value
 				$argValues[]=&$arg; //byref or byval direct value (not Node)
-			next($parameters_reflection);
+			$index++;
 		}
 		return $argValues;
 	}
@@ -220,7 +237,6 @@ trait EmulatorFunctions
 			$ret=$this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
 		{
-			// $argValues=[];
 			$argValues=$this->core_function_prologue($name,$args); #this has to be before the trace line, 
 			array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
 			if (isset($this->mock_functions[strtolower($name)])) //mocked
