@@ -524,3 +524,5 @@ class OOEmulator extends Emulator
 
 }
 
+foreach (glob(__DIR__."/mocks/oo/*.php") as $mock)
+	require_once $mock;

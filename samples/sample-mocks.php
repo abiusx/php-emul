@@ -1,4 +1,77 @@
 <?php
+echo "\n=====Testing OO functions=====\n";
+class ClassA
+{
+	public $value=5;
+	static $s='A';
+	function f($x)
+	{
+		return $x;
+	}
+	static function static_call()
+	{
+		echo "Called class is: ".get_called_class(),PHP_EOL;
+		return static::$s;
+	}
+	static function self_call()
+	{
+		echo "Called class is: ".get_called_class(),PHP_EOL;
+		return self::$s;
+	}
+}
+class ClassB extends classA
+{
+	public $value=6;
+	static $s='B';
+
+	
+}
+$a=new classA();
+$b=new ClassB();
+
+echo "Testing get_class and static binding:\n";
+echo $a->value,"=5, 6=",$b->value,PHP_EOL;
+echo get_parent_class($b),"=ClassA\n";
+echo get_class($b),"=ClassB\n";
+echo ClassA::static_call(),"=A\n";
+echo ClassA::self_call(),"=A\n";
+echo ClassB::static_call(),"=B\n";
+echo ClassB::self_call(),"=A\n";
+echo PHP_EOL;
+
+echo "Testing method-exists:\n";
+echo method_exists($a, 'f'),"=1\n";
+echo method_exists($b, 'f'),"=1\n";
+echo method_exists(get_class($a), 'f'),"=1\n";
+echo method_exists(get_class($b), 'f'),"=1\n";
+echo method_exists(get_class($a), 'z')*1,"=0\n";
+echo PHP_EOL;
+
+echo "Testing property-exists:\n";
+echo property_exists($a, "value"),"=1\n";
+echo property_exists($b, "value"),"=1\n";
+echo property_exists($b, "valuez")*1,"=0\n";
+echo property_exists(get_class($a), "value")*1,"=1\n";
+$b->valuez=1;
+echo property_exists($b, "valuez")*1,"=1\n";
+echo PHP_EOL;
+
+echo "Testing is-a:\n";
+echo is_a($a, get_class($a)),"=1\n";
+echo is_a($b, get_class($a)),"=1\n";
+echo is_a($a, get_class($b))*1,"=0\n";
+echo is_a(get_class($b), get_class($a),false)*1,"=0\n";
+echo is_a(get_class($b), get_class($a),true)*1,"=1\n";
+echo PHP_EOL;
+
+echo "Testing is_subclass_of:\n";
+echo is_subclass_of($a, get_class($a))*1,"=0\n";
+echo is_subclass_of($b, get_class($a))*1,"=1\n";
+echo is_subclass_of(get_class($b), get_class($a),false)*1,"=0\n";
+echo is_subclass_of(get_class($b), get_class($a),true)*1,"=1\n";
+echo PHP_EOL;
+die();
+
 echo "\n=====Testing constant functions=====\n";
 
 define ("a","b");

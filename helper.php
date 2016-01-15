@@ -62,5 +62,5 @@ function check_mock_progress($functions_file)
 }
 $functions_file="functions.def.txt";
 
-// check_mock_progress($functions_file);
-var_export(get_callback_functions());
+check_mock_progress($functions_file);
+// var_export(get_callback_functions());
