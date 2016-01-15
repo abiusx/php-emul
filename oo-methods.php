@@ -103,7 +103,7 @@ trait OOEmulatorMethodExistence {
 			else
 				return $this->function_exists($x);
 		}
-		elseif (is_array($x) and count($x)==2)
+		elseif (is_array($x) and count($x)==2 and isset($x[0]) and isset($x[1]))
 		{
 			if (is_string($x[0]))
 				return $this->class_exists($x[0]) and $this->static_method_exists($x[0], $x[1]);
