@@ -144,7 +144,7 @@ trait EmulatorErrors
 	 * @param  [type] $node [description]
 	 * @return [type]       [description]
 	 */
-	protected function error($msg,$node=null)
+	public function error($msg,$node=null)
 	{
 		$this->verbose("Emulation Error: ",0);
 		$this->_error($msg,$node);
@@ -179,7 +179,7 @@ trait EmulatorErrors
 	 * @param  [type] $node [description]
 	 * @return [type]       [description]
 	 */
-	protected function notice($msg,$node=null)
+	public function notice($msg,$node=null)
 	{
 		if ($this->error_suppression) return false;
 		if ($this->error_reporting & E_NOTICE or (defined("E_USER_NOTICE") and $this->error_reporting & E_USER_NOTICE))
@@ -196,7 +196,7 @@ trait EmulatorErrors
 	 * @param  [type] $node [description]
 	 * @return [type]       [description]
 	 */
-	protected function warning($msg,$node=null)
+	public function warning($msg,$node=null)
 	{
 		if ($this->error_suppression) return false;
 		if ($this->error_reporting & E_WARNING or (defined("E_USER_WARNING") and $this->error_reporting & E_USER_WARNING))

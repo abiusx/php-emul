@@ -20,9 +20,9 @@ if (isset($argc) and realpath($argv[0])==__FILE__)
 	$x=new OOEmulator;
 	$x->direct_output=false;
 	$x->verbose=5;
-	$entry_file="samples/sample-ob.php";
+	$entry_file="samples/sample-mocks.php";
 	// $entry_file="wordpress/wp-admin/install.php";
-	$entry_file="wordpress/index.php";
+	// $entry_file="wordpress/index.php";
 
 	$x->start($entry_file);
 	file_put_contents("output.txt",$x->output);

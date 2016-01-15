@@ -572,7 +572,7 @@ class Emulator
 			foreach ($node->consts as $const)
 			{
 				if (isset($this->constants[$const->name]))
-					$this->warning("Constant {$node->name} already defined");
+					$this->notice("Constant {$node->name} already defined");
 				else
 					$this->constants[($const->name)]=$this->evaluate_expression($const->value);
 			}
