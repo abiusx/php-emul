@@ -54,3 +54,4 @@ var_dump($a);
 extract(["a"=>5,"b"=>"10"]);
 echo $a,"=5 & 10=",$b,PHP_EOL;
 
+#TODO: more thorough tests for extract? it has many weird flags
