@@ -28,6 +28,18 @@ class EmulatorCallableString
 trait EmulatorFunctions
 {
 	/**
+ 	 * Whether or not an argument is callable, i.e valid syntax and real function name
+	 * @param  string  $name 
+	 * @return boolean       
+	 */
+	public function is_callable($name)
+	{
+		if (is_string($name))
+			return $this->function_exists($name);
+		else
+			return false;
+	}
+	/**
 	 * Whether or not a user function exists
 	 * @param  string $f 
 	 * @return bool    

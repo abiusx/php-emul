@@ -88,8 +88,8 @@ trait OOEmulatorMethodExistence {
 
 	/**
 	 * Whether or not an argument is callable, i.e valid syntax and valid function/method/class names
-	 * @param  [type]  $x [description]
-	 * @return boolean    [description]
+	 * @param  string  $x 
+	 * @return boolean    
 	 */
 	public function is_callable($x)
 	{
@@ -100,8 +100,6 @@ trait OOEmulatorMethodExistence {
 				list($classname,$methodname)=explode("::",$x);
 				return ($this->class_exists($classname) and $this->static_method_exists($classname, $methodname));
 			}
-			else
-				return $this->function_exists($x);
 		}
 		elseif (is_array($x) and count($x)==2 and isset($x[0]) and isset($x[1]))
 		{
@@ -111,7 +109,7 @@ trait OOEmulatorMethodExistence {
 				return $this->is_object($x[0]) and $this->method_exists($x[0],$x[1]);
 		}
 		else 
-			return false;
+			return parent::is_callable($x);
 	}
 }
 trait OOEmulatorMethods {
