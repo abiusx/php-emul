@@ -1,7 +1,5 @@
 <?php
-#TODO: isCallable from Reflection does not work. Currently a generic object is used as a string|callable substitute. 
-#	instead gather of a list of callable arguments in PHP and use them as reference (and whether they receive byref args or not)
-#	also the current generic object forces byref args, this means that values can not be sent to it. however, I doubt that any PHP callback using functions send values. we shall see!
+#TODO: isCallable from Reflection does not work. get a list of callable arguments in PHP functions and hold here for wrapping.
 use PhpParser\Node;
 
 trait EmulatorFunctions

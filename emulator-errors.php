@@ -104,6 +104,15 @@ trait EmulatorErrors
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
 		$this->stash_ob();
+		// if (preg_match("/(\w+)\(\) expects parameter (\d)+ to be a valid callback, (.*?) '(.*?)' (.*)/i",$errstr,$matches))
+		// {
+		// 	#Warning: array_map() expects parameter 1 to be a valid callback, class 'asdz' not found in /Users/abiusx/Desktop/hybrid-ng/php-emul/main.php on line 6
+		// 	#Warning: array_map() expects parameter 1 to be a valid callback, class 'temp' does not have a method 'asd' in /Users/abiusx/Desktop/hybrid-ng/php-emul/main.php on line 6
+		// 	#Warning: array_map() expects parameter 1 to be a valid callback, function '_wp_add_global_attributes' not found or invalid function name
+		// 	var_dump($matches);
+		// 	echo("Found a callback error! lets fix it!");
+		// 	return true;
+		// }
 		$file=$errfile;
 		$line=$errline;
 		$file2=$line2=null;

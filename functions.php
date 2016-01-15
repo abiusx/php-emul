@@ -25,19 +25,42 @@ function get_emulation_functions($file)
 	}
 	return $o;
 }
+function get_callback_functions()
+{
+	$out=[];
+	foreach (get_defined_functions()['internal'] as $f)
+	{
+		$r=new ReflectionFunction($f);
+		$p=$r->getParameters();
+		$flag=false;
+		foreach ($p as $param)
+			if (strpos($param->getName(),"callback")!==false or strpos($param->getName(),"funcname")!==false) 
+				{
+					if (!$flag) $out[$f]=[];
+					$out[$f][$param->getPosition()]=($param->getName());
+					$flag=true;
+				}
+	}
+	return $out;
+}
 
+function check_mock_progress($functions_file)
+{
+	$funcs=get_emulation_functions($functions_file);
 
+	foreach (glob("mocks/*.php") as $inc)
+		require_once $inc;
+
+	$count=0;$done=0;
+	foreach ($funcs['emul'] as $f)
+	if (!function_exists($f."_mock"))
+		echo str_pad(++$count,3),") ",str_pad($f."()",30)," is emulation sensitive and lacks mocking.",PHP_EOL;
+	else
+		$done++;
+
+	echo "Result: A total of {$done} functions out of ".count($funcs['emul'])." required for emulation are mocked.",PHP_EOL;	
+}
 $functions_file="functions.def.txt";
-$funcs=get_emulation_functions($functions_file);
 
-foreach (glob("mocks/*.php") as $inc)
-	require_once $inc;
-
-$count=0;$done=0;
-foreach ($funcs['emul'] as $f)
-if (!function_exists($f."_mock"))
-	echo str_pad(++$count,3),") ",str_pad($f."()",30)," is emulation sensitive and lacks mocking.",PHP_EOL;
-else
-	$done++;
-
-echo "Result: A total of {$done} functions out of ".count($funcs['emul'])." required for emulation are mocked.",PHP_EOL;
+// check_mock_progress($functions_file);
+var_dump(get_callback_functions());
