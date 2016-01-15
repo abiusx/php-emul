@@ -100,6 +100,8 @@ trait OOEmulatorMethodExistence {
 				list($classname,$methodname)=explode("::",$x);
 				return ($this->class_exists($classname) and $this->static_method_exists($classname, $methodname));
 			}
+			else
+				return parent::is_callable($x);
 		}
 		elseif (is_array($x) and count($x)==2 and isset($x[0]) and isset($x[1]))
 		{
