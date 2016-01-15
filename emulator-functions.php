@@ -3,28 +3,7 @@
 #	instead gather of a list of callable arguments in PHP and use them as reference (and whether they receive byref args or not)
 #	also the current generic object forces byref args, this means that values can not be sent to it. however, I doubt that any PHP callback using functions send values. we shall see!
 use PhpParser\Node;
-class EmulatorCallableString
-{
-	public $value;
-	protected $emul;
-	function __construct($emul,$value)
-	{
-		$this->emul=$emul;
-		$this->value=$value;
-	}
-	//WARNING: forced byref. values can not be sent to these callbacks.
-	function __invoke(&$arg1=null,&$arg2=null,&$arg3=null,&$arg4=null,&$arg5=null,&$arg6=null,&$arg7=null,&$arg8=null,&$arg9=null)
-	{
-		$argz=debug_backtrace()[0]['args']; #byref hack. func_get_args returns a copy. either use this or directly use arguments
-		$this->emul->verbose("Calling auto-wrapped callback {$this->value}()...\n",4);
-		$r=$this->emul->call_function($this->value,$argz);
-		return $r;
-	}
-	function __toString()
-	{
-		return $this->value;
-	}
-}
+
 trait EmulatorFunctions
 {
 	/**
@@ -217,10 +196,10 @@ trait EmulatorFunctions
 				else
 				{
 				 	$val=$this->evaluate_expression($arg->value);
-				 	if ($this->is_callable($val))
-						#auto-wrap. note: ReflectionParameter::isCallable always returns false as of PHP 5.4
-						$argValues[]=new EmulatorCallableString($this,$val);
-					else //byval
+				 	//	if ($this->is_callable($val))
+					// 	#auto-wrap. note: ReflectionParameter::isCallable always returns false as of PHP 5.4
+					// 	$argValues[]=new EmulatorCallableString($this,$val);
+					// else //byval
 						$argValues[]=$val;
 				}
 			}
