@@ -1,8 +1,30 @@
 <?php
-#TODO: use ReflectionParameter::isCallable to auto-wrap callbacks for core functions
-
+#TODO: isCallable from Reflection does not work. Currently a generic object is used as a string|callable substitute. 
+#	instead gather of a list of callable arguments in PHP and use them as reference (and whether they receive byref args or not)
+#	also the current generic object forces byref args, this means that values can not be sent to it. however, I doubt that any PHP callback using functions send values. we shall see!
 use PhpParser\Node;
-
+class EmulatorCallableString
+{
+	public $value;
+	protected $emul;
+	function __construct($emul,$value)
+	{
+		$this->emul=$emul;
+		$this->value=$value;
+	}
+	//WARNING: forced byref. values can not be sent to these callbacks.
+	function __invoke(&$arg1=null,&$arg2=null,&$arg3=null,&$arg4=null,&$arg5=null,&$arg6=null,&$arg7=null,&$arg8=null,&$arg9=null)
+	{
+		$argz=debug_backtrace()[0]['args']; #byref hack. func_get_args returns a copy. either use this or directly use arguments
+		$this->emul->verbose("Calling auto-wrapped callback {$this->value}()...\n",4);
+		$r=$this->emul->call_function($this->value,$argz);
+		return $r;
+	}
+	function __toString()
+	{
+		return $this->value;
+	}
+}
 trait EmulatorFunctions
 {
 	/**
@@ -144,7 +166,6 @@ trait EmulatorFunctions
 		$this->verbose("Running {$name}() with ".count($args)." args...".PHP_EOL,2);
 		
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
-
 		$res=$this->run_function($this->functions[strtolower($name)],$args,
 			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name,"line"=>$this->current_line], //wrappings
 			["function"=>$name] //trace
@@ -174,15 +195,22 @@ trait EmulatorFunctions
 			{
 				if ($parameter_reflection!==false and $parameter_reflection->isPassedByReference()) //byref 
 				{
+
 					if (!$this->variable_isset($arg->value))//should create the variable, like byref return vars
 						$this->variable_set($arg->value);
 					#has to assign to this, otherwise GC will remove ref before it is used by call_function
 					$this->ref=&$this->variable_reference($arg->value); 
 					$argValues[]=&$this->ref;
-
 				}
-				else //byval
-					$argValues[]=$this->evaluate_expression($arg->value);
+				else
+				{
+				 	$val=$this->evaluate_expression($arg->value);
+				 	if ($this->is_callable($val))
+						#auto-wrap. note: ReflectionParameter::isCallable always returns false as of PHP 5.4
+						$argValues[]=new EmulatorCallableString($this,$val);
+					else //byval
+						$argValues[]=$val;
+				}
 			}
 			else //direct value
 				$argValues[]=&$arg; //byref or byval direct value (not Node)

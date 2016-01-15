@@ -1015,8 +1015,8 @@ str_pad
 chop                          
 strchr                        
 sprintf                       
-printf                        emul
-vprintf                       emul
+printf                        
+vprintf                       
 vsprintf                      
 fprintf                       
 vfprintf                      
@@ -1136,10 +1136,10 @@ forward_static_call           emul oo
 forward_static_call_array     emul oo
 serialize                     emul oo
 unserialize                   emul oo
-var_dump                      emul
-var_export                    emul
+var_dump                      
+var_export                    
 debug_zval_dump               
-print_r                       emul
+print_r                       
 memory_get_usage              
 memory_get_peak_usage         
 register_shutdown_function    emul

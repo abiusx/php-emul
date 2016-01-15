@@ -1,4 +1,19 @@
 <?php
+function plusone(&$x)
+{
+  return ++$x;
+}
+echo "Should start from 6 and go to 15: ";
+$a=[5,6,7,8,9];
+var_dump(array_map("plusone", $a));
+$a=[10,11,12,13,14];
+echo "true=";
+var_dump(array_walk($a,"plusone"));
+var_dump($a);
+
+die();
+
+
 $fruits = array("d" => "lemon", "a" => "orange", "b" => "banana", "c" => "apple");
 
 function test_alter(&$item1, $key, $prefix)
