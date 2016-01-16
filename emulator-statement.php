@@ -256,7 +256,7 @@ trait EmulatorStatement
 			else
 			{
 				#TODO:
-				$this->error("Global statics not yet supported");
+				$this->todo("Global statics not yet supported");
 
 			}
 		}

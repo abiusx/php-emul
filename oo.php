@@ -25,7 +25,8 @@ class EmulatorObject
 	 */
 	public $properties;
 	/**
-	 * Visibility of properties
+	 * Visibility of properties. 
+	 * if a visibility does not exist for a property (dynamic creation), it's assumed public
 	 * @var [type]
 	 */
 	public $visibilities;
@@ -435,8 +436,10 @@ class OOEmulator extends Emulator
 						$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 						return $this->null_reference($key);
 					}
-					else //dynamic properties, on all classes (FIXME: only notice if not stdClass?)
+					else //dynamic properties, on all classes 
+					{
 						$var->properties[$property_name]=null;
+					}
 				}
 				$key=$property_name;
 				return $var->properties; //reference its value only!

@@ -147,6 +147,10 @@ trait EmulatorErrors
 		$this->restore_ob();
 		return true;
 	}
+	function todo()
+	{
+		return call_user_func_array([$this,"error"], func_get_args());
+	}
 	/**
 	 * Used by emulator to mark emulation errors
 	 * @param  [type] $msg  [description]

@@ -310,6 +310,7 @@ trait EmulatorExpression {
 			}
 			else
 				$res=null;
+
 			$this->terminated=true;	
 			return $res;
 		}

@@ -12,18 +12,6 @@ trait OOEmulatorMethodExistence {
 		return isset($this->classes[strtolower($classname)]);
 	}
 	/**
-	 * Whether or not a user defined method (of a specific class) exists
-	 * @param  string $classname  
-	 * @param  string $methodname 
-	 * @return bool             
-	 */
-	public function user_method_exists($classname,$methodname)
-	{
-		if (!$this->user_class_exists($classname)) return false;
-		#TODO: separate static/instance methods?
-		return isset($this->classes[strtolower($classname)]->methods[strtolower($methodname)]);
-	}
-	/**
 	 * Whether or not a class exists, either core class or user class
 	 * @param  string $classname 
 	 * @return bool            
@@ -32,21 +20,60 @@ trait OOEmulatorMethodExistence {
 	{
 		return class_exists($classname) or $this->user_class_exists($classname);
 	}
+	
+	/**
+	 * Checks whether a user class has a direct property or not
+	 * @param  [type] $class    [description]
+	 * @param  [type] $property [description]
+	 * @return [type]           [description]
+	 */
+	public function user_property_exists($class,$property)
+	{
+		if (!isset($this->classes[strtolower($class)])) return false;
+		var_dump($this->classes[strtolower($class)]->properties);
+		$this->stash_ob();
+		return isset($this->classes[strtolower($class)]->properties[$property]); //this is case sensitive
+	}
+
+	/**
+	 * Checks whether a class or object has a property or not, including its ancestors
+	 * @param  [type] $class_or_obj [description]
+	 * @param  [type] $property     [description]
+	 * @return [type]               [description]
+	 */
+	public function property_exists($class_or_obj,$property)
+	{
+		if (!is_string($class_or_obj))
+		{
+			if ($class_or_obj instanceof EmulatorObject)
+				return isset($class_or_obj->properties[$property]);
+			else
+				return property_exists($class_or_obj, $property);
+		}
+		$class=$class_or_obj;		
+		if (!$this->user_class_exists($class)) return property_exists($class,$methodname); //internal php class
+		foreach ($this->ancestry($class) as $ancestor)
+			if ($this->user_property_exists($ancestor,$property)) return true;
+		return false;
+	}
+
+
+
 	/**
 	 * Equivalent to PHP's method_exists
-	 * @param  mixed $classname_or_object [description]
+	 * @param  mixed $class_or_obj [description]
 	 * @param  string $methodname          [description]
 	 * @return bool                      [description]
 	 */
-	public function method_exists($classname_or_object,$methodname)
+	public function method_exists($class_or_obj,$methodname)
 	{
-		if (!is_string($classname_or_object))
-			$class=$this->get_class($classname_or_object);
+		if (!is_string($class_or_obj))
+			$class=$this->get_class($class_or_obj);
 		else
-			$class=$classname_or_object;
-		if (class_exists($class)) return method_exists($class,$methodname); //internal php class
+			$class=$class_or_obj;
+		if (!$this->user_class_exists($class)) return method_exists($class,$methodname); //internal php class
 		foreach ($this->ancestry($class) as $ancestor)
-			if ($this->static_method_exists($ancestor,$methodname)) return true;
+			if ($this->user_method_exists($ancestor,$methodname)) return true;
 		return false;
 	}
 	/**
@@ -60,6 +87,21 @@ trait OOEmulatorMethodExistence {
 	{
 		return method_exists($classname, $methodname) or $this->user_method_exists($classname,$methodname);
 	}	
+	/**
+	 * Whether or not a user defined method (of a specific class) exists
+	 * @param  string $classname  
+	 * @param  string $methodname 
+	 * @return bool             
+	 */
+	public function user_method_exists($classname,$methodname)
+	{
+		if (!$this->user_class_exists($classname)) return false;
+		#TODO: separate static/instance methods?
+		return isset($this->classes[strtolower($classname)]->methods[strtolower($methodname)]);
+	}
+
+
+
 	public function get_parent_class($obj)
 	{
 		if (!is_object($obj)) return null;
