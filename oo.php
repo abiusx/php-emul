@@ -87,8 +87,14 @@ class OOEmulator extends Emulator
 
 			$extends=null;
 			if ($node->extends)
+			{
 				$extends=$this->name($node->extends);
-			
+				if (!$this->class_exists($extends))
+					$this->error("Class '{$extends}' not found");
+				$extends=$this->classes[strtolower($extends)]->name;
+			}
+				
+			$class->name=$classname;
 			$class->interfaces=[];
 			$class->consts=[];
 			$class->methods=[];
@@ -167,7 +173,7 @@ class OOEmulator extends Emulator
 	protected function new_user_object($classname,array $args)
 	{
 		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
-		$obj=new EmulatorObject($classname,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->visibilities);
+		$obj=new EmulatorObject($this->classes[strtolower($classname)]->name,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->visibilities);
 		foreach ($this->ancestry($classname,true) as $class)
 		{
 			foreach ($this->classes[strtolower($class)]->properties as $property_name=>$property)

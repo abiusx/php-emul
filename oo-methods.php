@@ -43,6 +43,19 @@ trait OOEmulatorMethodExistence {
 	{
 		return method_exists($classname, $methodname) or $this->user_method_exists($classname,$methodname);
 	}	
+	public function get_parent_class($obj)
+	{
+		if (!is_object($obj)) return null;
+		if ($obj instanceof EmulatorObject)
+		{
+			$class=$obj->classname;
+			if (!isset($this->classes[strtolower($class)]))
+				return null;
+			return $this->classes[strtolower($class)]->parent;
+		}
+		else
+			return get_parent_class($obj);
+	}
 	/**
 	 * Get the classname of an object (either user defined or core)
 	 * @param  object $obj 
