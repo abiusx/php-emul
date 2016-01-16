@@ -36,7 +36,7 @@ trait OOEmulatorMethodExistence {
 	}
 
 	/**
-	 * Checks whether a class or object has a property or not, including its ancestors
+	 * Checks whether a class (including its ancestors) or an object has a property or not, 
 	 * @param  [type] $class_or_obj [description]
 	 * @param  [type] $property     [description]
 	 * @return [type]               [description]

@@ -50,6 +50,8 @@ function check_mock_progress($functions_file)
 
 	foreach (glob("mocks/*.php") as $inc)
 		require_once $inc;
+	foreach (glob("mocks/oo/*.php") as $inc)
+		require_once $inc;
 
 	$count=0;$done=0;
 	foreach ($funcs['emul'] as $f)
