@@ -58,13 +58,13 @@ class OOEmulator extends Emulator
 	 * @var array
 	 */
 	public $classes=[];
-	protected $current_class,$current_method,$current_trait;
+	protected $current_method,$current_trait;
 	protected $current_namespace;
 	/**
-	 * Holds $this and self object and class pointers
+	 * Holds $this and self object and class pointers, as well as late static binding
 	 * @var null
 	 */
-	protected $current_this=null,$current_self=null;
+	public $current_this=null,$current_self=null,$current_class=null;
 
 	/**
 	 * Extract ClassLike declarations from files.

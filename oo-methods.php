@@ -33,6 +33,23 @@ trait OOEmulatorMethodExistence {
 		return class_exists($classname) or $this->user_class_exists($classname);
 	}
 	/**
+	 * Equivalent to PHP's method_exists
+	 * @param  mixed $classname_or_object [description]
+	 * @param  string $methodname          [description]
+	 * @return bool                      [description]
+	 */
+	public function method_exists($classname_or_object,$methodname)
+	{
+		if (!is_string($classname_or_object))
+			$class=$this->get_class($classname_or_object);
+		else
+			$class=$classname_or_object;
+		if (class_exists($class)) return method_exists($class,$methodname); //internal php class
+		foreach ($this->ancestry($class) as $ancestor)
+			if ($this->static_method_exists($ancestor,$methodname)) return true;
+		return false;
+	}
+	/**
 	 * Whether or not a method exists in a class
 	 * WARNING: does not check whether the method is really static or not
 	 * @param  string $classname  
@@ -69,16 +86,6 @@ trait OOEmulatorMethodExistence {
 		else
 			$class=get_class($obj);
 		return $class;
-	}
-	/**
-	 * Whether or not the object has a method
-	 * @param  object $obj        
-	 * @param  string $methodname 
-	 * @return bool             
-	 */
-	public function method_exists($obj,$methodname)
-	{
-		return $this->static_method_exists($this->get_class($obj),$methodname);
 	}
 	/**
 	 * Whether or not an object is an instance of a user defined class
