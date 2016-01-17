@@ -1,4 +1,12 @@
 <?php
+echo "\n=====Testing declared classes=====\n";
+echo "Should be ClassA and ClassB: ";
+var_dump(array_slice(get_declared_classes(),count(get_declared_classes())-2 ) );
+die();
+echo "\n=====Testing defined functions=====\n";
+function some_function(){}
+echo "Should be 1 function: ";
+var_dump(get_defined_functions()['user']);
 
 echo "\n=====Testing include functions=====\n";
 echo "Should have only one file at first, then two:\n";

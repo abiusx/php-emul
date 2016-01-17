@@ -28,8 +28,8 @@ is_a                          emul oo
 get_class_vars                emul oo
 get_object_vars               emul oo
 get_class_methods             emul oo
-trigger_error                 emul
-user_error                    emul
+trigger_error                 
+user_error                    
 set_error_handler             emul
 restore_error_handler         emul 
 set_exception_handler         emul oo
