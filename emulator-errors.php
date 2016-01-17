@@ -121,7 +121,10 @@ trait EmulatorErrors
 		$fatal=false;
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
-			case E_ERROR:
+			case E_USER_NOTICE:
+				$str="Notice";
+				break;
+			case E_ERROR or E_USER_ERROR:
 				$fatal=true;
 				$str="Error";
 				break;
@@ -131,9 +134,13 @@ trait EmulatorErrors
 			default:
 				$str="Error";
 		}
-
+		if ($fatal)
+			$fatal_str="Fatal ";
+		else
+			$fatal_str="";
 		$this->verbose("PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)".PHP_EOL,0);
-		if ($fatal or $this->strict) 
+		$this->output("PHP {$fatal_str}{$str}:  {$errstr} in {$file2} on line {$line2}".PHP_EOL);
+		if ($fatal ) 
 		{
 			$this->terminated=true;
 			if ($this->verbose>=2)

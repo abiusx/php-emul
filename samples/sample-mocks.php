@@ -1,4 +1,5 @@
 <?php
+
 echo "\n=====Testing include functions=====\n";
 echo "Should have only one file at first, then two:\n";
 var_dump(get_included_files());
@@ -7,7 +8,6 @@ ob_start();
 include "sample4.php";
 ob_get_clean();
 var_dump(get_included_files());
-die();
 
 echo "\n=====Testing OO functions=====\n";
 class ClassA
