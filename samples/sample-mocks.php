@@ -1,4 +1,14 @@
 <?php
+echo "\n=====Testing include functions=====\n";
+echo "Should have only one file at first, then two:\n";
+var_dump(get_included_files());
+var_dump(get_required_files());
+ob_start();
+include "sample4.php";
+ob_get_clean();
+var_dump(get_included_files());
+die();
+
 echo "\n=====Testing OO functions=====\n";
 class ClassA
 {
@@ -70,7 +80,6 @@ echo is_subclass_of($b, get_class($a))*1,"=1\n";
 echo is_subclass_of(get_class($b), get_class($a),false)*1,"=0\n";
 echo is_subclass_of(get_class($b), get_class($a),true)*1,"=1\n";
 echo PHP_EOL;
-die();
 
 echo "\n=====Testing constant functions=====\n";
 
