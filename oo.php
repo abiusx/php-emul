@@ -531,6 +531,55 @@ class OOEmulator extends Emulator
 		return $ret;
 	}
 
+	/**
+	 * Compatible with PHP's is_a
+	 * @param  [type]  $object_or_string [description]
+	 * @param  [type]  $class_name       [description]
+	 * @param  boolean $allow_string     [description]
+	 * @return boolean                   [description]
+	 */
+	public function is_a($object_or_string,$class_name,$allow_string=false)
+	{
+		if (is_object($object_or_string) and !($object_or_string instanceof EmulatorObject))
+			return is_a($object_or_string,$class_name);
+		if (is_string($object_or_string) and $allow_string!=true) return null;
+		if (is_string($object_or_string) and !$this->user_class_exists($object_or_string))
+			return is_a($object_or_string,$class_name,true);
+		if (is_object($object_or_string))
+			$class=$this->get_class($object_or_string);
+		else
+			$class=$object_or_string;
+		
+		foreach ($this->ancestry($class) as $ancestor)
+			if (strtolower($ancestor)===strtolower($class_name))
+				return true;	
+		return false;
+	}
+	/**
+	 * Compatible with PHP's is_subclass_of
+	 * @param  [type]  $object_or_string [description]
+	 * @param  [type]  $class_name       [description]
+	 * @param  boolean $allow_string     [description]
+	 * @return boolean                   [description]
+	 */
+	public function is_subclass_of($object_or_string, $class_name,$allow_string=true)
+	{
+		if (is_object($object_or_string) and !($object_or_string instanceof EmulatorObject))
+			return is_subclass_of($object_or_string,$class_name);
+		if (is_string($object_or_string) and $allow_string!=true) return null;
+		if (is_string($object_or_string) and !$this->user_class_exists($object_or_string))
+			return is_subclass_of($object_or_string,$class_name,true);
+		if (is_object($object_or_string))
+			$class=$this->get_class($object_or_string);
+		else
+			$class=$object_or_string;
+		
+		foreach ($this->ancestry($class) as $ancestor)
+			if (strtolower($class)!=strtolower($ancestor) and strtolower($ancestor)===strtolower($class_name))
+				return true;	
+		return false;
+	}
+
 }
 
 foreach (glob(__DIR__."/mocks/oo/*.php") as $mock)
