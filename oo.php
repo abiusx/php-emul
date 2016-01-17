@@ -136,7 +136,8 @@ class OOEmulator extends Emulator
 				{
 					$methodname=$this->name($part->name);
 					$type=$part->type;
-					$class->methods[strtolower($methodname)]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,"file"=>$this->current_file,'type'=>$type,'statics'=>[]); 
+					$class->methods[strtolower($methodname)]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,
+							"file"=>$this->current_file,'type'=>$type,'statics'=>[]); 
 				}
 				elseif ($part instanceof Node\Stmt\ClassConst)
 				{
@@ -301,7 +302,7 @@ class OOEmulator extends Emulator
 			if ($var instanceof EmulatorObject)
 			{
 				foreach ($this->ancestry($var->classname) as $class)
-					if ($class===$classname) return true;
+					if (strtolower($class)===strtolower($classname)) return true;
 				return false;
 			}
 			else

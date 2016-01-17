@@ -1,8 +1,28 @@
 <?php
+echo "\n=====Testing is_callable=====\n";
+$r="";
+$r.=is_callable("some_function")*1;
+$r.=is_callable("some_functionz")*1;
+$r.=is_callable("some_functionz",true)*1;
+$r.=is_callable(array("A","some_functionz"),true)*1;
+$r.="x";
+$r.=is_callable(array("ClassA","f"))*1;
+$r.=is_callable(array("ClassB","static_call"))*1;
+$r.=is_callable(array("ClassB","static_callz"))*1;
+$r.=is_callable(array("ClassB","static_callz"),true)*1;
+$r.="x";
+$r.=is_callable("ClassB::static_callz",true)*1;
+$r.=is_callable(("ClassB::static_call"),false)*1;
+$r.=is_callable(("ClassB::static_callz"),false)*1;
+$r.=is_callable(("ClassB::f"),false)*1;
+
+echo $r,"=1011x1101x1101",PHP_EOL;
+die();
+
 echo "\n=====Testing declared classes=====\n";
 echo "Should be ClassA and ClassB: ";
 var_dump(array_slice(get_declared_classes(),count(get_declared_classes())-2 ) );
-die();
+
 echo "\n=====Testing defined functions=====\n";
 function some_function(){}
 echo "Should be 1 function: ";

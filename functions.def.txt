@@ -1187,7 +1187,7 @@ strval
 gettype                       
 settype                       
 is_null                       
-is_resource                   emul
+is_resource                   
 is_bool                       
 is_long                       
 is_float                      
@@ -1198,7 +1198,7 @@ is_real
 is_numeric                    
 is_string                     
 is_array                      
-is_object                     emul
+is_object                     
 is_scalar                     
 is_callable                   emul
 pclose                        
