@@ -29,12 +29,18 @@ class EmulatorObject
 	 * if a visibility does not exist for a property (dynamic creation), it's assumed public
 	 * @var [type]
 	 */
-	public $visibilities;
+	public $property_visibilities;
+	/**
+	 * Which class this property was generated from (inheritance)
+	 * @var array
+	 */
+	public $property_class=[];
+
 	public function __construct($classname,$properties=[],$visibilities=[])
 	{
 		$this->classname=$classname;
 		$this->properties=$properties;
-		$this->visibilities=$visibilities;
+		$this->property_visibilities=$visibilities;
 	}
 	function __destruct()
 	{
@@ -100,7 +106,7 @@ class OOEmulator extends Emulator
 			$class->consts=[];
 			$class->methods=[];
 			$class->properties=[];
-			$class->visibilities=[];
+			$class->property_visibilities=[];
 			$class->static=[];
 			$class->parent=$extends;
 			foreach ($node->stmts as $part)
@@ -129,7 +135,7 @@ class OOEmulator extends Emulator
 						}
 						else
 							$class->properties[$propname]=$val;
-							$class->visibilities[$propname]=$visibility;
+							$class->property_visibilities[$propname]=$visibility;
 					}
 				}
 				elseif ($part instanceof Node\Stmt\ClassMethod)
@@ -175,11 +181,15 @@ class OOEmulator extends Emulator
 	protected function new_user_object($classname,array $args)
 	{
 		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
-		$obj=new EmulatorObject($this->classes[strtolower($classname)]->name,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->visibilities);
+		$obj=new EmulatorObject($this->classes[strtolower($classname)]->name,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->property_visibilities);
 		foreach ($this->ancestry($classname,true) as $class)
 		{
 			foreach ($this->classes[strtolower($class)]->properties as $property_name=>$property)
+			{
 				$obj->properties[$property_name]=$property;
+				$obj->property_visibilities[$property_name]=$this->classes[strtolower($class)]->property_visibilities[$property_name];
+				$obj->property_class[$property_name]=$this->classes[strtolower($class)]->name;
+			}
 		}
 		foreach ($this->ancestry($classname) as $class)
 		{
@@ -327,13 +337,13 @@ class OOEmulator extends Emulator
 			foreach ($val as $k=>$v)
 			{
 				$obj->properties[$k]=$v;
-				$obj->visibilities[$k]=EmulatorObject::Visibility_Public;
+				$obj->property_visibilities[$k]=EmulatorObject::Visibility_Public;
 			}
 		}
 		else
 		{
 			$obj->properties['scalar']=$val;
-			$obj->visibilities['scalar']=EmulatorObject::Visibility_Public;
+			$obj->property_visibilities['scalar']=EmulatorObject::Visibility_Public;
 		}
 
 		return $obj;

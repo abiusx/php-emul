@@ -77,7 +77,8 @@ trait OOEmulatorMethodExistence {
 		return false;
 	}
 	/**
-	 * Whether or not a method exists in a class
+	 * Whether or not a method exists DIRECTLY in a class
+	 * Does not check ancestry.
 	 * WARNING: does not check whether the method is really static or not
 	 * @param  string $classname  
 	 * @param  string $methodname 
@@ -89,6 +90,8 @@ trait OOEmulatorMethodExistence {
 	}	
 	/**
 	 * Whether or not a user defined method (of a specific class) exists
+	 * Does not check ancestry.
+	 * WARNING: does not check whether the method is static or not
 	 * @param  string $classname  
 	 * @param  string $methodname 
 	 * @return bool             
