@@ -124,7 +124,8 @@ trait EmulatorErrors
 			case E_USER_NOTICE:
 				$str="Notice";
 				break;
-			case E_ERROR or E_USER_ERROR:
+			case E_ERROR:
+			case E_USER_ERROR:
 				$fatal=true;
 				$str="Error";
 				break;
@@ -132,7 +133,7 @@ trait EmulatorErrors
 				$str="Warning";
 				break;
 			default:
-				$str="Error";
+				$str="Error?";
 		}
 		if ($fatal)
 			$fatal_str="Fatal ";
