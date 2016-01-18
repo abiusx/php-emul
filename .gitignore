@@ -2,12 +2,13 @@
 *.tar.gz
 *.sublime*
 *.emu
-
-*/*
-
+!.gitignore
+*
+*.php
+*.txt
+!helper/*
 !mocks/*.php
 !mocks/oo/*.php
 !test/*.php
 !samples/*.php
-output.txt
 
