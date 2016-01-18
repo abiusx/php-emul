@@ -631,7 +631,11 @@ class Emulator
 		{
 			$code=file_get_contents($file);
 			$ast=$this->parser->parse($code);
-			file_put_contents($cache_file,gzcompress(serialize($ast)));
+			if (!file_exists(__DIR__."/cache")) @mkdir(__DIR__."/cache");
+			if (is_writable(__DIR__."/cache"))
+				file_put_contents($cache_file,gzcompress(serialize($ast)));
+			else
+				$this->verbose("WARNING: Can not write to cache folder, caching disabled (performance degradation).\n",0);
 		}
 		return $ast;
 	}
