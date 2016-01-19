@@ -5,7 +5,7 @@ use PhpParser\Node;
 //trait_,traituse,namespace,use
 //TODO: magic methods, destructor
 //TODO: handle visibilities
-
+//TODO: print_r,var_export and var_dump output EmulatorObject not actual object
 require_once "oo-methods.php";
 /**
  * The user defined objects are wrapped in this class.
@@ -36,11 +36,12 @@ class EmulatorObject
 	 */
 	public $property_class=[];
 
-	public function __construct($classname,$properties=[],$visibilities=[])
+	public function __construct($classname,$properties=[],$visibilities=[],$classes=[])
 	{
 		$this->classname=$classname;
 		$this->properties=$properties;
 		$this->property_visibilities=$visibilities;
+		$this->property_class=$classes;
 	}
 	function __destruct()
 	{

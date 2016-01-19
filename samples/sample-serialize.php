@@ -37,3 +37,10 @@ var_dump(ser($b));
 echo assert(md5(ser($b))==="611b5780389092a27ea54828dac7e086"),PHP_EOL;
 var_dump(ser($c));
 echo assert(md5(ser($c))==="44d81401ea5396de6d734cd3546ef7f8"),PHP_EOL;
+
+$t=serialize($c);
+
+var_dump(unserialize($t));
+
+$t=serialize([1=>2,[3=>'4','a'=>'b'],3.4,7]);
+var_dump(unserialize($t));
