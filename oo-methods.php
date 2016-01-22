@@ -3,21 +3,25 @@ use PhpParser\Node;
 
 trait OOEmulatorMethodExistence {
 	/**
-	 * Whether or not a user defined class exists
+	 * Whether or not a user defined classlike (interface, trait, class, etc.) exists
 	 * @param  string $classname 
 	 * @return bool
 	 */
-	public function user_class_exists($classname,$type='class')
+	public function user_classlike_exists($classname,$type=null)
 	{
-		return isset($this->classes[strtolower($classname)]) and $this->classes[strtolower($classname)]->type==$type;
+		return isset($this->classes[strtolower($classname)]) and ($type===null or $this->classes[strtolower($classname)]->type==$type);
+	}
+	public function user_class_exists($classname)
+	{
+		return $this->user_classlike_exists($classname,"class");
 	}
 	public function user_interface_exists($classname)
 	{
-		return $this->user_class_exists($classname,"interface");
+		return $this->user_classlike_exists($classname,"interface");
 	}
 	public function user_trait_exists($classname)
 	{
-		return $this->user_class_exists($classname,"trait");
+		return $this->user_classlike_exists($classname,"trait");
 	}
 	/**
 	 * Whether or not a class exists, either core class or user class
