@@ -1,4 +1,19 @@
 <?php
+echo "\n=====Testing phpversion=====\n";
+echo phpversion(),PHP_EOL;
+
+echo "\n=====Testing get_class_*=====\n";
+var_dump(get_class_vars("ClassA"));
+ClassA::$s="B";
+var_dump(get_class_vars("ClassA"));
+$o=new ClassA;
+$o->o=1;
+var_dump(get_object_vars($o));
+var_dump(get_class_methods($o));
+var_dump(get_class_methods("ClassA"));
+
+die();
+
 echo "\n=====Testing is_callable=====\n";
 $r="";
 $r.=is_callable("some_function")*1;

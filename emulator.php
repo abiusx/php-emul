@@ -28,6 +28,12 @@ class Emulator
 	 */
 	public $infinite_loop	=	1000; 
 	/**
+	 * Maximum PHP version fully supported by the emulator
+	 * this is the version that will be returned via phpversion()
+	 * @var integer
+	 */
+	public $max_php_version	=	"5.4.45"; 
+	/**
 	 * Configuration: whether to output directly, or just store it in $output
 	 * @var boolean
 	 */
