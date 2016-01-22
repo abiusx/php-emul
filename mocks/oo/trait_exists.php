@@ -1,0 +1,5 @@
+<?php
+function trait_exists_mock($emul,$name,$autoload=true)
+{
+	return trait_exists($name,$autoload) or $emul->user_trait_exists($name);
+}

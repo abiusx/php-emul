@@ -90,11 +90,12 @@ class OOEmulator extends Emulator
 			if (isset($node->type))
 				$classtype=$node->type;
 			$classname=$this->name($node->name);
+			$type=strtolower(substr(explode("\\",get_class($node))[3],0,-1)); #intertface, class, trait
 			$this->classes[strtolower($classname)]=new stdClass;
 			$class=&$this->classes[strtolower($classname)];
 
 			$extends=null;
-			if ($node->extends)
+			if (isset($node->extends) and $node->extends)
 			{
 				$extends=$this->name($node->extends);
 				if (!$this->class_exists($extends))
@@ -105,6 +106,7 @@ class OOEmulator extends Emulator
 			$class->name=$classname;
 			$class->interfaces=[];
 			$class->consts=[];
+			$class->type=$type;
 			$class->methods=[];
 			$class->properties=[];
 			$class->property_visibilities=[];
@@ -163,7 +165,7 @@ class OOEmulator extends Emulator
 			if (isset($node->implements))
 			foreach ($node->implements as $interface)
 				$interfaces[]=$this->name($interface);
-			$class->type=$classtype;
+			$class->classtype=$classtype;
 			$class->file=$this->current_file;
 			$class->interfaces=$interfaces;
 			// $class=(object)["properties"=>$properties,"static"=>$static_properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
