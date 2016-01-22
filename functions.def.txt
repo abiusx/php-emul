@@ -40,7 +40,7 @@ get_declared_interfaces       emul oo
 get_defined_functions         emul
 get_defined_vars              emul
 create_function               emul
-get_resource_type             emul
+get_resource_type             
 get_loaded_extensions         
 extension_loaded              
 get_extension_funcs           
@@ -945,7 +945,7 @@ php_logo_guid
 php_real_logo_guid            
 php_egg_logo_guid             
 zend_logo_guid                
-php_sapi_name                 emul
+php_sapi_name                 
 php_uname                     
 php_ini_scanned_files         
 php_ini_loaded_file           
@@ -1130,8 +1130,8 @@ error_log
 error_get_last                
 call_user_func                emul
 call_user_func_array          emul
-call_user_method              emul
-call_user_method_array        emul
+call_user_method              
+call_user_method_array        
 forward_static_call           emul oo
 forward_static_call_array     emul oo
 serialize                     emul oo
@@ -1423,8 +1423,8 @@ array_key_exists
 pos                           
 sizeof                        
 key_exists                    
-assert                        emul
-assert_options                emul
+assert                        
+assert_options                
 version_compare               
 ftok                          
 str_rot13                     

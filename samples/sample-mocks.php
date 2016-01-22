@@ -1,6 +1,36 @@
 <?php
 echo "\n=====Testing phpversion=====\n";
 echo phpversion(),PHP_EOL;
+echo "\n=====Testing class_uses=====\n";
+
+trait TR1 {};
+trait TR2 {};
+class CLSTR  {
+use TR1,TR2;
+}
+$o=new CLSTR;
+var_dump(class_uses("CLSTr"));
+var_dump(class_uses($o));
+var_dump(class_uses("ClassB"));
+die();
+echo "\n=====Testing class_implements=====\n";
+
+interface IN1 {};
+interface IN2 {};
+class CLS  implements IN1,IN2{};
+$o=new CLS;
+var_dump(class_implements("CLS"));
+var_dump(class_implements($o));
+var_dump(class_implements("ClassB"));
+
+
+echo "\n=====Testing class_parents=====\n";
+
+$b=new Classb;
+var_dump(class_parents($b));
+var_dump(class_parents('ClassB'));
+var_dump(class_parents('ClassA'));
+
 
 echo "\n=====Testing get_class_*=====\n";
 var_dump(get_class_vars("ClassA"));
@@ -12,7 +42,6 @@ var_dump(get_object_vars($o));
 var_dump(get_class_methods($o));
 var_dump(get_class_methods("ClassA"));
 
-die();
 
 echo "\n=====Testing is_callable=====\n";
 $r="";

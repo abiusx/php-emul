@@ -105,6 +105,7 @@ class OOEmulator extends Emulator
 				
 			$class->name=$classname;
 			$class->interfaces=[];
+			$class->traits=[];
 			$class->consts=[];
 			$class->type=$type;
 			$class->methods=[];
@@ -156,6 +157,11 @@ class OOEmulator extends Emulator
 						$val=$this->evaluate_expression($const->value);
 						$class->consts[$constname]=$val;
 					}
+				}
+				elseif ($part instanceof Node\Stmt\TraitUse)
+				{
+					foreach ($part->traits as $trait)
+						$class->traits[]=$this->name($trait);
 				}
 				else
 					$this->error("Unknown class part for class '{$classname}'",$part);
@@ -373,7 +379,7 @@ class OOEmulator extends Emulator
 	 * @param  string $classname 
 	 * @return array            
 	 */
-	protected function ancestry($classname,$top_to_bottom=false)
+	public function ancestry($classname,$top_to_bottom=false)
 	{
 		$classname=$this->real_class($classname);
 		if (!isset($this->classes[strtolower($classname)])) return null;
