@@ -513,7 +513,16 @@ class Emulator
 	public function run_file($file)
 	{
 		$last_file=$this->current_file;
-		$this->current_file=realpath($file);
+		$realfile=realpath($file);
+		foreach (explode(":",get_include_path()) as $path)
+		{
+			if (file_exists($path."/{$file}"))
+			{
+				$realfile=realpath($path."/{$file}");
+				break;
+			}
+		}
+		$this->current_file=$realfile;
 		$tfolder=dirname($this->current_file)."/";
 		if (!isset($this->folder) or strlen($this->folder>$tfolder))
 			$this->folder=$tfolder;
@@ -589,7 +598,7 @@ class Emulator
 	 * It basically loops over statements and runs them.
 	 * @param  Node $ast 
 	 */
-	protected function run_code($ast)
+	public function run_code($ast)
 	{
 		//first pass, get all definitions
 		foreach ($ast as $node)

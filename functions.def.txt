@@ -1154,9 +1154,9 @@ ini_get_all
 ini_set                       
 ini_alter                     
 ini_restore                   
-get_include_path              emul
-set_include_path              emul
-restore_include_path          emul
+get_include_path              
+set_include_path              
+restore_include_path          
 setcookie                     
 setrawcookie                  
 header                        

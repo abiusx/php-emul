@@ -1,4 +1,8 @@
 <?php
+echo "\n=====Testing create_function=====\n";
+var_dump(array_map(create_function('$x','return $x*$x;'), [1,2,3,4,5]));
+
+die();
 echo "\n=====Testing phpversion=====\n";
 echo phpversion(),PHP_EOL;
 echo "\n=====Testing class_uses=====\n";
