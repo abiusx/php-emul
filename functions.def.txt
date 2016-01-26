@@ -792,7 +792,7 @@ pcntl_getpriority
 pcntl_setpriority             
 pcntl_sigprocmask             
 spl_classes                   
-spl_autoload                  emul
+spl_autoload                  
 spl_autoload_extensions       emul
 spl_autoload_register         emul
 spl_autoload_unregister       emul

@@ -1,6 +1,7 @@
 <?php
 function class_parents_mock($emul,$class_or_object,$autoload=true)
 {
+	if ($autoload) $emul->autoload($name);
 	$class=$class_or_object;
 	if (!is_string($class))
 		$class=$emul->get_class($class_or_object);

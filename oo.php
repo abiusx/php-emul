@@ -2,9 +2,9 @@
 require_once __DIR__."/emulator.php";
 use PhpParser\Node;
 #TODO: closure,closureUse
-//namespace,use
+#TODO: namespace,use
 //TODO: magic methods, destructor
-//TODO: handle visibilities
+//TODO: enforce visibilities
 //TODO: print_r,var_export and var_dump output EmulatorObject not actual object
 require_once "oo-methods.php";
 
