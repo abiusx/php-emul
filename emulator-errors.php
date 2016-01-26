@@ -147,7 +147,7 @@ trait EmulatorErrors
 	 * @param int $error_reporting 
 	 * @return  mixed
 	 */
-	function set_error_handler($handler,$error_reporting=E_ALL|E_STRICT)
+	function set_error_handler($handler,$error_reporting=32767)
 	{
 		if (count($this->error_handlers))
 			$res=end($this->error_handlers)['handler'];
