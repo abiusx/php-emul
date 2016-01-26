@@ -561,8 +561,10 @@ class Emulator
 		$file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
+		set_exception_handler(array($this,"exception_handler"));
 		$res=$this->run_file($file);
 		$this->shutdown();
+		restore_exception_handler();
 		restore_error_handler();
 		chdir($this->original_dir);
 		return $res;

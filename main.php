@@ -10,7 +10,7 @@ if (!function_exists("apache_getenv"))
 
 
 $usage="Usage: php main.php -f file.php [-v verbosity -o]\n";
-if (isset($argc) and realpath($argv[0])==__FILE__)
+if (isset($argc))// and realpath($argv[0])==__FILE__)
 {
 	$options=getopt("f:v:o");
 	if (!isset($options['f']))

@@ -791,7 +791,7 @@ pcntl_strerror
 pcntl_getpriority             
 pcntl_setpriority             
 pcntl_sigprocmask             
-spl_classes                   emul
+spl_classes                   
 spl_autoload                  emul
 spl_autoload_extensions       emul
 spl_autoload_register         emul
@@ -801,7 +801,7 @@ spl_autoload_call             emul
 class_parents                 emul oo
 class_implements              emul oo
 class_uses                    emul oo
-spl_object_hash               emul
+spl_object_hash               
 iterator_to_array             
 iterator_count                
 iterator_apply                
@@ -1143,8 +1143,8 @@ print_r
 memory_get_usage              
 memory_get_peak_usage         
 register_shutdown_function    emul
-register_tick_function        emul
-unregister_tick_function      emul
+register_tick_function        
+unregister_tick_function      
 highlight_file                
 show_source                   
 highlight_string              

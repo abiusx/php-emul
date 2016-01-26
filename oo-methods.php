@@ -1,6 +1,5 @@
 <?php
 use PhpParser\Node;
-
 trait OOEmulatorMethodExistence {
 	/**
 	 * Whether or not a user defined classlike (interface, trait, class, etc.) exists

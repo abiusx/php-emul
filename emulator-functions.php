@@ -1,5 +1,4 @@
 <?php
-#TODO: isCallable from Reflection does not work. get a list of callable arguments in PHP functions and hold here for wrapping.
 use PhpParser\Node;
 
 trait EmulatorFunctions

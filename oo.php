@@ -2,11 +2,17 @@
 require_once __DIR__."/emulator.php";
 use PhpParser\Node;
 #TODO: closure,closureUse
-//trait_,traituse,namespace,use
+//namespace,use
 //TODO: magic methods, destructor
 //TODO: handle visibilities
 //TODO: print_r,var_export and var_dump output EmulatorObject not actual object
 require_once "oo-methods.php";
+
+trait OOEmulator_spl_autoload 
+{
+
+}
+
 /**
  * The user defined objects are wrapped in this class.
  */
@@ -57,6 +63,7 @@ class EmulatorObject
 class OOEmulator extends Emulator
 {
 	use OOEmulatorMethods;
+	use OOEmulator_spl_autoload;
 	function __construct()
 	{
 		parent::__construct();

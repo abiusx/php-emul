@@ -1,7 +1,37 @@
 <?php
-
+use PhpParser\Node;
 trait EmulatorErrors
 {
+	public $error_handlers=[];
+	/**
+	 * Equivalent to PHP's set_error_handler
+	 * @param callable $handler         
+	 * @param int $error_reporting 
+	 * @return  mixed
+	 */
+	function set_error_handler($handler,$error_reporting=E_ALL|E_STRICT)
+	{
+		if (count($this->error_handlers))
+			$res=end($this->error_handlers);
+		else
+			$res=null;
+
+		if (!$this->is_callable($handler)) return null;
+		$this->error_handlers[]=$handler;
+		return $res;
+	}
+
+	function restore_error_handler()
+	{
+		if (count($this->error_handlers))
+			array_pop($this->error_handlers);
+		return true;
+	}
+	public function exception_handler(Exception $e)
+	{
+
+	}
+
 	protected $error_reporting=-1;
 	/**
 	 * Same as PHP's error_reporting
@@ -103,6 +133,8 @@ trait EmulatorErrors
 	 */
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
+		if (count($this->error_handlers))
+			if (false!==$this->call_function(end($this->error_handlers),func_get_args())) return true;
 		$this->stash_ob();
 		// if (preg_match("/(\w+)\(\) expects parameter (\d)+ to be a valid callback, (.*?) '(.*?)' (.*)/i",$errstr,$matches))
 		// {
