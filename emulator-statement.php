@@ -205,7 +205,8 @@ trait EmulatorStatement
 			if ($this->try>0)
 				throw $this->evaluate_expression($node->expr);
 			else
-				$this->error("Throw that is not catched");
+				$this->exception_handler($this->evaluate_expression($node->expr));
+				// $this->error("Throw that is not catched");
 
 		}
 		elseif ($node instanceof Node\Stmt\TryCatch)

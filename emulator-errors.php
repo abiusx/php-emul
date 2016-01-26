@@ -2,9 +2,47 @@
 use PhpParser\Node;
 trait EmulatorErrors
 {
-	public function exception_handler(Exception $e)
+	public $exception_handlers=[];
+	/**
+	 * Default emulator exception handler
+	 * @param  Exception $e 
+	 * @return        [description]
+	 */
+	public function exception_handler($e)
 	{
+		if (count($this->exception_handlers))
+		{
+			$this->call_function(end($this->exception_handlers),[$e]);
+			$this->terminated=true;	
+			return true;
+		}
+		$this->verbose($e."\n"); 
+		$this->terminated=true;
+	}
+	/**
+	 * Compatible with PHP
+	 * @return true
+	 */
+	public function restore_exception_handler()
+	{
+		if (count($this->exception_handlers))
+			array_pop($this->exception_handlers);
+		return true;
+	}
+	/**
+	 * Compatible with PHP
+	 * @param mixed $handler
+	 */
+	public function set_exception_handler($handler)
+	{
+		if (count($this->exception_handlers))
+			$res=end($this->exception_handlers);
+		else
+			$res=null;
 
+		if (!$this->is_callable($handler)) return null;
+		$this->exception_handlers[]=$handler;
+		return $res;
 	}
 	/**
 	 * Retains error_reporting value
