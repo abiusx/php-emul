@@ -44,7 +44,7 @@ trait EmulatorVariables
 	{
 		$r=&$this->symbol_table($node,$key,false);
 		if ($key!==null)
-			if (!isset($r[$key]))
+			if (!array_key_exists($key, $r))
 			{
 				$this->notice("Undefined index: {$key}");
 				return null;
