@@ -2,36 +2,14 @@
 use PhpParser\Node;
 trait EmulatorErrors
 {
-	public $error_handlers=[];
-	/**
-	 * Equivalent to PHP's set_error_handler
-	 * @param callable $handler         
-	 * @param int $error_reporting 
-	 * @return  mixed
-	 */
-	function set_error_handler($handler,$error_reporting=E_ALL|E_STRICT)
-	{
-		if (count($this->error_handlers))
-			$res=end($this->error_handlers);
-		else
-			$res=null;
-
-		if (!$this->is_callable($handler)) return null;
-		$this->error_handlers[]=$handler;
-		return $res;
-	}
-
-	function restore_error_handler()
-	{
-		if (count($this->error_handlers))
-			array_pop($this->error_handlers);
-		return true;
-	}
 	public function exception_handler(Exception $e)
 	{
 
 	}
-
+	/**
+	 * Retains error_reporting value
+	 * @var integer
+	 */
 	protected $error_reporting=-1;
 	/**
 	 * Same as PHP's error_reporting
@@ -123,6 +101,35 @@ trait EmulatorErrors
 		return $out;
 
 	}
+	
+	public $error_handlers=[];
+	/**
+	 * Equivalent to PHP's set_error_handler
+	 * @param callable $handler         
+	 * @param int $error_reporting 
+	 * @return  mixed
+	 */
+	function set_error_handler($handler,$error_reporting=E_ALL|E_STRICT)
+	{
+		if (count($this->error_handlers))
+			$res=end($this->error_handlers)['handler'];
+		else
+			$res=null;
+
+		if (!$this->is_callable($handler)) return null;
+		$this->error_handlers[]=['handler'=>$handler,'error_reporting'=>$error_reporting];
+		return $res;
+	}
+	/**
+	 * Same as PHP's restore_error_handler
+	 * @return true
+	 */
+	function restore_error_handler()
+	{
+		if (count($this->error_handlers))
+			array_pop($this->error_handlers);
+		return true;
+	}
 	/**
 	 * The emulator error handler (in case an error happens in the emulation, that is not intended)
 	 * @param  [type] $errno   [description]
@@ -133,18 +140,9 @@ trait EmulatorErrors
 	 */
 	function error_handler($errno, $errstr, $errfile, $errline)
 	{
-		if (count($this->error_handlers))
-			if (false!==$this->call_function(end($this->error_handlers),func_get_args())) return true;
+		if (count($this->error_handlers) and $errno&end($this->error_handlers)['error_reporting'])
+			if (false!==$this->call_function(end($this->error_handlers)['handler'],func_get_args())) return true;
 		$this->stash_ob();
-		// if (preg_match("/(\w+)\(\) expects parameter (\d)+ to be a valid callback, (.*?) '(.*?)' (.*)/i",$errstr,$matches))
-		// {
-		// 	#Warning: array_map() expects parameter 1 to be a valid callback, class 'asdz' not found in /Users/abiusx/Desktop/hybrid-ng/php-emul/main.php on line 6
-		// 	#Warning: array_map() expects parameter 1 to be a valid callback, class 'temp' does not have a method 'asd' in /Users/abiusx/Desktop/hybrid-ng/php-emul/main.php on line 6
-		// 	#Warning: array_map() expects parameter 1 to be a valid callback, function '_wp_add_global_attributes' not found or invalid function name
-		// 	var_dump($matches);
-		// 	echo("Found a callback error! lets fix it!");
-		// 	return true;
-		// }
 		$file=$errfile;
 		$line=$errline;
 		$file2=$line2=null;
@@ -161,6 +159,7 @@ trait EmulatorErrors
 				$fatal=true;
 				$str="Error";
 				break;
+			case E_USER_WARNING:
 			case E_WARNING:
 				$str="Warning";
 				break;
