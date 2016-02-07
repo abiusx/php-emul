@@ -20,7 +20,7 @@ function ob_end_clean_mock($emul)
 function ob_get_flush_mock($emul)
 {
 	$r=$emul->output_buffer[0];
-	ob_end_flush_mock($emul);
+	ob_end_clean_mock($emul);
 	return $r;
 }
 function ob_end_flush_mock($emul)
