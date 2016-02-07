@@ -317,27 +317,6 @@ class Emulator
 	}
 	
 	/**
-	 * The depth of error suppression
-	 * @var integer
-	 */
-	protected $error_suppression=0;
-	/**
-	 * Suppress errors one more level
-	 */
-	function error_silence()
-	{
-		$this->error_suppression++;
-	}
-	/**
-	 * Remove error suppression
-	 */
-	function error_restore()
-	{
-		$this->error_suppression--;
-	}
-
-
-	/**
 	 * Returns the base array (symbol table) that the variable exists in, as well as the key in that array for the variable
 	 * 
 	 * 

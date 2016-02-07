@@ -2,6 +2,26 @@
 use PhpParser\Node;
 trait EmulatorErrors
 {
+	/**
+	 * The depth of error suppression
+	 * @var integer
+	 */
+	protected $error_suppression=0;
+	/**
+	 * Suppress errors one more level
+	 */
+	function error_silence()
+	{
+		$this->error_suppression++;
+	}
+	/**
+	 * Remove error suppression
+	 */
+	function error_restore()
+	{
+		$this->error_suppression--;
+	}
+
 	public $exception_handlers=[];
 	/**
 	 * Default emulator exception handler
@@ -267,7 +287,7 @@ trait EmulatorErrors
 			$this->terminated=true;
 			$this->termination_value=-2;
 		}
-		
+
 
 	}
 	/**

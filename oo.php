@@ -490,7 +490,8 @@ class OOEmulator extends Emulator
 			$base=&$this->symbol_table($node->var,$key2,$create);
 			if ($key2===null)
 			{
-				$this->error("Variable not found: {$node->var}",$node->var);	
+				$name=is_string($node->var)?$node->var:"Unknown";
+				$this->notice("Undefined variable: {$name}");	
 				return $this->null_reference($key);
 			}
 			$var=&$base[$key2];
@@ -526,7 +527,7 @@ class OOEmulator extends Emulator
 			}
 			else 
 			{
-				$this->error("Trying to get property of non-object",$var);
+				$this->notice("Trying to get property of non-object",$var);
 				return $this->null_reference($key);
 			}
 		}
