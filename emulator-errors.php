@@ -213,6 +213,7 @@ trait EmulatorErrors
 		if ($fatal or $this->strict) 
 		{
 			$this->terminated=true;
+			$this->termination_value=-1;
 			if ($this->verbose>=2)
 			{
 				$this->verbose("Emulator Backtrace:\n");
@@ -261,7 +262,13 @@ trait EmulatorErrors
 				echo $this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 			}
 		}
-		if ($this->strict) $this->terminated=true;
+		if ($this->strict) 
+		{
+			$this->terminated=true;
+			$this->termination_value=-2;
+		}
+		
+
 	}
 	/**
 	 * Notices 

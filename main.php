@@ -29,6 +29,10 @@ if (isset($argc))// and realpath($argv[0])==__FILE__)
 	if (!isset($options['output'])) 
 		file_put_contents("output.txt",$x->output);
 
+	if (isset($x->termination_value))
+		exit($x->termination_value);
+	else
+		exit(0);
 }
 else
 	die($usage);
