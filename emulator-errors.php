@@ -210,7 +210,7 @@ trait EmulatorErrors
 			$fatal_str="";
 		$this->verbose("PHP-Emul {$str}:  {$errstr} in {$file} on line {$line} ($file2:$line2)".PHP_EOL,0);
 		$this->output("PHP {$fatal_str}{$str}:  {$errstr} in {$file2} on line {$line2}".PHP_EOL);
-		if ($fatal ) 
+		if ($fatal or $this->strict) 
 		{
 			$this->terminated=true;
 			if ($this->verbose>=2)

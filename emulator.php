@@ -48,7 +48,7 @@ class Emulator
 	 * Whether to stop on all errors or not.
 	 * @var boolean
 	 */
-	public $strict			= 	true;
+	public $strict			= 	false;
 	/**
 	 * Whether to automatically mock functions or not
 	 * If true, on init emulator will mock all internal php functions with their mocked version.
