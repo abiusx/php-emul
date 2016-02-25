@@ -140,6 +140,8 @@ trait EmulatorStatement
 			$valueVar=&$this->variable_reference($node->valueVar);
 
 			$this->loop_depth++;
+			if ($this->loop_condition())
+				return null; #if already terminated die
 			foreach ($list as $k=>$v)
 			{
 				if ($keyed)
