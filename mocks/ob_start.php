@@ -1,5 +1,7 @@
 <?php
 //TODO: handle arguments
+//FIXME: output also buffers as long as buffering is on. test properly.
+
 function ob_start_mock($emul, $callback=null,$chunk_size=0,$flags=null)
 {
 	array_unshift($emul->output_buffer,"");
@@ -19,15 +21,16 @@ function ob_end_clean_mock($emul)
 
 function ob_get_flush_mock($emul)
 {
+	if (!ob_get_level_mock($emul)) return false;
 	$r=$emul->output_buffer[0];
 	ob_end_clean_mock($emul);
+	$emul->output($r);
 	return $r;
 }
 function ob_end_flush_mock($emul)
 {
 	if (!ob_get_level_mock($emul)) return false;
-	$r=ob_get_flush_mock($emul);
-	$emul->output($r);
+	ob_get_flush_mock($emul);
 	return true;
 }
 
@@ -39,6 +42,8 @@ function ob_clean_mock($emul)
 function ob_flush_mock($emul)
 {
 	if (ob_get_level_mock($emul))
+		#FIXME: the output issue should be here.
+		#ERROR
 	$emul->output($emul->output_buffer[0]);
 	ob_clean_mock($emul);
 }
