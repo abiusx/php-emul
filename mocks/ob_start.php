@@ -42,10 +42,10 @@ function ob_clean_mock($emul)
 function ob_flush_mock($emul)
 {
 	if (ob_get_level_mock($emul))
-		#FIXME: the output issue should be here.
-		#ERROR
-	$emul->output($emul->output_buffer[0]);
-	ob_clean_mock($emul);
+	$r=ob_get_clean_mock($emul);
+	$emul->output($r);
+	ob_start_mock($emul);
+	return $r;
 }
 
 function ob_get_clean_mock($emul)
