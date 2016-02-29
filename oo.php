@@ -384,9 +384,11 @@ class OOEmulator extends Emulator
 			{
 				if ($node instanceof Node\Expr\Cast\Array_)
 					return (array)$expr->properties; #FIXME: php does this like serialize, e.g private is nullNAMEnull=>val
-				elseif ($node instanceof Node\Expr\Cast\Object_)
-					return $this->to_object($expr);
+				#TODO: what if scalar object is cast back to scalar?
+				#TODO: string cast (call magic __toString)
 			}
+			elseif ($node instanceof Node\Expr\Cast\Object_)
+				return $this->to_object($expr);
 		}
 
 		return parent::evaluate_expression($node);
