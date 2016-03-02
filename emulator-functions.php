@@ -78,8 +78,9 @@ trait EmulatorFunctions
 				}
 				else //direct value, not a Node
 				{
-					$processed_args[]=$function_variables[$this->name($param)]=&$args[key($args)]; //byref
-					// $t=current($args); //byval, not desired
+					$function_variables[$this->name($param)]=&$args[key($args)]; //byref
+					$processed_args[]=&$function_variables[$this->name($param)];
+					// $processed_args[]=$function_variables[$this->name($param)]=current($args); //byval, not desired
 				}
 				next($args);
 			}
@@ -91,6 +92,7 @@ trait EmulatorFunctions
 			if (current($args) instanceof Node) //emulator node
 				$processed_args[]=$this->evaluate_expression(current($args)->value);
 			else //direct value
+				#TODO: #WEIRD check and make sure this needs to be byref. sometimes byval is the way to go
 				$processed_args[]=&$args[key($args)];
 			next($args);
 		}
