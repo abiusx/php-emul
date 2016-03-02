@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 if (count($argv)<=1)
 	die("Usage: test.php tests/*.php\n");
@@ -5,7 +6,7 @@ echo "This tool checks whether a PHP script runned by the emulator matches the s
 // require_once "main.php";
 
 array_shift($argv); //test.php
-if ($argv[1]=='--diff')
+if ($argc>1 and $argv[0]=='--diff')
 {
 	$diff=true;
 	array_shift($argv); 
