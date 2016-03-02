@@ -1,4 +1,5 @@
 <?php
+#FIXME: call_user_func* should not be in backtrace
 use PhpParser\Node;
 trait EmulatorErrors
 {

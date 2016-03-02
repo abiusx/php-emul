@@ -78,7 +78,7 @@ trait EmulatorFunctions
 				}
 				else //direct value, not a Node
 				{
-					$function_variables[$this->name($param)]=&$args[key($args)]; //byref
+					$processed_args[]=$function_variables[$this->name($param)]=&$args[key($args)]; //byref
 					// $t=current($args); //byval, not desired
 				}
 				next($args);
