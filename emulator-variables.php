@@ -35,6 +35,14 @@ trait EmulatorVariables
 		else 
 			return null;
 	}
+	function variable_set_byref($node,&$ref)
+	{
+		$r=&$this->symbol_table($node,$key,true);
+		if ($key!==null)
+			return $r[$key]=&$ref;
+		else 
+			return null;
+	}
 	/**
 	 * Get the value of a variable
 	 * @param  Node $node 

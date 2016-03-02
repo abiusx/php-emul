@@ -39,8 +39,8 @@ trait EmulatorExpression {
 		{
 			// $originalVar=$this->name($node->expr);
 			$originalVar=&$this->variable_reference($node->expr);
-			$this->variable_set($node->var,$originalVar);
-			$var=$originalVar;
+			$this->variable_set_byref($node->var,$originalVar);
+			// $var=$originalVar;
 		}
 		elseif ($node instanceof Node\Expr\Assign)
 		{
@@ -81,10 +81,21 @@ trait EmulatorExpression {
 		{
 			$out=[];
 			foreach ($node->items as $item)
+			{
 				if (isset($item->key))
-					$out[$this->evaluate_expression($item->key)]=$this->evaluate_expression($item->value);
+				{
+					$key=$this->evaluate_expression($item->key);
+					if ($item->byRef)
+						$out[$key]=&$this->variable_reference($item->value);
+					else
+						$out[$key]=$this->evaluate_expression($item->value);
+				}
 				else
-					$out[]=$this->evaluate_expression($item->value);
+					if ($item->byRef)
+						$out[]=&$this->variable_reference($item->value);
+					else
+						$out[]=$this->evaluate_expression($item->value);
+			}
 			return $out;
 		}
 		elseif ($node instanceof Node\Expr\Cast)

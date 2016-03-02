@@ -3,11 +3,12 @@ $x=5;
 $z=&$x;
 $z++;
 var_dump($x);
-exit(0);
+// exit(0);
 
 $str="abc";
 
 $str_ref_arr=array(&$str,2,3);
+var_dump($str_ref_arr);
 $just_ref=&$str;
 
 
