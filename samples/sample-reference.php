@@ -1,4 +1,14 @@
 <?php
+$str="abc";
+
+$str_ref_arr=array(&$str,2,3);
+
+$str_ref_arr[0].="xyz";
+var_dump($str_ref_arr);
+var_dump($str);
+
+exit(0);
+
 $a=$b=5;
 function z(&$a,&$b)
 {
