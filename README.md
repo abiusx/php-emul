@@ -46,3 +46,6 @@ The following are current limitations:
 * Not all errors caught by PHP are caught by the emulator as well. Basically, the emulator assumes that you are running PHP code that is runnable with
 actual PHP (although it checks and enforces 50% of conditions). For example, object property visibility is not yet enforced when accessing.
 
+## Documentation:
+
+The blog post at https://abiusx.com/php-emulator/ covers many aspects of the emulator, and is a great place to start.
