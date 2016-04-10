@@ -1,3 +1,4 @@
+#!/usr/bin/env php
 <?php
 //function available in apache
 if (!function_exists("apache_getenv"))

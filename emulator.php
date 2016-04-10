@@ -32,7 +32,8 @@ class Emulator
 	 * this is the version that will be returned via phpversion()
 	 * @var integer
 	 */
-	public $max_php_version	=	"5.4.45"; 
+	// public $max_php_version	=	"5.4.45"; 
+	public $max_php_version	=	"7.0.3 "; 
 	/**
 	 * Configuration: whether to output directly, or just store it in $output
 	 * @var boolean
@@ -282,7 +283,7 @@ class Emulator
 		$args=func_get_args();
 		$data=implode("",$args);
 		if (count($this->output_buffer))
-			$this->output_buffer[0].=$data;
+			$this->output_buffer[0].=$data; #FIXME: shouldn't this be -1 instead of 0? i.e the one to the last nesting?
 		else
 		{
 			$this->output.=$data;
@@ -511,7 +512,6 @@ class Emulator
 		$this->included_files[$this->current_file]=true;
 		
 		$ast=$this->parse($file);
-
 		$res=$this->run_code($ast);
 		$this->verbose(substr($this->current_file,strlen($this->folder))." finished.".PHP_EOL,2);
 		if ($this->return)

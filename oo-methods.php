@@ -219,7 +219,7 @@ trait OOEmulatorMethods {
 	 * @param  object &$object optional whether or not an object ($this) should be set.
 	 * @return mixed                      
 	 */
-	protected function run_user_static_method($original_class_name,$method_name,$args,&$object=null)
+	protected function run_user_static_method($original_class_name,$method_name,$args=[],&$object=null)
 	{
 		$class_name=$this->real_class($original_class_name);
 		if ($this->verbose)
@@ -264,7 +264,7 @@ trait OOEmulatorMethods {
 	 * @param  array $args        
 	 * @return mixed              
 	 */
-	protected function run_method(&$object,$method_name,$args)
+	public function run_method(&$object,$method_name,$args=[])
 	{
 		if ($object instanceof EmulatorObject)
 			return $this->run_user_method($object,$method_name,$args);
@@ -281,7 +281,7 @@ trait OOEmulatorMethods {
 	 * @param  array $args        
 	 * @return mixed              
 	 */
-	protected function run_user_method(&$object,$method_name,$args)
+	protected function run_user_method(&$object,$method_name,$args=[])
 	{
 		if (!($object instanceof EmulatorObject))
 		{

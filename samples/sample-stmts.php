@@ -9,7 +9,7 @@ var_dump($z);
 
 echo "Testing List... Should get array(1,2) then int(1) and int(2)",PHP_EOL;
 $a=[1,2];
-var_dump(list($x,$y)=$a);
+// var_dump(list($x,$y)=$a);
 
 var_dump($x);
 var_dump($y);

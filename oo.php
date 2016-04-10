@@ -6,53 +6,6 @@ use PhpParser\Node;
 //TODO: magic methods, destructor
 //TODO: enforce visibilities
 //TODO: print_r,var_export and var_dump output EmulatorObject not actual object
-require_once "oo-methods.php";
-
-trait OOEmulator_spl_autoload 
-{
-	protected $autoloaders=[];
-	public function spl_autoload_register($callback=null, $throw=true, $prepend=false)
-	{
-		if ($callback===null)
-			$callback="spl_autoload"; //default autoloader of php
-		if ($prepend)
-			array_unshift($this->autoloaders, $prepend);
-		else
-			$this->autoloaders[]=$callback;
-		return true;
-	}
-	public function spl_autoload_unregister($callback)
-	{
-		if ( ($key=array_search($callback, $this->autoloaders))!==false)
-		{
-			unset($this->autoloaders[$key]);
-			return true;
-		}
-		return false;
-
-	}
-	public function spl_autoload_functions()
-	{
-		return $this->autoloaders;
-	}
-	public function spl_autoload_call($class)
-	{
-		foreach ($this->autoloaders as $autoloader)
-			if ($this->class_exists($class)) break;
-			else $this->call_function($autoloader,[$class]);
-	}
-	protected $autoload_extensions=".inc,.php";
-	public function spl_autoload_extensions($extensions=null)
-	{
-		if ($extensions===null) return $this->autoload_extensions;
-		spl_autoload_extensions($extensions);
-		$this->autoload_extensions=$extensions;
-	}
-	function autoload($class)
-	{
-		return $this->spl_autoload_call($class);
-	}
-}
 
 /**
  * The user defined objects are wrapped in this class.
@@ -62,6 +15,10 @@ class EmulatorObject
 	const Visibility_Public=1;
 	const Visibility_Protected=2;
 	const Visibility_Private=4;
+
+	public static $emul=null;
+	public static $object_count=0;
+
 	/**
 	 * @var string
 	 */
@@ -83,16 +40,32 @@ class EmulatorObject
 	 */
 	public $property_class=[];
 
+	/**
+	 * A numeric value which is distinct for every object
+	 * @var integer
+	 */
+	public $objectid;
 	public function __construct($classname,$properties=[],$visibilities=[],$classes=[])
 	{
+		$this->objectid=self::$object_count++;
+		self::$emul->verbose("EmulatorObject __construct() id={$this->objectid}\n",5);
 		$this->classname=$classname;
 		$this->properties=$properties;
 		$this->property_visibilities=$visibilities;
 		$this->property_class=$classes;
 	}
+	function __clone()
+	{
+		self::$emul->verbose("EmulatorObject __clone() id={$this->objectid}\n",5);
+		self::$object_count--;
+	}
 	function __destruct()
 	{
-		#TODO: call the internal destructor
+		self::$emul->verbose("EmulatorObject __destruct() id={$this->objectid}\n",5);
+		self::$object_count--;
+		if (self::$emul->method_exists($this, "__destruct"))
+			self::$emul->run_method($this,"__destruct");
+		#TODO: call the internal destructor from OOEmulator instead of here
 	}
 
 	function __toString()
@@ -101,6 +74,9 @@ class EmulatorObject
 	}
 
 }
+
+require_once "oo-methods.php";
+require_once "oo-spl-autoload.php";
 class OOEmulator extends Emulator
 {
 	use OOEmulatorMethods;
@@ -108,6 +84,7 @@ class OOEmulator extends Emulator
 	function __construct()
 	{
 		parent::__construct();
+		EmulatorObject::$emul=$this; //HACK for allowing destructor calls
 	}
 	/**
 	 * Holds the class definitions
@@ -357,6 +334,8 @@ class OOEmulator extends Emulator
 		{
 			$var=$this->variable_get($node->expr);
 			$var2=clone $var;
+			if ($this->method_exists($var2, "__clone"))
+				$this->run_method($var2,"__clone");
 			// $var2->properties=[];
 			// foreach ($var->properties as $k=>$property)
 			// 	$var2->properties[$k]=clone $property;

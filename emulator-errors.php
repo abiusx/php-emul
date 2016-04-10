@@ -190,7 +190,7 @@ trait EmulatorErrors
 		return true;
 	}
 	/**
-	 * The emulator error handler (in case an error happens in the emulation, that is not intended)
+	 * The emulator error handler (in case an error happens in the emulation, that is not intended/caught/handled)
 	 * @param  [type] $errno   [description]
 	 * @param  [type] $errstr  [description]
 	 * @param  [type] $errfile [description]

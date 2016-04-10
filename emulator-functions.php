@@ -262,7 +262,10 @@ trait EmulatorFunctions
 			array_pop($this->trace);
 		}
 		else
-			$this->error("Call to undefined function {$name}()",$node);
+		{
+			$this->error("Call to undefined function {$name}()",$args);
+			$ret=null;
+		}
 		$this->restore_ob();
 		return $ret;
 	}
