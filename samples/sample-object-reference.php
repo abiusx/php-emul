@@ -14,24 +14,36 @@ class Foo {
     echo "Destruct {$this->id}",PHP_EOL;
   }
 }
-for ($i=0;$i<10;++$i)
-$x=new Foo();
+// for ($i=0;$i<10;++$i)
+  // $x=new Foo();
+function spl($obj)
+{
+  return "*".strtoupper(substr(md5(spl_object_hash($obj)),-4));
+}
 
 $a = new Foo; // $a is a pointer pointing to Foo object 0
 echo $a->id,PHP_EOL;
+echo spl($a),PHP_EOL,PHP_EOL;
 $b = $a; // $b is a pointer pointing to Foo object 0, however, $b is a copy of $a
 echo $b->id,PHP_EOL;
+echo spl($b),PHP_EOL,PHP_EOL;
 $c = &$a; // $c and $a are now references of a pointer pointing to Foo object 0
 echo $c->id,PHP_EOL;
+echo spl($c),PHP_EOL,PHP_EOL;
 $a = new Foo; // $a and $c are now references of a pointer pointing to Foo object 1, $b is still a pointer pointing to Foo object 0
 echo $a->id,PHP_EOL;
+echo spl($a),PHP_EOL,PHP_EOL;
 echo $b->id,PHP_EOL;
+echo spl($b),PHP_EOL,PHP_EOL;
 echo $c->id,PHP_EOL;
+echo spl($c),PHP_EOL,PHP_EOL;
 
 unset($a); // A reference with reference count 1 is automatically converted back to a value. Now $c is a pointer to Foo object 1
 echo "---\n";
 echo $b->id,PHP_EOL;
+echo spl($b),PHP_EOL,PHP_EOL;
 echo $c->id,PHP_EOL;
+echo spl($c),PHP_EOL,PHP_EOL;
 echo "---\n";
 $a = &$b; // $a and $b are now references of a pointer pointing to Foo object 0
 echo $a->id,PHP_EOL;
