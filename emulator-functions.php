@@ -132,8 +132,10 @@ trait EmulatorFunctions
 		{
 			if (!property_exists($this, "current_{$k}"))
 				$this->error("Invalid wrapping '{$k}'=>'{$v}'.\n");
+			//FIXME: deep copy?
 			$backups[$k]=$this->{"current_{$k}"};
 			$this->{"current_{$k}"}=$v;
+			// $this->{"current_{$k}"}=&$wrappings[$k];//FIXME?
 		}
 		$res=$this->run_code($function->code);
 		
@@ -225,6 +227,38 @@ trait EmulatorFunctions
 		}
 		return $argValues;
 	}
+	protected function run_original_core_function($name,$argValues)
+	{
+		$this->verbose("Calling core function {$name}()...\n",4);
+		#FIXME: not all output in the duration of core function execution is that functions output,
+		#		control might come back to emulator and verbose and others used. Do something.
+		if (ob_get_level()==0) ob_start();	
+		$ret=call_user_func_array($name,$argValues); //core function
+		if (ob_get_level()>0) $this->output(ob_get_clean());
+		return $ret;
+	}
+	protected function run_mocked_core_function($name,$argValues)
+	{
+		$mocked_name=$this->mock_functions[strtolower($name)];
+		if (!function_exists($mocked_name))
+			$this->error("Mocked function '{$this->mock_functions[$name]}()' not defined to mock '{$name}()'.");
+		$this->verbose("Calling mocked function {$mocked_name}() instead of {$name}()...\n",4);
+		array_unshift($argValues, $this); //emulator is first argument in mock functions
+		$ret=call_user_func_array($mocked_name,$argValues); //core function
+		return $ret;
+	}
+	protected function run_core_function($name,$args)
+	{
+		$argValues=$this->core_function_prologue($name,$args); #this has to be before the trace line, 
+		if ($this->terminated) return null;
+		array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
+		if (isset($this->mock_functions[strtolower($name)])) //mocked
+			$ret=$this->run_mocked_core_function($name,$argValues);
+		else //original core function
+			$ret=$this->run_original_core_function($name,$argValues);
+		array_pop($this->trace);
+		return $ret;
+	}
 	/**
 	 * Runs a function, whether its internal or emulated.
 	 * @param  string $name [description]
@@ -237,30 +271,7 @@ trait EmulatorFunctions
 		if ($this->user_function_exists($name)) //user function
 			$ret=$this->run_user_function($name,$args); 
 		elseif (function_exists($name)) //core function
-		{
-			$argValues=$this->core_function_prologue($name,$args); #this has to be before the trace line, 
-			if ($this->terminated) return null;
-			array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
-			if (isset($this->mock_functions[strtolower($name)])) //mocked
-			{
-				$mocked_name=$this->mock_functions[strtolower($name)];
-				if (!function_exists($mocked_name))
-					$this->error("Mocked function '{$this->mock_functions[$name]}()' not defined to mock '{$name}()'.");
-				$this->verbose("Calling mocked function {$mocked_name}() instead of {$name}()...\n",4);
-				array_unshift($argValues, $this); //emulator is first argument in mock functions
-				$ret=call_user_func_array($mocked_name,$argValues); //core function
-			}
-			else //original core function
-			{
-				$this->verbose("Calling core function {$name}()...\n",4);
-				#FIXME: not all output in the duration of core function execution is that functions output,
-				#		control might come back to emulator and verbose and others used. Do something.
-				if (ob_get_level()==0) ob_start();	
-				$ret=call_user_func_array($name,$argValues); //core function
-				if (ob_get_level()>0) $this->output(ob_get_clean());
-			}
-			array_pop($this->trace);
-		}
+			$ret=$this->run_core_function($name,$args);
 		else
 		{
 			$this->error("Call to undefined function {$name}()",$args);

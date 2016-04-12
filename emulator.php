@@ -235,7 +235,7 @@ class Emulator
 		$this->variables=&$this->variable_stack['global'];
 		foreach ($GLOBALS as $k=>$v)
 		{
-			// if ($k=="GLOBALS") continue; 
+			// if ($k=="GLOBALS") continue; //TODO: should we do this or not? PHP itself has recursion
 			$this->super_globals[$k]=$v;
 		}
 		if ($this->auto_mock)

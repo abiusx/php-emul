@@ -61,7 +61,7 @@ class EmulatorObject
 	}
 	function __destruct()
 	{
-		self::$emul->verbose("EmulatorObject __destruct() id={$this->objectid}\n",5);
+		self::$emul->verbose("EmulatorObject('{$this->classname}') __destruct() id={$this->objectid}\n",5);
 		self::$object_count--;
 		if (self::$emul->method_exists($this, "__destruct"))
 			self::$emul->run_method($this,"__destruct");
