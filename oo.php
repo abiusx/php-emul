@@ -56,8 +56,8 @@ class EmulatorObject
 	}
 	function __clone()
 	{
+		$this->objectid=self::$object_count++;
 		self::$emul->verbose("EmulatorObject __clone() id={$this->objectid}\n",5);
-		self::$object_count--;
 	}
 	function __destruct()
 	{
@@ -248,6 +248,7 @@ class OOEmulator extends Emulator
 	 */
 	protected function new_core_object($classname,array $args)
 	{
+		$this->verbose("New instance of core class '{$classname}'\n",5);
 		$argValues=[];
 		foreach ($args as $arg)
 			$argValues[]=$this->evaluate_expression($arg->value);
@@ -380,22 +381,25 @@ class OOEmulator extends Emulator
 	 */
 	protected function to_object($val)
 	{
-		$obj=new EmulatorObject("stdClass");
-		if (is_array($val))
-		{
-			foreach ($val as $k=>$v)
-			{
-				$obj->properties[$k]=$v;
-				$obj->property_visibilities[$k]=EmulatorObject::Visibility_Public;
-			}
-		}
-		else
-		{
-			$obj->properties['scalar']=$val;
-			$obj->property_visibilities['scalar']=EmulatorObject::Visibility_Public;
-		}
 
-		return $obj;
+		return (object)$val; //convert to direct stdClass instead of Emulator object
+		//TODO: remove after a few commits
+		// $obj=new EmulatorObject("stdClass");
+		// if (is_array($val))
+		// {
+		// 	foreach ($val as $k=>$v)
+		// 	{
+		// 		$obj->properties[$k]=$v;
+		// 		$obj->property_visibilities[$k]=EmulatorObject::Visibility_Public;
+		// 	}
+		// }
+		// else
+		// {
+		// 	$obj->properties['scalar']=$val;
+		// 	$obj->property_visibilities['scalar']=EmulatorObject::Visibility_Public;
+		// }
+
+		// return $obj;
 	}
 	/**
 	 * Finds the real class name of a class reference (e.g self, parent, static, etc.)
