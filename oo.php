@@ -81,9 +81,9 @@ class OOEmulator extends Emulator
 {
 	use OOEmulatorMethods;
 	use OOEmulator_spl_autoload;
-	function __construct()
+	function __construct($init_environ=null)
 	{
-		parent::__construct();
+		parent::__construct($init_environ);
 		EmulatorObject::$emul=$this; //HACK for allowing destructor calls
 	}
 	/**
@@ -551,7 +551,7 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\Variable and is_string($node->name) and $node->name=="this") //$this
 		{
-			$key='this';
+			$key='temp';
 			$t=array($key=>&$this->current_this);
 			return $t;
 		}
@@ -649,3 +649,4 @@ class OOEmulator extends Emulator
 
 foreach (glob(__DIR__."/mocks/oo/*.php") as $mock)
 	require_once $mock;
+unset($mock);

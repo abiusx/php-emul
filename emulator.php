@@ -90,10 +90,12 @@ class Emulator
 	public $output_buffer=[];
 
 	/**
-	 * Super global variables (e.g $GLOBALS, $_GET, etc.)
+	 * List of super global variables (e.g $GLOBALS, $_GET, etc.)
+	 * these should be available in all contexts, i.e from all symbol tables
+	 * keys are the names, values are ints
 	 * @var array
 	 */
-	public $super_globals=[];
+	public $superglobals=[];
 
 	/**
 	 * User-defined (emulated) functions
@@ -229,15 +231,26 @@ class Emulator
 	 * Initialize the emulator by setting environment variables (super globals)
 	 * and mocking mock functions
 	 */
-	function init()
+	function init($init_environ)
 	{
-		$this->variable_stack['global']=array();
-		$this->variables=&$this->variable_stack['global'];
-		foreach ($GLOBALS as $k=>$v)
+		$this->superglobals=array_flip(explode(",$",'_GET,$_POST,$_FILES,$_COOKIE,$_SESSION,$_SERVER,$_REQUEST,$_ENV,$GLOBALS'));
+		echo str_repeat("-",80),PHP_EOL;
+		if ($init_environ===null)
 		{
-			// if ($k=="GLOBALS") continue; //TODO: should we do this or not? PHP itself has recursion
-			$this->super_globals[$k]=$v;
+			$init_environ=[];	
+			foreach ($this->superglobals as $k=>$sg)
+				if (isset($GLOBALS[$k]))
+					$init_environ[$k]=&$GLOBALS[$k];
+				else
+					$init_environ[$k]=[];
+			$init_environ['GLOBALS']=&$init_environ;
 		}
+		$this->variable_stack['global']=array(); //the first key in var_stack is the global scope
+		$this->_reference_variables_to_stack();
+		foreach ($init_environ as $k=>$v)
+			$this->variables[$k]=$v;
+		$this->variables['GLOBALS']=&$this->variables; //as done by PHP itself
+
 		if ($this->auto_mock)
 		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives internal and user subarrays.
 		{
@@ -345,10 +358,11 @@ class Emulator
 				$key='global';	
 				return $this->variable_stack;
 			}
-			elseif (array_key_exists($node, $this->super_globals)) //super globals
+			elseif (array_key_exists($node, $this->superglobals) //super globals
+				and isset($this->variable_stack['global'][$node])) //can be deleted too!
 			{
 				$key=$node;
-				return $this->super_globals;
+				return $this->variable_stack['global'];
 			}
 			else
 			{
@@ -639,10 +653,10 @@ class Emulator
 	 * Emulator constructor
 	 * init the emulator
 	 */
-	function __construct()
+	function __construct($init_environ=null)
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
-    	$this->init();
+    	$this->init($init_environ);
 	}
 	/**
 	 * Emulator destructor
@@ -659,10 +673,11 @@ class Emulator
 //this loads all mock functions, so that auto-mock will replace them
 foreach (glob(__DIR__."/mocks/*.php") as $mock)
 	require_once $mock;
+unset($mock);
 
 
 
-if (isset($argc) and $argv[0]==__FILE__)
+if (isset($argv) and $argv[0]==__FILE__)
 {
 	die("Should not run this directly.".PHP_EOL);
 }
