@@ -128,14 +128,15 @@ trait EmulatorFunctions
 		foreach ($trace_args as $k=>$v)
 			end($this->trace)->$k=$v;
 		
-		foreach ($wrappings as $k=>$v)
+		foreach ($wrappings as $k=>&$v)
 		{
 			if (!property_exists($this, "current_{$k}"))
 				$this->error("Invalid wrapping '{$k}'=>'{$v}'.\n");
 			//FIXME: deep copy?
 			$backups[$k]=$this->{"current_{$k}"};
-			$this->{"current_{$k}"}=$v;
+			// $this->{"current_{$k}"}=$v;
 			// $this->{"current_{$k}"}=&$wrappings[$k];//FIXME?
+			$this->{"current_{$k}"}=&$v;
 		}
 		$res=$this->run_code($function->code);
 		

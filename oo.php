@@ -48,8 +48,8 @@ class EmulatorObject
 	public function __construct($classname,$properties=[],$visibilities=[],$classes=[])
 	{
 		$this->objectid=self::$object_count++;
-		self::$emul->verbose("EmulatorObject __construct() id={$this->objectid}\n",5);
 		$this->classname=$classname;
+		self::$emul->verbose("EmulatorObject('{$this->classname}') __construct() id={$this->objectid}\n",5);
 		$this->properties=$properties;
 		$this->property_visibilities=$visibilities;
 		$this->property_class=$classes;
@@ -252,12 +252,12 @@ class OOEmulator extends Emulator
 		$argValues=[];
 		foreach ($args as $arg)
 			$argValues[]=$this->evaluate_expression($arg->value);
-		ob_start();	
+		// ob_start();	
 		$r = new ReflectionClass($classname);
 		$ret = $r->newInstanceArgs($argValues); #TODO: byref?
 		// $ret=new $classname($argValues); //core class
-		$output=ob_get_clean();
-		$this->output($output);
+		// $output=ob_get_clean();
+		// $this->output($output);
 		return $ret;
 	}
 	/**

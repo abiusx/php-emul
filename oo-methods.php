@@ -41,7 +41,6 @@ trait OOEmulatorMethodExistence {
 	public function user_property_exists($class,$property)
 	{
 		if (!isset($this->classes[strtolower($class)])) return false;
-		var_dump($this->classes[strtolower($class)]->properties);
 		$this->stash_ob();
 		return isset($this->classes[strtolower($class)]->properties[$property]); //this is case sensitive
 	}
@@ -238,9 +237,9 @@ trait OOEmulatorMethods {
 				$wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file,"line"=>$this->current_line];
 				if ($object!==null)
 				{
-					$trace_args['object']=&$object;
+					$trace_args['object']=$object; //do we need ref here? I don't think so
 					$trace_args['type']="->";
-					$wrappings['this']=&$object;
+					$wrappings['this']=$object; //do we need ref here? I don't think so
 				}
 				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args, $wrappings, $trace_args);
 				$flag=true;

@@ -250,7 +250,6 @@ class Emulator
 		foreach ($init_environ as $k=>$v)
 			$this->variables[$k]=$v;
 		$this->variables['GLOBALS']=&$this->variables; //as done by PHP itself
-
 		if ($this->auto_mock)
 		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives internal and user subarrays.
 		{
