@@ -42,6 +42,7 @@ trait EmulatorFunctions
 	protected function user_function_prologue($name,$function,$args)
 	{
 		$count=count($args);
+	
 		$index=0;
 		$function_variables=[];
 		$processed_args=[];
@@ -142,7 +143,6 @@ trait EmulatorFunctions
 		
 		foreach ($backups as $k=>$v)
 			$this->{"current_{$k}"}=$v;
-
 		array_pop($this->trace);
 
 		$this->pop();

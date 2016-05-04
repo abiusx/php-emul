@@ -308,7 +308,7 @@ class Emulator
 	 */
 	protected function push()
 	{
-		array_push($this->variable_stack,array());
+		array_push($this->variable_stack,array()); //create one more symbol table
 		$this->_reference_variables_to_stack();
 	}
 	/**
@@ -326,6 +326,8 @@ class Emulator
 	protected function pop()
 	{
 		array_pop($this->variable_stack);
+		// end($this->variable_stack);
+		// unset($this->variable_stack[key($this->variable_stack)]);
 		$this->_reference_variables_to_stack();
 	}
 	

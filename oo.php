@@ -252,12 +252,12 @@ class OOEmulator extends Emulator
 		$argValues=[];
 		foreach ($args as $arg)
 			$argValues[]=$this->evaluate_expression($arg->value);
-		// ob_start();	
+		ob_start();	
 		$r = new ReflectionClass($classname);
 		$ret = $r->newInstanceArgs($argValues); #TODO: byref?
 		// $ret=new $classname($argValues); //core class
-		// $output=ob_get_clean();
-		// $this->output($output);
+		$output=ob_get_clean();
+		$this->output($output);
 		return $ret;
 	}
 	/**
@@ -334,6 +334,7 @@ class OOEmulator extends Emulator
 		elseif ($node instanceof Node\Expr\Clone_)
 		{
 			$var=$this->variable_get($node->expr);
+			if (!is_object($var)) return $this->error("_clone method called on non-object",$node);
 			$var2=clone $var;
 			if ($this->method_exists($var2, "__clone"))
 				$this->run_method($var2,"__clone");

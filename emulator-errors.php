@@ -261,6 +261,7 @@ trait EmulatorErrors
 		$this->verbose("Emulation Error: ",0);
 		$this->_error($msg,$node);
 		$this->terminated=true;
+		return null;
 	}
 	/**
 	 * Core function used by all types of error (warning, error, notice, etc.)
