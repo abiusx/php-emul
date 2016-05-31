@@ -65,7 +65,7 @@ class EmulatorObject
 	{
 		self::$emul->verbose("EmulatorObject('{$this->classname}') __destruct() id={$this->objectid}\n",5);
 		self::$object_count--;
-		if (self::$emul->method_exists($this, "__destruct"));
+		if (self::$emul->method_exists($this, "__destruct"))
 			self::$emul->run_method($this,"__destruct");
 		// TODO: call the internal destructor from OOEmulator instead of here
 	}
