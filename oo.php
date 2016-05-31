@@ -57,15 +57,17 @@ class EmulatorObject
 	function __clone()
 	{
 		$this->objectid=self::$object_count++;
-		self::$emul->verbose("EmulatorObject __clone() id={$this->objectid}\n",5);
+		self::$emul->verbose("EmulatorObject('{$this->classname}')) __clone() id={$this->objectid}\n",5);
+		//TODO: call clone
 	}
+	public $destructor=null;
 	function __destruct()
 	{
 		self::$emul->verbose("EmulatorObject('{$this->classname}') __destruct() id={$this->objectid}\n",5);
 		self::$object_count--;
-		if (self::$emul->method_exists($this, "__destruct"))
+		if (self::$emul->method_exists($this, "__destruct"));
 			self::$emul->run_method($this,"__destruct");
-		#TODO: call the internal destructor from OOEmulator instead of here
+		// TODO: call the internal destructor from OOEmulator instead of here
 	}
 
 	function __toString()
@@ -225,19 +227,11 @@ class OOEmulator extends Emulator
 				$obj->property_class[$property_name]=$this->classes[strtolower($class)]->name;
 			}
 		}
-		foreach ($this->ancestry($classname) as $class)
-		{
-			if ($this->user_method_exists($class, "__construct"))
-			{
-				$this->run_user_method($obj,"__construct",$args);
-				break;
-			}
-			elseif ($this->user_method_exists($class,$class))
-			{
-				$this->run_user_method($obj,$class,$args);
-				break;
-			}
-		}
+		if ($this->user_method_exists($classname,"__construct"))
+			$this->run_user_method($obj,"__construct",$args);
+		elseif ($this->user_method_exists($classname,$classname))
+			$this->run_user_method($obj,$classname,$args);
+		$this->verbose("Creation done!".PHP_EOL,2); ///DEBUG
 		return $obj;
 	}
 	/**
