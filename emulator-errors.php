@@ -52,7 +52,7 @@ trait EmulatorErrors
 
 		//emulator output
 		// $this->verbose("PHP-Emul Fatal Error: Uncaught ".$e,0); 
-		$this->verbose("PHP-Emul Fatal error: Uncaught Error: ".$e->getMessage()."\n",0); 
+		$this->verbose("PHP-Emul Fatal error: Uncaught Error: ".$e->getMessage()." in ".$e->getFile().":".$e->getLine()."\n",0); 
 		if ($this->verbose>=2)
 		{
 			$this->verbose("Emulator Backtrace:\n");
