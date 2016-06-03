@@ -556,18 +556,7 @@ class Emulator
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
 		// set_exception_handler(array($this,"exception_handler")); //exception handlers can not return. they terminate the program.
-		$res=null;
-		try {
-			$res=$this->run_file($file);
-		}
-		catch (Exception $e)
-		{
-			$this->exception_handler($e);
-		}
-		catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
-		{
-			$this->exception_handler($e);
-		}
+		$res=$this->run_file($file);
 		$this->shutdown();
 		// restore_exception_handler();
 		restore_error_handler();
@@ -624,7 +613,18 @@ class Emulator
 					$this->verbose(sprintf("%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line),3);
 			}
 			$this->statement_count++;
-			$this->run_statement($node);
+			try 
+			{
+				$this->run_statement($node);
+			}
+			catch (Exception $e)
+			{
+				$this->exception_handler($e);
+			}
+			catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
+			{
+				$this->exception_handler($e);
+			}			
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;
 			if ($this->break) break;
