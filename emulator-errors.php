@@ -47,16 +47,20 @@ trait EmulatorErrors
 		$this->output("#",$count," {main}",PHP_EOL);
 		$this->output("  thrown in ",$this->current_file," on line ",$this->current_line,PHP_EOL);
 		
+		$this->termination_value=-1;
+		$this->terminated=true;
+
 		//emulator output
 		// $this->verbose("PHP-Emul Fatal Error: Uncaught ".$e,0); 
 		$this->verbose("PHP-Emul Fatal error: Uncaught Error: ".$e->getMessage()."\n",0); 
-		$this->verbose("Emulator Backtrace:\n");
-		echo $e->getTraceAsString(),PHP_EOL;
-		$this->verbose("Emulation Backtrace:\n");
-		echo $this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		if ($this->verbose>=2)
+		{
+			$this->verbose("Emulator Backtrace:\n");
+			echo $e->getTraceAsString(),PHP_EOL;
+			$this->verbose("Emulation Backtrace:\n");
+			echo $this->print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		}
 		
-
-		$this->terminated=true;
 		return true;
 	}
 	/**
