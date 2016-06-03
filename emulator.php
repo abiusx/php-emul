@@ -555,10 +555,21 @@ class Emulator
 		$file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
-		set_exception_handler(array($this,"exception_handler"));
-		$res=$this->run_file($file);
+		// set_exception_handler(array($this,"exception_handler")); //exception handlers can not return. they terminate the program.
+		$res=null;
+		try {
+			$res=$this->run_file($file);
+		}
+		catch (Exception $e)
+		{
+			$this->exception_handler($e);
+		}
+		catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
+		{
+			$this->exception_handler($e);
+		}
 		$this->shutdown();
-		restore_exception_handler();
+		// restore_exception_handler();
 		restore_error_handler();
 		chdir($this->original_dir);
 		return $res;

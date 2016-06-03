@@ -376,25 +376,7 @@ class OOEmulator extends Emulator
 	 */
 	protected function to_object($val)
 	{
-
 		return (object)$val; //convert to direct stdClass instead of Emulator object
-		//TODO: remove after a few commits
-		// $obj=new EmulatorObject("stdClass");
-		// if (is_array($val))
-		// {
-		// 	foreach ($val as $k=>$v)
-		// 	{
-		// 		$obj->properties[$k]=$v;
-		// 		$obj->property_visibilities[$k]=EmulatorObject::Visibility_Public;
-		// 	}
-		// }
-		// else
-		// {
-		// 	$obj->properties['scalar']=$val;
-		// 	$obj->property_visibilities['scalar']=EmulatorObject::Visibility_Public;
-		// }
-
-		// return $obj;
 	}
 	/**
 	 * Finds the real class name of a class reference (e.g self, parent, static, etc.)
