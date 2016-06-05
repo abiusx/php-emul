@@ -262,6 +262,8 @@ class OOEmulator extends Emulator
 	 */
 	protected function new_object($classname,array $args)
 	{
+		if (!$this->class_exists($classname))	
+			$this->spl_autoload_call($classname);
 		if (array_key_exists(strtolower($classname), $this->classes)) //user classes
 			return $this->new_user_object($classname,$args);
 		elseif (class_exists($classname)) //core classes
