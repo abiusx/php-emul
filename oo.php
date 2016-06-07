@@ -222,6 +222,12 @@ class OOEmulator extends Emulator
 	{
 		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
 		$obj=new EmulatorObject($this->classes[strtolower($classname)]->name,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->property_visibilities);
+		$constructor=null;
+		if ($this->user_method_exists($classname,"__construct"))
+			$constructor="__construct";
+		elseif ($this->user_method_exists($classname,$classname))
+			$constructor=$classname;
+
 		foreach ($this->ancestry($classname,true) as $class)
 		{
 			if ($this->user_class_exists($class))
@@ -233,14 +239,17 @@ class OOEmulator extends Emulator
 			}
 			else
 			{
-				$r=new ReflectionClass($class);
-				$obj->parent=$r->newInstanceWithoutConstructor();
+				if ($constructor) //has a constructor, do not auto-construct
+				{
+					$r=new ReflectionClass($class);
+					$obj->parent=$r->newInstanceWithoutConstructor();
+				}
+				else
+					$obj->parent=new $class;
 			}
 		}
-		if ($this->user_method_exists($classname,"__construct"))
-			$this->run_user_method($obj,"__construct",$args);
-		elseif ($this->user_method_exists($classname,$classname))
-			$this->run_user_method($obj,$classname,$args);
+		if ($constructor)
+			$this->run_user_method($obj,$constructor,$args);
 		$this->verbose("Creation done!".PHP_EOL,2); ///DEBUG
 		return $obj;
 	}
