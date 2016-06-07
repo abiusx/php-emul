@@ -173,12 +173,16 @@ trait EmulatorFunctions
 	 * Prologue of a native function
 	 * @param  string $name 
 	 * @param  array $args 
+	 * @param  string $class prologue a class method
 	 * @return bool       
 	 */
-	protected function core_function_prologue($name,$args)
+	protected function core_function_prologue($name,$args,$class=null)
 	{
 		#TODO: auto-wrap callables, they are used all over the place
-		$function_reflection=new ReflectionFunction($name);
+		if ($class)
+			$function_reflection=new ReflectionMethod($class,$name);
+		else
+			$function_reflection=new ReflectionFunction($name);
 		$parameters_reflection=$function_reflection->getParameters();
 		$argValues=[];
 		$index=0;
