@@ -280,27 +280,43 @@ trait OOEmulatorMethods {
 	 */
 	function run_core_static_method($class_name,$method_name,$args,&$object=null)
 	{
-		if ($class_name===null and $object===null)
-			$this->error("Should provide either the class name or a valid object.\n");
-		#TODO: add mocked class/methods, and also add trace here.
+		$class=$this->real_class($class_name);
+
+		$argValues=$this->core_function_prologue($method_name,$args,$class); #this has to be before the trace line, 
+		if ($this->terminated) return null;
+		#TODO: add mocked class/methods
 		
 		if ($object) //method
-			return call_user_func_array(array($object,$method_name), $args);
+		{
+			array_push($this->trace, (object)array("type"=>"->","function"=>$method_name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
+			$ret=call_user_func_array(array($object,$method_name), $argValues);
+			array_pop($this->trace);
+
+		}
 		else 		//static
 		{
-			$class=$this->real_class($class_name);
 			if (method_exists($class, $method_name))
 			{
 				$r=new ReflectionMethod($class,$method_name);
 				if ($r->isStatic())
-					return call_user_func_array($class."::".$method_name, $args);
+				{
+					array_push($this->trace, (object)array("type"=>"::","function"=>$method_name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
+					$ret=call_user_func_array($class."::".$method_name, $argValues);
+					array_pop($this->trace);
+				}
 				elseif ($this->current_this and $this->current_this->parent) //call with this
-					return call_user_func_array(array($this->current_this->parent,$method_name), $args);
+				{
+					array_push($this->trace, (object)array("type"=>"->","function"=>$method_name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
+					$ret=call_user_func_array(array($this->current_this->parent,$method_name), $argValues);
+					array_pop($this->trace);
+				}
 				else
 					$this->error("Non-static method {$class}::{$method_name}() cannot be called statically");
 
 			}
 		}
+
+		return $ret;
 
 	}
 	/**
