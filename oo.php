@@ -18,7 +18,6 @@ class EmulatorObject
 
 	public static $emul=null;
 	public static $object_count=0;
-
 	/**
 	 * @var string
 	 */
@@ -39,7 +38,11 @@ class EmulatorObject
 	 * @var array
 	 */
 	public $property_class=[];
-
+	/**
+	 * Parent if inherited from a core PHP class
+	 * @var  object 
+	 */
+	public $parent=null;
 	/**
 	 * A numeric value which is distinct for every object
 	 * @var integer
@@ -99,7 +102,7 @@ class OOEmulator extends Emulator
 	 * Holds $this and self object and class pointers, as well as late static binding
 	 * @var null
 	 */
-	public $current_this=null,$current_self=null,$current_class=null;
+	protected $current_this=null,$current_self=null,$current_class=null;
 
 	/**
 	 * Extract ClassLike declarations from files.
@@ -127,7 +130,8 @@ class OOEmulator extends Emulator
 				$extends=$this->name($node->extends);
 				if (!$this->class_exists($extends))
 					$this->error("Class '{$extends}' not found");
-				$extends=$this->classes[strtolower($extends)]->name;
+				if ($this->user_class_exists($extends))
+					$extends=$this->classes[strtolower($extends)]->name;
 			}
 				
 			$class->name=$classname;
@@ -220,11 +224,17 @@ class OOEmulator extends Emulator
 		$obj=new EmulatorObject($this->classes[strtolower($classname)]->name,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->property_visibilities);
 		foreach ($this->ancestry($classname,true) as $class)
 		{
+			if ($this->user_class_exists($class))
 			foreach ($this->classes[strtolower($class)]->properties as $property_name=>$property)
 			{
 				$obj->properties[$property_name]=$property;
 				$obj->property_visibilities[$property_name]=$this->classes[strtolower($class)]->property_visibilities[$property_name];
 				$obj->property_class[$property_name]=$this->classes[strtolower($class)]->name;
+			}
+			else
+			{
+				$r=new ReflectionClass($class);
+				$obj->parent=$r->newInstanceWithoutConstructor();
 			}
 		}
 		if ($this->user_method_exists($classname,"__construct"))
@@ -407,7 +417,8 @@ class OOEmulator extends Emulator
 		$classname=$this->real_class($classname);
 		if (!isset($this->classes[strtolower($classname)])) return null;
 		$res=[$classname];
-		while ($this->classes[strtolower($classname)]->parent)
+		while (isset($this->classes[strtolower($classname)]) 
+			and $this->classes[strtolower($classname)]->parent)
 		{
 			$classname=$this->classes[strtolower($classname)]->parent;
 			$res[]=$classname;

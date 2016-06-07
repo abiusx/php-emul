@@ -207,7 +207,8 @@ trait OOEmulatorMethods {
 		if (array_key_exists(strtolower($class_name), $this->classes))
 			return $this->run_user_static_method($original_class_name,$method_name,$args);
 		elseif (class_exists($class_name))
-			return call_user_func_array($class_name."::".$method_name, $args);
+			return $this->run_core_static_method($original_class_name,$method_name,$args);
+			// return call_user_func_array($class_name."::".$method_name, $args);
 		else
 		{
 			$this->error("Can not call static method '{$class_name}::{$method_name}', class '{$original_class_name}' does not exist.\n");
@@ -249,6 +250,15 @@ trait OOEmulatorMethods {
 				$flag=true;
 				break;	
 			}
+			elseif (class_exists($class)) //core class
+			{
+				if ($object and $object->parent and method_exists($object->parent, $method_name))
+				{
+					$res=$this->run_core_static_method($class,$method_name,$args,$object->parent);
+					$flag=true;
+					break;
+				}
+			}
 
 		}
 		if (!$flag)
@@ -261,19 +271,52 @@ trait OOEmulatorMethods {
 		return $res;
 	}
 	/**
+	 * Runs methods on core classes on objects
+	 * @param  string $class_name  can be parent, self, etc.
+	 * @param  [type] $method_name [description]
+	 * @param  [type] $args        [description]
+	 * @param  [type] &$object     optional, for non-static method call
+	 * @return [type]              [description]
+	 */
+	function run_core_static_method($class_name,$method_name,$args,&$object=null)
+	{
+		if ($class_name===null and $object===null)
+			$this->error("Should provide either the class name or a valid object.\n");
+		#TODO: add mocked class/methods, and also add trace here.
+		
+		if ($object) //method
+			return call_user_func_array(array($object,$method_name), $args);
+		else 		//static
+		{
+			$class=$this->real_class($class_name);
+			if (method_exists($class, $method_name))
+			{
+				$r=new ReflectionMethod($class,$method_name);
+				if ($r->isStatic())
+					return call_user_func_array($class."::".$method_name, $args);
+				elseif ($this->current_this and $this->current_this->parent) //call with this
+					return call_user_func_array(array($this->current_this->parent,$method_name), $args);
+				else
+					$this->error("Non-static method {$class}::{$method_name}() cannot be called statically");
+
+			}
+		}
+
+	}
+	/**
 	 * Runs a method on an object (whether user defined or core)
 	 * @param  object &$object     
 	 * @param  string $method_name 
 	 * @param  array $args        
 	 * @return mixed              
 	 */
-	public function run_method(&$object,$method_name,$args=[])
+	public function run_method(&$object,$method_name,$args=[],$class_name=null)
 	{
 		if ($object instanceof EmulatorObject)
-			return $this->run_user_method($object,$method_name,$args);
+			return $this->run_user_method($object,$method_name,$args,$class_name);
 		elseif (is_object($object))
-			#TODO: add mocked class/methods, and also add trace here.
-			return call_user_func_array(array($object,$method_name), $args);
+			$this->run_core_static_method(get_class($object),$method_name,$args,$object);
+			// return call_user_func_array(array($object,$method_name), $args);
 		else
 			$this->error("Can not call method '{$method_name}' on a non-object.\n",$object);
 	}
@@ -284,14 +327,15 @@ trait OOEmulatorMethods {
 	 * @param  array $args        
 	 * @return mixed              
 	 */
-	protected function run_user_method(&$object,$method_name,$args=[])
+	protected function run_user_method(&$object,$method_name,$args=[],$class_name=null)
 	{
 		if (!($object instanceof EmulatorObject))
 		{
 			$this->error("Inconsistency in object oriented emulation. A malformed object detected.",$object);
 			return null;
 		}
-		$class_name=$object->classname;
+		if ($class_name===null)
+			$class_name=$object->classname;
 		
 		$res=$this->run_user_static_method($class_name,$method_name,$args,$object);
 		return $res;
