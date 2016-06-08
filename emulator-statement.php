@@ -277,6 +277,20 @@ trait EmulatorStatement
 				$this->variables[$name]=&$globals_[$name];
 			}
 		}
+		elseif ($node instanceof Node\Stmt\Namespace_)
+		{
+			$backup=$this->current_namespace;
+			$this->current_namespace=$this->name($node);
+			$this->verbose("Changing namespace to '{$this->current_namespace}'...\n",2);
+			$res=$this->run_code($node->stmts);
+			$namespace_name="'$backup'";
+			if ($namespace_name=="''")
+				$namespace_name="default";
+			$this->verbose("Restoring namespace to {$namespace_name}...\n",2);
+			$this->current_namespace=$backup;
+			return $res;
+
+		}
 		elseif ($node instanceof Node\Expr)
 			$this->evaluate_expression($node);
 		else

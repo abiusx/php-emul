@@ -342,6 +342,8 @@ class Emulator
 	 */
 	protected function &symbol_table($node,&$key,$create)
 	{
+		echo str_repeat("-",100),PHP_EOL;
+		var_dump($node);
 		if ($node===null)
 		{
 			$this->notice("Undefined variable (null node).");	
@@ -379,6 +381,13 @@ class Emulator
 					return $this->null_reference($key);
 				}
 			}
+		}
+		elseif ($node instanceof Node\Scalar\Encapsed)
+		{
+			$key=$this->name($node);
+			if ($create)
+				$this->variables[$key]=null;
+			return $this->variables;
 		}
 		elseif ($node instanceof Node\Expr\ArrayDimFetch)
 		{
@@ -464,7 +473,6 @@ class Emulator
 	protected function name($ast)
 	{
 		if (is_string($ast))
-
 			return $ast;
 		elseif ($ast instanceof Node\Expr\FuncCall)
 		{
@@ -474,13 +482,25 @@ class Emulator
 			else 
 				return $this->evaluate_expression($ast->name);
 		}
+		elseif ($ast instanceof Node\Scalar\Encapsed)
+		{
+			$res="";
+			foreach ($ast->parts as $part)
+			{
+				if (is_string($part))
+					$res.=$part;
+				else
+					$res.=$this->evaluate_expression($part);
+			}
+			return $res;
+		}
 		elseif ($ast instanceof Node\Scalar)
 			return $ast->value;
 		elseif ($ast instanceof Node\Param)
 			return $ast->name;
 		elseif ($ast instanceof Node\Name)
 		{
-
+			//TODO: where does this happen?
 			$res="";
 			foreach ($ast->parts as $part)
 			{
@@ -493,6 +513,13 @@ class Emulator
 		}
 		elseif ($ast instanceof Node\Expr\Variable)
 			return $this->evaluate_expression($ast);
+		elseif ($ast instanceof Node\Stmt\Namespace_)
+		{
+			$res=[];
+			foreach ($ast->name->parts as $p)
+				$res[]=$p;
+			return implode("\\",$res);
+		}
 		else
 			$this->error("Can not determine name: ",$ast);
 	}
