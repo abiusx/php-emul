@@ -288,6 +288,7 @@ trait OOEmulatorMethods {
 		
 		if ($object) //method
 		{
+			$this->verbose("Core method has a bound object, calling...\n",4);
 			array_push($this->trace, (object)array("type"=>"->","function"=>$method_name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
 			$ret=call_user_func_array(array($object,$method_name), $argValues);
 			array_pop($this->trace);
@@ -295,6 +296,7 @@ trait OOEmulatorMethods {
 		}
 		else 		//static
 		{
+			$this->verbose("Core method is static-like, calling...\n",4);
 			if (method_exists($class, $method_name))
 			{
 				$r=new ReflectionMethod($class,$method_name);
@@ -331,7 +333,7 @@ trait OOEmulatorMethods {
 		if ($object instanceof EmulatorObject)
 			return $this->run_user_method($object,$method_name,$args,$class_name);
 		elseif (is_object($object))
-			$this->run_core_static_method(get_class($object),$method_name,$args,$object);
+			return $this->run_core_static_method(get_class($object),$method_name,$args,$object);
 			// return call_user_func_array(array($object,$method_name), $args);
 		else
 			$this->error("Can not call method '{$method_name}' on a non-object.\n",$object);

@@ -250,7 +250,7 @@ class OOEmulator extends Emulator
 		}
 		if ($constructor)
 			$this->run_user_method($obj,$constructor,$args);
-		$this->verbose("Creation done!".PHP_EOL,2); ///DEBUG
+		// $this->verbose("Creation done!".PHP_EOL,2); ///DEBUG
 		return $obj;
 	}
 	/**
@@ -309,7 +309,11 @@ class OOEmulator extends Emulator
 		{
 			$object=&$this->variable_reference($node->var);
 			$method_name=$this->name($node->name);
-			$this->verbose("Method call ".$object->classname."::".$method_name.PHP_EOL,3);
+			if ($object instanceof EmulatorObject)
+				$classname=$object->classname;
+			else
+				$classname=get_class($object);
+			$this->verbose("Method call {$classname}::{$method_name}()".PHP_EOL,3);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
 		}
