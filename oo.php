@@ -121,8 +121,10 @@ class OOEmulator extends Emulator
 				$classtype=$node->type;
 			$classname=$this->name($node->name);
 			$type=strtolower(substr(explode("\\",get_class($node))[3],0,-1)); #intertface, class, trait
-			$this->classes[strtolower($classname)]=new stdClass;
-			$class=&$this->classes[strtolower($classname)];
+			// $class_index=strtolower($this->namespace($classname));
+			$class_index=strtolower($classname);
+			$this->classes[$class_index]=new stdClass;
+			$class=&$this->classes[$class_index];
 
 			$extends=null;
 			if (isset($node->extends) and $node->extends)
@@ -133,6 +135,7 @@ class OOEmulator extends Emulator
 				if ($this->user_class_exists($extends))
 					$extends=$this->classes[strtolower($extends)]->name;
 			}
+			$this->verbose("Extracting declaration of class '{$classname}'...\n",3);
 				
 			$class->name=$classname;
 			$class->interfaces=[];
@@ -221,14 +224,21 @@ class OOEmulator extends Emulator
 	protected function new_user_object($classname,array $args)
 	{
 		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
-		$obj=new EmulatorObject($this->classes[strtolower($classname)]->name,$this->classes[strtolower($classname)]->properties,$this->classes[strtolower($classname)]->property_visibilities);
+		$class_index=strtolower($classname);
+		
+		// if (!$this->user_class_exists($class_index) and $this->user_class_exists($this->namespace($class_index)))
+			// $class_index=strtolower($this->namespace($class_index));
+		if (!$this->user_class_exists($class_index))
+			$class_index=strtolower($class_index);
+
+		$obj=new EmulatorObject($this->classes[$class_index]->name,$this->classes[$class_index]->properties,$this->classes[$class_index]->property_visibilities);
 		$constructor=null;
 		if ($this->user_method_exists($classname,"__construct"))
 			$constructor="__construct";
 		elseif ($this->user_method_exists($classname,$classname))
 			$constructor=$classname;
 
-		foreach ($this->ancestry($classname,true) as $class)
+		foreach ($this->ancestry($class_index,true) as $class)
 		{
 			if ($this->user_class_exists($class))
 			foreach ($this->classes[strtolower($class)]->properties as $property_name=>$property)
@@ -283,7 +293,8 @@ class OOEmulator extends Emulator
 	{
 		if (!$this->class_exists($classname))	
 			$this->spl_autoload_call($classname);
-		if (array_key_exists(strtolower($classname), $this->classes)) //user classes
+		// if ($this->user_class_exists($classname) or $this->user_class_exists($this->namespace($classname))) //user classes
+		if ($this->user_class_exists($classname)) //user classes
 			return $this->new_user_object($classname,$args);
 		elseif (class_exists($classname)) //core classes
 			return $this->new_core_object($classname,$args);

@@ -66,7 +66,7 @@ class Emulator
 	 */
 	protected $current_node,$current_statement_index;
 	protected $current_function,$current_file,$current_line;
-	
+	protected $current_namespace="";
 	/**
 	 * Number of statements executed so far
 	 * @var integer
@@ -342,8 +342,6 @@ class Emulator
 	 */
 	protected function &symbol_table($node,&$key,$create)
 	{
-		echo str_repeat("-",100),PHP_EOL;
-		var_dump($node);
 		if ($node===null)
 		{
 			$this->notice("Undefined variable (null node).");	
@@ -371,8 +369,8 @@ class Emulator
 			{
 				if ($create)
 				{
-					$this->variables[$node]=null;
-					$key=$node;
+					$key=$this->namespace($node);
+					$this->variables[$key]=null;
 					return $this->variables;
 				}
 				else
@@ -384,6 +382,7 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Scalar\Encapsed)
 		{
+			// $key=$this->namespace($this->name($node));
 			$key=$this->name($node);
 			if ($create)
 				$this->variables[$key]=null;
@@ -486,45 +485,54 @@ class Emulator
 		{
 			$res="";
 			foreach ($ast->parts as $part)
-			{
 				if (is_string($part))
 					$res.=$part;
 				else
 					$res.=$this->evaluate_expression($part);
-			}
 			return $res;
 		}
 		elseif ($ast instanceof Node\Scalar)
 			return $ast->value;
 		elseif ($ast instanceof Node\Param)
 			return $ast->name;
+		elseif ($ast instanceof Node\Stmt\Namespace_ 
+			or $ast instanceof Node\Name\FullyQualified)
+		{
+			if ($ast->name===null)
+				return "";
+			else
+				return $this->name($ast->name);
+			// $res="";
+			// foreach ($ast->name->parts as $p)
+			// 	$res.="\\".$p;
+			// return $res;
+		}
 		elseif ($ast instanceof Node\Name)
 		{
 			//TODO: where does this happen?
-			$res="";
+			$res=[];
 			foreach ($ast->parts as $part)
 			{
 				if (is_string($part))
-					$res.=$part;
+					$res[]=$part;
 				else
-					$res.=$this->evaluate_expression($part);
+					$res[]=$this->evaluate_expression($part);
 			}
-			return $res;
+			return implode("\\",$res);
 		}
 		elseif ($ast instanceof Node\Expr\Variable)
 			return $this->evaluate_expression($ast);
-		elseif ($ast instanceof Node\Stmt\Namespace_)
-		{
-			$res=[];
-			foreach ($ast->name->parts as $p)
-				$res[]=$p;
-			return implode("\\",$res);
-		}
 		else
 			$this->error("Can not determine name: ",$ast);
 	}
 
-	
+	function namespace($name)
+	{
+		if ($this->current_namespace)
+			return $this->current_namespace."\\".$name;
+		else
+			return $name;
+	}
 	/**
 	 * Runs a PHP file
 	 * Basically it sets up current file and other state variables, reads the file,
@@ -600,19 +608,43 @@ class Emulator
 	protected function get_declarations($node)
 	{
 		if (0);
+		elseif ($node instanceof Node\Stmt\Namespace_)
+		{
+			$backup=$this->current_namespace;
+			$this->current_namespace=$this->name($node);
+			$this->verbose("Extracting declarations of namespace '{$this->current_namespace}'...\n",2);
+			foreach ($node->stmts as $stmt)
+				$this->get_declarations($stmt);
+			if (!$backup)
+				$namespace_name="default";
+			else
+				$namespace_name="'{$backup}'";
+			$this->verbose("Restoring declaration namespace to {$namespace_name}...\n",2);
+			$this->current_namespace=$backup;
+
+		}
+		// elseif ($node instanceof Node\Stmt\Namespace_)
+		// {
+		// 	$this->verbose("Extracting namespace declarations...\n",3);
+		// 	foreach ($node->stmts as $stmt)
+		// 		$this->get_declarations($stmt);
+		// }
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
 			$name=$this->name($node->name);
+			// $this->functions[$this->namespace(strtolower($name))]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
 			$this->functions[strtolower($name)]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
 		}
 		elseif ($node instanceof Node\Stmt\Const_)
 		{
 			foreach ($node->consts as $const)
 			{
+				// if (isset($this->constants[$this->namespace($const->name)]))
 				if (isset($this->constants[$const->name]))
 					$this->notice("Constant {$node->name} already defined");
 				else
-					$this->constants[($const->name)]=$this->evaluate_expression($const->value);
+					// $this->constants[$this->namespace($const->name)]=$this->evaluate_expression($const->value);
+					$this->constants[$const->name]=$this->evaluate_expression($const->value);
 			}
 		}
 	}
@@ -702,6 +734,9 @@ class Emulator
 	 */
 	function __destruct()
 	{
+		unset ($this->variables['GLOBALS'],$this->variables['_SERVER']);
+		// var_dump($this->variables);
+		// var_dump($this->classes);
 		$this->verbose(sprintf("Memory usage: %.2fMB (%.2fMB)\n",memory_get_usage()/1024.0/1024.0,memory_get_peak_usage()/1024.0/1024.0));
 	}
 
