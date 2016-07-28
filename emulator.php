@@ -727,7 +727,14 @@ class Emulator
 	function __construct($init_environ=null)
 	{
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
+		$this->printer = new PhpParser\PrettyPrinter\Standard;
     	$this->init($init_environ);
+	}
+	function print_ast($ast)
+	{
+		if (!is_array($ast))
+			$ast=[$ast];
+		return $this->printer->prettyPrint($ast);
 	}
 	/**
 	 * Emulator destructor
