@@ -587,11 +587,11 @@ class Emulator
 		}
 		$this->original_dir=getcwd();
 		chdir(dirname($this->entry_file));
-		$file=basename($this->entry_file);
+		// $file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
 		set_error_handler(array($this,"error_handler"));
 		// set_exception_handler(array($this,"exception_handler")); //exception handlers can not return. they terminate the program.
-		$res=$this->run_file($file);
+		$res=$this->run_file($this->entry_file);
 		$this->shutdown();
 		// restore_exception_handler();
 		restore_error_handler();
