@@ -1,5 +1,6 @@
 <?php
 
+#TODO: isset returns false on null values. Replace with array_key_exists everywhere
 #major TODO: do not use function calls in emulator, instead have stacks of operations and have a central 
 #	function that loops over them and executes them. That way state can be saved and termination and other conditions are easy to control.
 #TODO: make symbol_table return the actual variable instead of superset, and handle unset separately. 
