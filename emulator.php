@@ -520,13 +520,17 @@ class Emulator
 			else
 				return $this->name($ast->name);
 		}
-		// elseif ($ast instanceof Node\Name\FullyQualified)
-		// {
-		// 	return "\\".implode("\\",$ast->parts);
-		// }
+		elseif ($ast instanceof Node\Name\FullyQualified)
+		{
+			return "".implode("\\",$ast->parts);
+		}
+		elseif ($ast instanceof Node\Name\Relative)
+		{
+			return "".$this->resolve_namespace_aliases(implode("\\",$ast->parts));
+		}
 		elseif ($ast instanceof Node\Name)
 		{
-			//TODO: where does this happen?
+			//compound name (of any kind), e.g variable, function, class
 			$res=[];
 			foreach ($ast->parts as $part)
 			{
@@ -543,22 +547,14 @@ class Emulator
 			$this->error("Can not determine name: ",$ast);
 	}
 
-	
-	/**
-	 * Here's how namespaces work
-	 * For classes, it must either be FQN or relative name that directly matches
-	 * For constants and functions, it must be FQN or relative name that directly matches,
-	 * and if failed, checked in global scope.
-	 * Variables are not affected by namespace. They are always global.
-	 */
 	/**
 	 * Returns the real namespace name associated with an aliased namespace name
-	 * @param  string $name symbol name
+	 * @param  string $name name, can be either simple or relative namespaced name
 	 * @return array string
 	 */
-	function real_namespace($name)
+	function resolve_namespace_aliases($name)
 	{
-		// if (!$this->is_namespaced($name)) return $name; //a single part can be an alias!
+		$this->verbose("Resolving relative name '{$name}'...\n",6);
 		$parts=explode("\\",$name);
 		if (!isset($this->active_namespaces[strtolower($parts[0])])) //no alias
 			return $name;
@@ -566,10 +562,27 @@ class Emulator
 		$parts[0]=$this->active_namespaces[strtolower($parts[0])];
 		return implode("\\",$parts);
 	}
-	// function is_namespaced($name)
-	// {
-	// 	return strpos($name,"\\")!==false;
-	// }
+
+	/**
+	 * Namespaces quirk:
+	 * There are 3 types of names, normal, Fully Qualified (starting with \) and Relative (possibly having \).
+	 * The latter 2 are automatically resolved by name() function.
+	 * Only the first can be used in definitions, but all three can be used in referencing a symbol (class, function, const)
+	 * However, the important thing is that a normal name can be a relative name.
+	 * For example:
+	 * namespace X1\X2 {
+	 * 	class X{};
+	 * }
+	 * namespace {
+	 * 	use X1\X2\X;
+	 * 	$o=new X; 
+	 * }
+	 *
+	 * X in the last line is a normal name, but is a relative namespace and needs to be resolved.
+	 * For classes, call to resolve_namespace_aliases is forced.
+	 * For constants and functions, first current_namespace+name is checked, then name itself (name is always resolved).
+	 * For classes, only name is checked.
+	 */
 	/**
 	 * Returns a name in the current namespace
 	 * @param  string $name symbol
@@ -578,7 +591,7 @@ class Emulator
 	function current_namespace($name)
 	{
 		if ($this->current_namespace)
-			return $this->current_namespace."\\".$name;
+			return "".$this->current_namespace."\\".$name;
 		else
 			return $name;
 	}
@@ -693,7 +706,6 @@ class Emulator
 		{
 			$name=$this->name($node->name);
 			$index=strtolower($this->current_namespace($name));
-			// $this->functions[$this->namespace(strtolower($name))]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
 			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[],"namespace"=>$this->current_namespace); 
 		}
 

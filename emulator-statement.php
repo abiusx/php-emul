@@ -46,17 +46,6 @@ trait EmulatorStatement
 			foreach ($node->exprs as $expr)
 				$this->output($this->evaluate_expression($expr));
 			// $this->output_array($this->evaluate_expression_array($node->exprs));
-		elseif ($node instanceof Node\Stmt\Const_) //constants are not declared ahead of time, they are inline
-		{
-			foreach ($node->consts as $const)
-			{
-				$index=$this->current_namespace($const->name);
-				if (array_key_exists($index,$this->constants))
-					$this->notice("Constant {$index} already defined");
-				else
-					$this->constants[$index]=$this->evaluate_expression($const->value);
-			}
-		}
 		elseif ($node instanceof Node\Stmt\Function_)
 			return;
 		elseif ($node instanceof Node\Stmt\If_)
@@ -298,6 +287,19 @@ trait EmulatorStatement
 			return $res;
 
 		}
+		elseif ($node instanceof Node\Stmt\Const_) //constants are not declared ahead of time, they are inline
+		{
+			#constant definition:
+			foreach ($node->consts as $const)
+			{
+				$index=$this->current_namespace($const->name);
+				if (array_key_exists($index,$this->constants))
+					$this->notice("Constant {$index} already defined");
+				else
+					$this->constants[$index]=$this->evaluate_expression($const->value);
+			}
+		}
+
 		elseif ($node instanceof Node\Stmt\Use_)
 		;
 		elseif ($node instanceof Node\Expr)

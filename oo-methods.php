@@ -229,6 +229,8 @@ trait OOEmulatorMethods {
 		if ($this->verbose)
 			$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$flag=false;
+		// var_dump($class_name);
+		// var_dump($this->ancestry($class_name));
 		foreach ($this->ancestry($class_name) as $class)
 		{
 			if ($this->user_method_exists($class,$method_name))

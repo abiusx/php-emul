@@ -93,7 +93,6 @@ class OOEmulator extends Emulator
 		$this->state['classes']=
 		$this->state['current_method']=
 		$this->state['current_trait']=
-		$this->state['current_namespace']=
 		$this->state['current_this']=
 		$this->state['current_self']=
 		$this->state['current_class']=
@@ -107,7 +106,6 @@ class OOEmulator extends Emulator
 	 */
 	public $classes=[];
 	protected $current_method,$current_trait;
-	protected $current_namespace;
 	/**
 	 * Holds $this and self object and class pointers, as well as late static binding
 	 * @var null
@@ -310,20 +308,6 @@ class OOEmulator extends Emulator
 		$classname=$this->real_class($classname); //apparently 'new self' is ok!
 		if (!$this->class_exists($classname))	
 			$this->spl_autoload_call($classname);
-		// if ($this->real_namespace($classname)!=$classname) //namespace, fully qualified or relative, no fallback
-		// {
-		// 	if ($this->user_class_exists($this->real_namespace($classname))) //user classes
-		// 		return $this->new_user_object($classname,$args);
-		// 	elseif (class_exists($this->real_namespace($classname))) //core classes
-		// 		return $this->new_core_object($classname,$args);
-		// }
-		// else //classname in current namespace
-		// {
-		// 	if ($this->user_class_exists($this->current_namespace($classname))) //user classes
-		// 		return $this->new_user_object($classname,$args);
-		// 	elseif (class_exists($this->current_namespace($classname))) //core classes
-		// 		return $this->new_core_object($classname,$args);
-		// }
 		if ($this->user_class_exists($classname)) //user classes
 			return $this->new_user_object($classname,$args);
 		elseif (class_exists($classname)) //core classes
@@ -461,12 +445,8 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
 			$classname=$this->classes[strtolower($this->current_class)]->parent;	
-		if ($this->real_namespace($classname)!=$classname) //this can apply to simple, non-namedspaced names.
-			return $this->real_namespace($classname);
-		elseif (strpos($classname,"\\")===false) //only append current namespace, if no namespace in name
-			return $this->current_namespace($classname);
-		else
-			return $classname;
+
+		return $this->resolve_namespace_aliases($classname);
 	}
 	/**
 	 * Returns all parents, including self, of a class, ordered from youngest
