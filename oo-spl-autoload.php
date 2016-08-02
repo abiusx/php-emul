@@ -10,7 +10,7 @@ trait OOEmulator_spl_autoload
 		if ($callback===null)
 			$callback="spl_autoload"; //default autoloader of php
 		if ($prepend)
-			array_unshift($this->autoloaders, $prepend);
+			array_unshift($this->autoloaders, $callback);
 		else
 			$this->autoloaders[]=$callback;
 		return true;
