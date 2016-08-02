@@ -554,7 +554,7 @@ class Emulator
 	 */
 	function real_namespace($name)
 	{
-		if (!$this->is_namespaced($name)) return $name;
+		// if (!$this->is_namespaced($name)) return $name; //a single part can be an alias!
 		$parts=explode("\\",$name);
 		if (!isset($this->active_namespaces[strtolower($parts[0])])) //no alias
 			return $name;
@@ -562,10 +562,10 @@ class Emulator
 		$parts[0]=$this->active_namespaces[strtolower($parts[0])];
 		return implode("\\",$parts);
 	}
-	function is_namespaced($name)
-	{
-		return strpos($name,"\\")!==false;
-	}
+	// function is_namespaced($name)
+	// {
+	// 	return strpos($name,"\\")!==false;
+	// }
 	/**
 	 * Returns a name in the current namespace
 	 * @param  string $name symbol

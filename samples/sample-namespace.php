@@ -21,6 +21,8 @@ namespace {
 }
 namespace X1\X2 {
 	function fx() {return 1;}
+	class Something {public $x=333;}
+	const dix=12324;
 }
 namespace X1 {
 	const constX1=9;
@@ -30,6 +32,13 @@ namespace X1\X2\X3\X4\X5\X6\X7\X8\X9\X10\X11\X12\X13\X14\X15\X16\X17\X18\X19
 	var_dump(\X1\constX1);
 	use X1 as Z;
 	use X1\X2\X3, X1\X2\X3\X4;
+	use X1\X2\something;
+	use X1\X2\dix;
+	use X1\X2\fx;
+	// var_dump(dix); //error, but not in emulator #TODO
+	// var_dump(fx()); //error, but not in emulator
+	$t=new something;
+	var_dump($t->x);
 	// use X1\X2\X3\x4\x5 as z; //error
 	$c=0;
 	for ($i=0;$i<10;++$i)

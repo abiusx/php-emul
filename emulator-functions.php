@@ -274,7 +274,7 @@ trait EmulatorFunctions
 	public function call_function($name,$args)
 	{
 		$this->stash_ob();
-		if ($this->is_namespaced($name)) //namespaced
+		if ($this->real_namespace($name)!=$name) //namespaced
 		{
 			// echo "current_namespace:";var_dump($this->current_namespace);
 			// echo "real_namespace:";var_dump($this->real_namespace($name));

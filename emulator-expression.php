@@ -291,7 +291,7 @@ trait EmulatorExpression {
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
 			$name=$this->name($node->name);
-			if ($this->is_namespaced($name))
+			if ($this->real_namespace($name)!=$name)
 				$name=$this->real_namespace($name);
 			else //first check if its in current namespace, but only if not qualified
 				if (array_key_exists($this->current_namespace($name), $this->constants))
