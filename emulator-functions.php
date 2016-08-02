@@ -159,8 +159,6 @@ trait EmulatorFunctions
 		$this->verbose("Running {$name}() with ".count($args)." args...".PHP_EOL,2);
 		
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
-		echo "function ns:";
-		var_dump($this->functions[strtolower($name)]->namespace);
 		$res=$this->run_function($this->functions[strtolower($name)],$args,
 			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name,"line"=>$this->current_line,
 				"namespace"=>$this->functions[strtolower($name)]->namespace], //wrappings
