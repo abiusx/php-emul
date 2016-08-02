@@ -119,10 +119,10 @@ class OOEmulator extends Emulator
 			$classtype=null;
 			if (isset($node->type))
 				$classtype=$node->type;
-			$classname=$this->name($node->name);
+			$classname=$this->current_namespace($this->name($node->name));
 			$type=strtolower(substr(explode("\\",get_class($node))[3],0,-1)); #intertface, class, trait
 			// $class_index=strtolower($this->namespace($classname));
-			$class_index=strtolower($this->current_namespace($classname));
+			$class_index=strtolower($classname);
 			$this->classes[$class_index]=new stdClass;
 			$class=&$this->classes[$class_index];
 
@@ -292,6 +292,7 @@ class OOEmulator extends Emulator
 	 */
 	protected function new_object($classname,array $args)
 	{
+		$classname=$this->real_class($classname); //apparently 'new self' is ok!
 		if (!$this->class_exists($classname))	
 			$this->spl_autoload_call($classname);
 		if ($this->is_namespaced($classname)) //namespace, fully qualified or relative, no fallback
@@ -441,7 +442,6 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
 			$classname=$this->classes[strtolower($this->current_class)]->parent;	
-		var_dump($classname);
 		if ($this->is_namespaced($classname))
 			return $this->real_namespace($classname);
 		else
@@ -563,10 +563,7 @@ class OOEmulator extends Emulator
 			$classname=$this->name($node->class);
 			if ($classname instanceof EmulatorObject) //support for $object::static_method
 				$classname=$classname->classname;
-			echo "_____\n";
-			var_dump($classname);
 			$classname=$this->real_class($classname);
-			var_dump($classname);
 			$property_name=$this->name($node->name);
 			if ($this->ancestry($classname))
 			{
