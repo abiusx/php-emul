@@ -599,8 +599,11 @@ class Emulator
 		}
 		$this->current_file=$realfile;
 		$tfolder=dirname($this->current_file)."/";
-		if (!isset($this->folder) or strlen($this->folder>$tfolder))
-			$this->folder=$tfolder;
+		if (strlen($this->folder)>strlen($tfolder))
+			if (substr($this->folder,0,strlen($tfolder))===$tfolder)
+				$this->folder=$tfolder;
+			else
+				$this->folder=dirname($tfolder);
 
 		//restarting namespace
 		$this->current_namespace="";
@@ -635,6 +638,7 @@ class Emulator
 			return false;
 		}
 		$this->original_dir=getcwd();
+		$this->folder=dirname($this->entry_file);
 		chdir(dirname($this->entry_file));
 		// $file=basename($this->entry_file);
 		ini_set("memory_limit",-1);
