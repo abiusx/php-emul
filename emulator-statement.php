@@ -201,21 +201,19 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\Throw_)
 		{
-			if ($this->try>0)
-				throw $this->evaluate_expression($node->expr);
-			else
-				$this->exception_handler($this->evaluate_expression($node->expr));
-				// $this->error("Throw that is not catched");
-
+			$this->throw($this->evaluate_expression($node->expr));
 		}
 		elseif ($node instanceof Node\Stmt\TryCatch)
 		{
 			$this->try++;
 			try {
+				$this->verbose("Starting a try block (depth:{$this->try})...\n",3);
 				$this->run_code($node->stmts);
+				$this->verbose("Ending a try block without error (depth:{$this->try})...\n",3);
 			}
 			catch (Exception $e)
 			{
+				$this->verbose("Caught an exception of type '".get_class($e)."'!\n",3);
 				$this->try--; //no longer in the try
 				foreach ($node->catches as $catch)
 				{
@@ -230,16 +228,9 @@ trait EmulatorStatement
 				}
 				$this->try++; //balance off with the one below
 			}
+			#TODO: handle finally
 			$this->try--;
 		}
-		// elseif ($node instanceof Node\Expr\Exit_)
-		// {
-		// 	$res=$this->evaluate_expression($node->expr);
-		// 	if (!is_numeric($res))	
-		// 		$this->output($res);
-		// 	$this->terminated=true;
-		// 	return $res;
-		// }
 		elseif ($node instanceof Node\Stmt\Static_)
 		{
 			if (end($this->trace)->type==="" and  isset($this->functions[strtolower(end($this->trace)->function)])) //statc inside a function

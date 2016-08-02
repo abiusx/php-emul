@@ -554,7 +554,7 @@ class Emulator
 	 */
 	function resolve_namespace_aliases($name)
 	{
-		$this->verbose("Resolving relative name '{$name}'...\n",6);
+		$this->verbose("Resolving relative name '{$name}'...\n",5);
 		$parts=explode("\\",$name);
 		if (!isset($this->active_namespaces[strtolower($parts[0])])) //no alias
 			return $name;
@@ -740,11 +740,11 @@ class Emulator
 			}
 			catch (Exception $e)
 			{
-				$this->exception_handler($e);
+				$this->throw($e);
 			}
 			catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
 			{
-				$this->exception_handler($e);
+				$this->throw($e);
 			}			
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;

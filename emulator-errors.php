@@ -4,6 +4,19 @@ use PhpParser\Node;
 trait EmulatorErrors
 {
 	/**
+	 * The emulator throw.
+	 * If a try/catch is active, will throw, otherwise will use exception handler
+	 * @param  Exception/Error $e 
+	 */
+	function throw($e)
+	{
+		$this->verbose("Throwing (try depth: {$this->try})...\n",4);
+		if ($this->try>0)
+			throw $e;
+		else
+			$this->exception_handler(e);
+	}
+	/**
 	 * The depth of error suppression
 	 * @var integer
 	 */
@@ -31,6 +44,7 @@ trait EmulatorErrors
 	 */
 	public function exception_handler($e)
 	{
+		var_dump($this->try);
 		if (count($this->exception_handlers))
 		{
 			$this->call_function(end($this->exception_handlers),[$e]);
