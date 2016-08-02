@@ -409,8 +409,9 @@ trait EmulatorExpression {
 				}
 			array_push($this->trace, (object)array("type"=>"","function"=>$name,"file"=>$this->current_file,"line"=>$this->current_line,
 				"args"=>[$realfile]));
-			$this->run_file($realfile);
+			$r=$this->run_file($realfile);
 			array_pop($this->trace);
+			return $r;
 		}
 		elseif ($node instanceof Node\Expr\Ternary)
 		{
