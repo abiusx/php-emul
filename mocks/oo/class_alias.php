@@ -1,7 +1,7 @@
 <?php
 function class_alias_mock($emul,$original,$alias,$autoload=true)
 {
-	if ($autoload) $emul->autoload($name);
+	if ($autoload) $emul->autoload($original);
 	if (class_exists($original))
 			return class_alias($original,$alias,$autoload);
 	if ($emul->user_classlike_exists($alias))
