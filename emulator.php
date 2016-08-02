@@ -26,6 +26,12 @@ class Emulator
 	use EmulatorExpression;
 	use EmulatorStatement;
 	/**
+	 * An array that holds all properties that constitute
+	 * emulation state as keys.
+	 * @var array
+	 */
+	public $state=[];
+	/**
 	 * Configuration: inifite loop limit
 	 * @var integer
 	 */
@@ -187,7 +193,13 @@ class Emulator
 	 * @var array
 	 */
 	public $shutdown_functions=[]; 
-
+	/**
+	 * Retains a list of active namespaces via "use" PHP statement
+	 * does not include the namespace we are in
+	 * do not use directly, use active_namespaces() instead.
+	 * @var array
+	 */
+	public $active_namespaces=[];
 	/**
 	 * Output status messages of the emulator
 	 * @param  string  $msg       
@@ -533,13 +545,7 @@ class Emulator
 			$this->error("Can not determine name: ",$ast);
 	}
 
-	/**
-	 * Retains a list of active namespaces via "use" PHP statement
-	 * does not include the namespace we are in
-	 * do not use directly, use active_namespaces() instead.
-	 * @var array
-	 */
-	public $active_namespaces=[];
+	
 	/**
 	 * Here's how namespaces work
 	 * For classes, it must either be FQN or relative name that directly matches
@@ -757,6 +763,13 @@ class Emulator
 	 */
 	function __construct($init_environ=null)
 	{
+		$this->state[]=array_flip(['variables','constants','included_files','output_buffer','functions'
+		,'eval_depth','trace','output','break','continue'
+		,'variable_stack'
+		,'try','loop_depth','return','return_value'
+		,'current_namespace','active_namespace'
+		,'shutdown_functions'
+		]);
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
 		$this->printer = new PhpParser\PrettyPrinter\Standard;
     	$this->init($init_environ);
