@@ -1,12 +1,10 @@
 <?php
 
-#TODO: update current_namespace to refer to the namespace when a function call happens
+#FIXME: does active_namespaces also need to be updated with current_namespace? create a test and figure out (since actives are declarative)
 
 #TODO: isset returns false on null values. Replace with array_key_exists everywhere
-#major TODO: do not use function calls in emulator, instead have stacks of operations and have a central 
+#major TODO: do not use recursive function calls in emulator, instead have stacks of operations and have a central 
 #	function that loops over them and executes them. That way state can be saved and termination and other conditions are easy to control.
-#TODO: make symbol_table return the actual variable instead of superset, and handle unset separately. 
-#	This is making things too complicated. (i.e, replace symbol_table with variable_get, variable_set and variable_reference functions)
 
 require_once __DIR__."/PHP-Parser/lib/bootstrap.php";
 use PhpParser\Node;
