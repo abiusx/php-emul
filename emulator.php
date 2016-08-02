@@ -676,6 +676,21 @@ class Emulator
 			$this->current_namespace="";
 
 		}
+		elseif ($node instanceof Node\Stmt\Use_)
+		{
+			if ($node->type!==1)
+				#TODO:
+				$this->error("'use function/const' is not yet supported. Only 'use namespace' supported so far.");
+			foreach ($node->uses as $use)
+			{
+				$alias=$use->alias;
+				$name=$this->name($use->name);
+				$this->verbose("Aliasing namespace '{$name}' to '{$alias}'.\n",3);
+				if (array_key_exists(strtolower($alias),$this->active_namespaces))
+					$this->error("Cannot use {$name} as {$alias} because the name is already in use");
+				$this->active_namespaces[strtolower($alias)]=$name;
+			}
+		}		
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
 			$name=$this->name($node->name);
@@ -767,7 +782,7 @@ class Emulator
 		,'eval_depth','trace','output','break','continue'
 		,'variable_stack'
 		,'try','loop_depth','return','return_value'
-		,'current_namespace','active_namespace'
+		,'current_namespace','active_namespaces'
 		,'shutdown_functions'
 		]);
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);

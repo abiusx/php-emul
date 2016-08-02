@@ -299,19 +299,7 @@ trait EmulatorStatement
 
 		}
 		elseif ($node instanceof Node\Stmt\Use_)
-		{
-			if ($node->type!==1)
-				#TODO:
-				$this->error("'use function/const' is not yet supported. Only 'use namespace' supported so far.");
-			foreach ($node->uses as $use)
-			{
-				$alias=$use->alias;
-				$name=$this->name($use->name);
-				if (array_key_exists(strtolower($alias),$this->active_namespaces))
-					$this->error("Cannot use {$name} as {$alias} because the name is already in use");
-				$this->active_namespaces[strtolower($alias)]=$name;
-			}
-		}
+		;
 		elseif ($node instanceof Node\Expr)
 			$this->evaluate_expression($node);
 		else

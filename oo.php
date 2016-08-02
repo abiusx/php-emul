@@ -140,6 +140,7 @@ class OOEmulator extends Emulator
 			if (isset($node->extends) and $node->extends)
 			{
 				$extends=$this->name($node->extends);
+				$extends=$this->real_class($extends);
 				if (!$this->class_exists($extends))	
 				{
 					var_dump($extends);	
