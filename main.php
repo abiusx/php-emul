@@ -15,7 +15,7 @@ if (isset($argc))// and realpath($argv[0])==__FILE__)
 	$options=getopt("f:v:o",['strict','output']);
 	if (!isset($options['f']))
 		die($usage);
-	$_SERVER['REQUEST_URI']="/{$options['f']}";
+	// $_SERVER['REQUEST_URI']="/{$options['f']}";
 	ini_set("memory_limit",-1);
 	require_once "oo.php";
 	$emul=new OOEmulator(); 

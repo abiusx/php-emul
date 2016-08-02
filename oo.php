@@ -88,6 +88,16 @@ class OOEmulator extends Emulator
 	use OOEmulator_spl_autoload;
 	function __construct($init_environ=null)
 	{
+
+		$this->state['autoloaders']=
+		$this->state['classes']=
+		$this->state['current_method']=
+		$this->state['current_trait']=
+		$this->state['current_namespace']=
+		$this->state['current_this']=
+		$this->state['current_self']=
+		$this->state['current_class']=
+		1; //emulation state elements
 		parent::__construct($init_environ);
 		EmulatorObject::$emul=$this; //HACK for allowing destructor calls
 	}
@@ -130,6 +140,11 @@ class OOEmulator extends Emulator
 			if (isset($node->extends) and $node->extends)
 			{
 				$extends=$this->name($node->extends);
+				if (!$this->class_exists($extends))	
+				{
+					var_dump($extends);	
+					$this->spl_autoload_call($extends);
+				}
 				if (!$this->class_exists($extends))
 					$this->error("Class '{$extends}' not found");
 				if ($this->user_class_exists($extends))
