@@ -294,8 +294,8 @@ trait EmulatorExpression {
 			if ($this->is_namespaced($name))
 				$name=$this->real_namespace($name);
 			else //first check if its in current namespace, but only if not qualified
-				if (array_key_exists($this->namespace($name), $this->constants))
-					return $this->constants[$this->namespace($name)];
+				if (array_key_exists($this->current_namespace($name), $this->constants))
+					return $this->constants[$this->current_namespace($name)];
 			//fallback or qualified name
 			if (array_key_exists($name, $this->constants))
 				return $this->constants[$name];

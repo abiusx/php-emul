@@ -122,7 +122,7 @@ class OOEmulator extends Emulator
 			$classname=$this->name($node->name);
 			$type=strtolower(substr(explode("\\",get_class($node))[3],0,-1)); #intertface, class, trait
 			// $class_index=strtolower($this->namespace($classname));
-			$class_index=strtolower($this->namespace($classname));
+			$class_index=strtolower($this->current_namespace($classname));
 			$this->classes[$class_index]=new stdClass;
 			$class=&$this->classes[$class_index];
 
@@ -147,6 +147,7 @@ class OOEmulator extends Emulator
 			$class->property_visibilities=[];
 			$class->static=[];
 			$class->parent=$extends;
+			$class->namespace=$this->current_namespace;
 			foreach ($node->stmts as $part)
 			{
 				if ($part instanceof Node\Stmt\Property)
@@ -228,8 +229,8 @@ class OOEmulator extends Emulator
 		
 		// if (!$this->user_class_exists($class_index) and $this->user_class_exists($this->namespace($class_index)))
 			// $class_index=strtolower($this->namespace($class_index));
-		if (!$this->user_class_exists($class_index))
-			$class_index=strtolower($class_index);
+		// if (!$this->user_class_exists($class_index))
+		// 	$class_index=strtolower($class_index);
 
 		$obj=new EmulatorObject($this->classes[$class_index]->name,$this->classes[$class_index]->properties,$this->classes[$class_index]->property_visibilities);
 		$constructor=null;
@@ -293,11 +294,22 @@ class OOEmulator extends Emulator
 	{
 		if (!$this->class_exists($classname))	
 			$this->spl_autoload_call($classname);
-		// if ($this->user_class_exists($classname) or $this->user_class_exists($this->namespace($classname))) //user classes
-		if ($this->user_class_exists($this->real_namespace($classname))) //user classes
-			return $this->new_user_object($classname,$args);
-		elseif (class_exists($this->real_namespace($classname))) //core classes
-			return $this->new_core_object($classname,$args);
+		if ($this->is_namespaced($classname)) //namespace, fully qualified or relative, no fallback
+		{
+			if ($this->user_class_exists($this->real_namespace($classname))) //user classes
+				return $this->new_user_object($classname,$args);
+			elseif (class_exists($this->real_namespace($classname))) //core classes
+				return $this->new_core_object($classname,$args);
+		}
+		else //classname in current namespace
+		{
+			if ($this->user_class_exists($this->current_namespace($classname))) //user classes
+				return $this->new_user_object($classname,$args);
+			elseif (class_exists($this->current_namespace($classname))) //core classes
+				return $this->new_core_object($classname,$args);
+		}
+
+
 		$this->error("Class '{$classname}' not found ");
 	}
 	/**
@@ -429,8 +441,11 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
 			$classname=$this->classes[strtolower($this->current_class)]->parent;	
-
-		return $classname;
+		var_dump($classname);
+		if ($this->is_namespaced($classname))
+			return $this->real_namespace($classname);
+		else
+			return $this->current_namespace($classname);
 	}
 	/**
 	 * Returns all parents, including self, of a class, ordered from youngest
@@ -548,6 +563,10 @@ class OOEmulator extends Emulator
 			$classname=$this->name($node->class);
 			if ($classname instanceof EmulatorObject) //support for $object::static_method
 				$classname=$classname->classname;
+			echo "_____\n";
+			var_dump($classname);
+			$classname=$this->real_class($classname);
+			var_dump($classname);
 			$property_name=$this->name($node->name);
 			if ($this->ancestry($classname))
 			{

@@ -229,6 +229,8 @@ trait OOEmulatorMethods {
 		if ($this->verbose)
 			$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$flag=false;
+		var_dump($class_name);
+		var_dump($this->ancestry($class_name));
 		foreach ($this->ancestry($class_name) as $class)
 		{
 			if ($this->user_method_exists($class,$method_name))
@@ -239,7 +241,8 @@ trait OOEmulatorMethods {
 					$word="ancestor";
 				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
 				$trace_args=array("type"=>"::","function"=>$method_name,"class"=>$class);
-				$wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file,"line"=>$this->current_line];
+				$wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file,
+					"line"=>$this->current_line,"namespace"=>$this->classes[strtolower($class)]->namespace];
 				if ($object!==null)
 				{
 					$trace_args['object']=$object; //do we need ref here? I don't think so

@@ -50,8 +50,7 @@ trait EmulatorStatement
 		{
 			foreach ($node->consts as $const)
 			{
-				// if (isset($this->constants[$this->namespace($const->name)]))
-				$index=$this->namespace($const->name);
+				$index=$this->current_namespace($const->name);
 				if (array_key_exists($index,$this->constants))
 					$this->notice("Constant {$index} already defined");
 				else

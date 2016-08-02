@@ -1,5 +1,7 @@
 <?php
 
+#TODO: update current_namespace to refer to the namespace when a function call happens
+
 #TODO: isset returns false on null values. Replace with array_key_exists everywhere
 #major TODO: do not use function calls in emulator, instead have stacks of operations and have a central 
 #	function that loops over them and executes them. That way state can be saved and termination and other conditions are easy to control.
@@ -569,7 +571,7 @@ class Emulator
 	 * @param  string $name symbol
 	 * @return string symbol in namespace
 	 */
-	function namespace($name)
+	function current_namespace($name)
 	{
 		if ($this->current_namespace)
 			return $this->current_namespace."\\".$name;
@@ -667,9 +669,9 @@ class Emulator
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
 			$name=$this->name($node->name);
-			$index=strtolower($this->namespace($name));
+			$index=strtolower($this->current_namespace($name));
 			// $this->functions[$this->namespace(strtolower($name))]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
-			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
+			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[],"namespace"=>$this->current_namespace); 
 		}
 
 	}

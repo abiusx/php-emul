@@ -159,8 +159,11 @@ trait EmulatorFunctions
 		$this->verbose("Running {$name}() with ".count($args)." args...".PHP_EOL,2);
 		
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
+		echo "function ns:";
+		var_dump($this->functions[strtolower($name)]->namespace);
 		$res=$this->run_function($this->functions[strtolower($name)],$args,
-			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name,"line"=>$this->current_line], //wrappings
+			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name,"line"=>$this->current_line,
+				"namespace"=>$this->functions[strtolower($name)]->namespace], //wrappings
 			["function"=>$name] //trace
 			);
 
@@ -285,12 +288,12 @@ trait EmulatorFunctions
 		}
 		else //non-namespaced, try fallback
 		{
-			if ($this->user_function_exists($this->namespace($name))) //in this namespace
-				$ret=$this->run_user_function($this->namespace($name),$args); 
+			if ($this->user_function_exists($this->current_namespace($name))) //in this namespace
+				$ret=$this->run_user_function($this->current_namespace($name),$args); 
 			elseif ($this->user_function_exists($name)) //in global namespace
 				$ret=$this->run_user_function($name,$args); 
-			elseif (function_exists($this->namespace($name))) //in this namespace core function (shouldn't really happen)
-				$ret=$this->run_core_function($this->namespace($name),$args);
+			elseif (function_exists($this->current_namespace($name))) //in this namespace core function (shouldn't really happen)
+				$ret=$this->run_core_function($this->current_namespace($name),$args);
 			elseif (function_exists($name)) //global core function
 				$ret=$this->run_core_function($name,$args);
 			else
