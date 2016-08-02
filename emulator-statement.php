@@ -271,7 +271,7 @@ trait EmulatorStatement
 			//so all of this files is namespace statement(s)
 
 			$this->current_namespace=$this->name($node);
-			$this->active_namespaces=[];
+			$this->current_active_namespaces=[];
 
 			$this->verbose("Changing namespace to '{$this->current_namespace}'...\n",2);
 			$res=$this->run_code($node->stmts);

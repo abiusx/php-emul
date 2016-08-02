@@ -1,7 +1,5 @@
 <?php
 
-#FIXME: does active_namespaces also need to be updated with current_namespace? create a test and figure out (since actives are declarative)
-
 #TODO: isset returns false on null values. Replace with array_key_exists everywhere
 #major TODO: do not use recursive function calls in emulator, instead have stacks of operations and have a central 
 #	function that loops over them and executes them. That way state can be saved and termination and other conditions are easy to control.
@@ -197,7 +195,7 @@ class Emulator
 	 * do not use directly, use active_namespaces() instead.
 	 * @var array
 	 */
-	public $active_namespaces=[];
+	public $current_active_namespaces=[];
 	/**
 	 * Output status messages of the emulator
 	 * @param  string  $msg       
@@ -543,6 +541,8 @@ class Emulator
 		}
 		elseif ($ast instanceof Node\Expr\Variable)
 			return $this->evaluate_expression($ast);
+		elseif ($ast instanceof Node\Expr) //name can be any expr..., or can it?
+			return $this->evaluate_expression($ast);
 		else
 			$this->error("Can not determine name: ",$ast);
 	}
@@ -556,10 +556,9 @@ class Emulator
 	{
 		$this->verbose("Resolving relative name '{$name}'...\n",5);
 		$parts=explode("\\",$name);
-		if (!isset($this->active_namespaces[strtolower($parts[0])])) //no alias
+		if (!isset($this->current_active_namespaces[strtolower($parts[0])])) //no alias
 			return $name;
-
-		$parts[0]=$this->active_namespaces[strtolower($parts[0])];
+		$parts[0]=$this->current_active_namespaces[strtolower($parts[0])];
 		return implode("\\",$parts);
 	}
 
@@ -624,7 +623,7 @@ class Emulator
 
 		//restarting namespace
 		$this->current_namespace="";
-		$this->active_namespaces=[];
+		$this->current_active_namespaces=[];
 
 		$this->verbose(sprintf("Now running %s...\n",substr($this->current_file,strlen($this->folder)) ));
 		
@@ -697,16 +696,17 @@ class Emulator
 				$alias=$use->alias;
 				$name=$this->name($use->name);
 				$this->verbose("Aliasing namespace '{$name}' to '{$alias}'.\n",3);
-				if (array_key_exists(strtolower($alias),$this->active_namespaces))
+				if (array_key_exists(strtolower($alias),$this->current_active_namespaces))
 					$this->error("Cannot use {$name} as {$alias} because the name is already in use");
-				$this->active_namespaces[strtolower($alias)]=$name;
+				$this->current_active_namespaces[strtolower($alias)]=$name;
 			}
 		}		
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
 			$name=$this->name($node->name);
 			$index=strtolower($this->current_namespace($name));
-			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[],"namespace"=>$this->current_namespace); 
+			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,
+				"file"=>$this->current_file,"statics"=>[],"namespace"=>$this->current_namespace,"active_namespaces"=>$this->current_active_namespaces); 
 		}
 
 	}

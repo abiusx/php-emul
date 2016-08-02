@@ -140,10 +140,7 @@ class OOEmulator extends Emulator
 				$extends=$this->name($node->extends);
 				$extends=$this->real_class($extends);
 				if (!$this->class_exists($extends))	
-				{
-					var_dump($extends);	
 					$this->spl_autoload_call($extends);
-				}
 				if (!$this->class_exists($extends))
 					$this->error("Class '{$extends}' not found");
 				if ($this->user_class_exists($extends))
@@ -162,6 +159,7 @@ class OOEmulator extends Emulator
 			$class->static=[];
 			$class->parent=$extends;
 			$class->namespace=$this->current_namespace;
+			$class->active_namespaces=$this->current_active_namespaces;
 			foreach ($node->stmts as $part)
 			{
 				if ($part instanceof Node\Stmt\Property)
@@ -445,7 +443,6 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
 			$classname=$this->classes[strtolower($this->current_class)]->parent;	
-
 		return $this->resolve_namespace_aliases($classname);
 	}
 	/**

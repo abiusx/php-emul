@@ -241,8 +241,9 @@ trait OOEmulatorMethods {
 					$word="ancestor";
 				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
 				$trace_args=array("type"=>"::","function"=>$method_name,"class"=>$class);
-				$wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file,
-					"line"=>$this->current_line,"namespace"=>$this->classes[strtolower($class)]->namespace];
+				$wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file
+					,"line"=>$this->current_line,"namespace"=>$this->classes[strtolower($class)]->namespace
+					,"active_namespaces"=>$this->classes[strtolower($class)]->active_namespaces];
 				if ($object!==null)
 				{
 					$trace_args['object']=$object; //do we need ref here? I don't think so
