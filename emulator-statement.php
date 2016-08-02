@@ -46,8 +46,18 @@ trait EmulatorStatement
 			foreach ($node->exprs as $expr)
 				$this->output($this->evaluate_expression($expr));
 			// $this->output_array($this->evaluate_expression_array($node->exprs));
-		elseif ($node instanceof Node\Stmt\Const_)
-			return;
+		elseif ($node instanceof Node\Stmt\Const_) //constants are not declared ahead of time, they are inline
+		{
+			foreach ($node->consts as $const)
+			{
+				// if (isset($this->constants[$this->namespace($const->name)]))
+				$index=$this->namespace($const->name);
+				if (array_key_exists($index,$this->constants))
+					$this->notice("Constant {$index} already defined");
+				else
+					$this->constants[$index]=$this->evaluate_expression($const->value);
+			}
+		}
 		elseif ($node instanceof Node\Stmt\Function_)
 			return;
 		elseif ($node instanceof Node\Stmt\If_)
@@ -76,7 +86,6 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\Return_)
 		{
-			// print_r($node);
 			if ($node->expr)
 				$this->return_value=$this->evaluate_expression($node->expr);
 			else
@@ -279,17 +288,30 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\Namespace_)
 		{
-			$backup=$this->current_namespace;
+			//namespaces are not nested, and if used, there is no code outside namespace
+			//so all of this files is namespace statement(s)
+
 			$this->current_namespace=$this->name($node);
+			$this->active_namespaces=[];
+
 			$this->verbose("Changing namespace to '{$this->current_namespace}'...\n",2);
 			$res=$this->run_code($node->stmts);
-			$namespace_name="'$backup'";
-			if ($namespace_name=="''")
-				$namespace_name="default";
-			$this->verbose("Restoring namespace to {$namespace_name}...\n",2);
-			$this->current_namespace=$backup;
 			return $res;
 
+		}
+		elseif ($node instanceof Node\Stmt\Use_)
+		{
+			if ($node->type!==1)
+				#TODO:
+				$this->error("'use function/const' is not yet supported. Only 'use namespace' supported so far.");
+			foreach ($node->uses as $use)
+			{
+				$alias=$use->alias;
+				$name=$this->name($use->name);
+				if (array_key_exists(strtolower($alias),$this->active_namespaces))
+					$this->error("Cannot use {$name} as {$alias} because the name is already in use");
+				$this->active_namespaces[strtolower($alias)]=$name;
+			}
 		}
 		elseif ($node instanceof Node\Expr)
 			$this->evaluate_expression($node);

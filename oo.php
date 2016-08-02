@@ -122,7 +122,7 @@ class OOEmulator extends Emulator
 			$classname=$this->name($node->name);
 			$type=strtolower(substr(explode("\\",get_class($node))[3],0,-1)); #intertface, class, trait
 			// $class_index=strtolower($this->namespace($classname));
-			$class_index=strtolower($classname);
+			$class_index=strtolower($this->namespace($classname));
 			$this->classes[$class_index]=new stdClass;
 			$class=&$this->classes[$class_index];
 
@@ -294,12 +294,11 @@ class OOEmulator extends Emulator
 		if (!$this->class_exists($classname))	
 			$this->spl_autoload_call($classname);
 		// if ($this->user_class_exists($classname) or $this->user_class_exists($this->namespace($classname))) //user classes
-		if ($this->user_class_exists($classname)) //user classes
+		if ($this->user_class_exists($this->real_namespace($classname))) //user classes
 			return $this->new_user_object($classname,$args);
-		elseif (class_exists($classname)) //core classes
+		elseif (class_exists($this->real_namespace($classname))) //core classes
 			return $this->new_core_object($classname,$args);
-		else
-			$this->error("Class '{$classname}' not found ");
+		$this->error("Class '{$classname}' not found ");
 	}
 	/**
 	 * Evaluate expressions specific to object orientation
@@ -330,6 +329,7 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\StaticCall)
 		{
+			#TODO: namespace support
 			$method_name=$this->name($node->name);
 			if ($node->class instanceof Node\Expr\Variable)
 				$class=$this->evaluate_expression($node->class)->classname;
@@ -347,11 +347,13 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
 		{
+			#TODO: namespace support
 			$var=&$this->variable_reference($node); //do not create the property in static
 			return $var;
 		}
 		elseif ($node instanceof Node\Expr\ClassConstFetch)
 		{
+			#TODO: namespace support
 			$class=$this->name($node->class);
 			$constant=$this->name($node->name);
 			foreach ($this->ancestry($class) as $cls)

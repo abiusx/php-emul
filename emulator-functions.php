@@ -273,11 +273,30 @@ trait EmulatorFunctions
 	public function call_function($name,$args)
 	{
 		$this->stash_ob();
-		if ($this->user_function_exists($name)) //user function
-			$ret=$this->run_user_function($name,$args); 
-		elseif (function_exists($name)) //core function
-			$ret=$this->run_core_function($name,$args);
-		else
+		if ($this->is_namespaced($name)) //namespaced
+		{
+			// echo "current_namespace:";var_dump($this->current_namespace);
+			// echo "real_namespace:";var_dump($this->real_namespace($name));
+			// echo "active_namespaces:";var_dump($this->active_namespaces);
+			if ($this->user_function_exists($this->real_namespace($name))) //available
+				$ret=$this->run_user_function($this->real_namespace($name),$args); 
+			else
+				$err=true;
+		}
+		else //non-namespaced, try fallback
+		{
+			if ($this->user_function_exists($this->namespace($name))) //in this namespace
+				$ret=$this->run_user_function($this->namespace($name),$args); 
+			elseif ($this->user_function_exists($name)) //in global namespace
+				$ret=$this->run_user_function($name,$args); 
+			elseif (function_exists($this->namespace($name))) //in this namespace core function (shouldn't really happen)
+				$ret=$this->run_core_function($this->namespace($name),$args);
+			elseif (function_exists($name)) //global core function
+				$ret=$this->run_core_function($name,$args);
+			else
+				$err=true;
+		}
+		if (isset($err))
 		{
 			$this->error("Call to undefined function {$name}()",$args);
 			$ret=null;

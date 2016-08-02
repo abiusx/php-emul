@@ -370,7 +370,7 @@ class Emulator
 			{
 				if ($create)
 				{
-					$key=$this->namespace($node);
+					$key=$node;
 					$this->variables[$key]=null;
 					return $this->variables;
 				}
@@ -383,7 +383,6 @@ class Emulator
 		}
 		elseif ($node instanceof Node\Scalar\Encapsed)
 		{
-			// $key=$this->namespace($this->name($node));
 			$key=$this->name($node);
 			if ($create)
 				$this->variables[$key]=null;
@@ -472,11 +471,16 @@ class Emulator
 	 */
 	protected function name($ast)
 	{
+		/**
+		 * namespaced names have a name that has an array of parts.
+		 * however, if it is FullyQualified (Node\Name\FullyQualified)
+		 * it will only have parts 
+		 */
+
 		if (is_string($ast))
 			return $ast;
 		elseif ($ast instanceof Node\Expr\FuncCall)
 		{
-
 			if (is_string($ast->name) or $ast->name instanceof Node\Name)
 				return $this->name($ast->name);
 			else 
@@ -497,17 +501,17 @@ class Emulator
 		elseif ($ast instanceof Node\Param)
 			return $ast->name;
 		elseif ($ast instanceof Node\Stmt\Namespace_ 
-			or $ast instanceof Node\Name\FullyQualified)
+			)
 		{
 			if ($ast->name===null)
 				return "";
 			else
 				return $this->name($ast->name);
-			// $res="";
-			// foreach ($ast->name->parts as $p)
-			// 	$res.="\\".$p;
-			// return $res;
 		}
+		// elseif ($ast instanceof Node\Name\FullyQualified)
+		// {
+		// 	return "\\".implode("\\",$ast->parts);
+		// }
 		elseif ($ast instanceof Node\Name)
 		{
 			//TODO: where does this happen?
@@ -527,6 +531,44 @@ class Emulator
 			$this->error("Can not determine name: ",$ast);
 	}
 
+	/**
+	 * Retains a list of active namespaces via "use" PHP statement
+	 * does not include the namespace we are in
+	 * do not use directly, use active_namespaces() instead.
+	 * @var array
+	 */
+	public $active_namespaces=[];
+	/**
+	 * Here's how namespaces work
+	 * For classes, it must either be FQN or relative name that directly matches
+	 * For constants and functions, it must be FQN or relative name that directly matches,
+	 * and if failed, checked in global scope.
+	 * Variables are not affected by namespace. They are always global.
+	 */
+	/**
+	 * Returns the real namespace name associated with an aliased namespace name
+	 * @param  string $name symbol name
+	 * @return array string
+	 */
+	function real_namespace($name)
+	{
+		if (!$this->is_namespaced($name)) return $name;
+		$parts=explode("\\",$name);
+		if (!isset($this->active_namespaces[strtolower($parts[0])])) //no alias
+			return $name;
+
+		$parts[0]=$this->active_namespaces[strtolower($parts[0])];
+		return implode("\\",$parts);
+	}
+	function is_namespaced($name)
+	{
+		return strpos($name,"\\")!==false;
+	}
+	/**
+	 * Returns a name in the current namespace
+	 * @param  string $name symbol
+	 * @return string symbol in namespace
+	 */
 	function namespace($name)
 	{
 		if ($this->current_namespace)
@@ -557,6 +599,10 @@ class Emulator
 		$tfolder=dirname($this->current_file)."/";
 		if (!isset($this->folder) or strlen($this->folder>$tfolder))
 			$this->folder=$tfolder;
+
+		//restarting namespace
+		$this->current_namespace="";
+		$this->active_namespaces=[];
 
 		$this->verbose(sprintf("Now running %s...\n",substr($this->current_file,strlen($this->folder)) ));
 		
@@ -611,43 +657,21 @@ class Emulator
 		if (0);
 		elseif ($node instanceof Node\Stmt\Namespace_)
 		{
-			$backup=$this->current_namespace;
 			$this->current_namespace=$this->name($node);
 			$this->verbose("Extracting declarations of namespace '{$this->current_namespace}'...\n",2);
 			foreach ($node->stmts as $stmt)
 				$this->get_declarations($stmt);
-			if (!$backup)
-				$namespace_name="default";
-			else
-				$namespace_name="'{$backup}'";
-			$this->verbose("Restoring declaration namespace to {$namespace_name}...\n",2);
-			$this->current_namespace=$backup;
+			$this->current_namespace="";
 
 		}
-		// elseif ($node instanceof Node\Stmt\Namespace_)
-		// {
-		// 	$this->verbose("Extracting namespace declarations...\n",3);
-		// 	foreach ($node->stmts as $stmt)
-		// 		$this->get_declarations($stmt);
-		// }
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
 			$name=$this->name($node->name);
+			$index=strtolower($this->namespace($name));
 			// $this->functions[$this->namespace(strtolower($name))]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
-			$this->functions[strtolower($name)]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
+			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,"file"=>$this->current_file,"statics"=>[]); 
 		}
-		elseif ($node instanceof Node\Stmt\Const_)
-		{
-			foreach ($node->consts as $const)
-			{
-				// if (isset($this->constants[$this->namespace($const->name)]))
-				if (isset($this->constants[$const->name]))
-					$this->notice("Constant {$node->name} already defined");
-				else
-					// $this->constants[$this->namespace($const->name)]=$this->evaluate_expression($const->value);
-					$this->constants[$const->name]=$this->evaluate_expression($const->value);
-			}
-		}
+
 	}
 	/**
 	 * Runs an AST as code.

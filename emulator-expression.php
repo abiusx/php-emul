@@ -291,6 +291,12 @@ trait EmulatorExpression {
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
 			$name=$this->name($node->name);
+			if ($this->is_namespaced($name))
+				$name=$this->real_namespace($name);
+			else //first check if its in current namespace, but only if not qualified
+				if (array_key_exists($this->namespace($name), $this->constants))
+					return $this->constants[$this->namespace($name)];
+			//fallback or qualified name
 			if (array_key_exists($name, $this->constants))
 				return $this->constants[$name];
 			elseif (defined($name))
@@ -353,11 +359,15 @@ trait EmulatorExpression {
 			
 			$this->eval_depth++;
 			$this->verbose("Now running Eval code...".PHP_EOL);
-			
 			$code=$this->evaluate_expression($node->expr);
+			
+			$bu=$this->current_namespace;
+			$this->current_namespace="";	
+			
 			$ast=$this->parser->parse('<?php '.$code);
-
 			$res=$this->run_code($ast);
+			#TODO: (not important) check whether active namespaces (i.e. uses) are discarded in eval as well or not
+			$this->current_namespace=$bu;
 			$this->eval_depth--;
 			return $res;
 		}
