@@ -734,18 +734,18 @@ class Emulator
 					$this->verbose(sprintf("%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line),3);
 			}
 			$this->statement_count++;
-			try 
-			{
+			// try 
+			// {
 				$this->run_statement($node);
-			}
-			catch (Exception $e)
-			{
-				$this->throw($e);
-			}
-			catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
-			{
-				$this->throw($e);
-			}			
+			// }
+			// catch (Exception $e)
+			// {
+			// 	$this->throw($e);
+			// }
+			// catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
+			// {
+			// 	$this->throw($e);
+			// }			
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;
 			if ($this->break) break;
@@ -792,7 +792,7 @@ class Emulator
 		,'eval_depth','trace','output','break','continue'
 		,'variable_stack'
 		,'try','loop_depth','return','return_value'
-		,'current_namespace','active_namespaces'
+		,'current_namespace','current_active_namespaces'
 		,'shutdown_functions'
 		]);
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);

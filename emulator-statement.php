@@ -205,6 +205,7 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\TryCatch)
 		{
+			$file=$this->current_file;
 			$this->try++;
 			try {
 				$this->verbose("Starting a try block (depth:{$this->try})...\n",3);
@@ -213,7 +214,9 @@ trait EmulatorStatement
 			}
 			catch (Exception $e)
 			{
-				$this->verbose("Caught an exception of type '".get_class($e)."'!\n",3);
+				$bu=$this->current_file;
+				$this->current_file=$file;
+				$this->verbose("Found an exception of type '".get_class($e)."', testing to see if any catch block matches...\n",3);
 				$this->try--; //no longer in the try
 				foreach ($node->catches as $catch)
 				{
@@ -221,11 +224,14 @@ trait EmulatorStatement
 					$type=$this->name($catch->type);
 					if ($e instanceof $type)
 					{
+						$this->verbose("Catch block found, executing...\n",4);
 						$this->variable_set($catch->var,$e);
 						$this->run_code($catch->stmts);
 						break;
 					}
 				}
+				$this->verbose("Catch block complete.\n",4);
+				$this->current_file=$bu;
 				$this->try++; //balance off with the one below
 			}
 			#TODO: handle finally
