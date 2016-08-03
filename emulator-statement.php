@@ -224,9 +224,11 @@ trait EmulatorStatement
 					$type=$this->name($catch->type);
 					if ($e instanceof $type)
 					{
+						#TODO: needs to be executed in the try context, not in the context that threw. restore context here (Wrappings).
 						$this->verbose("Catch block found, executing...\n",4);
 						$this->variable_set($catch->var,$e);
 						$this->run_code($catch->stmts);
+						print_r($catch->stmts);
 						break;
 					}
 				}
