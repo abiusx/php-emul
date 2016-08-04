@@ -241,16 +241,22 @@ trait OOEmulatorMethods {
 					$word="ancestor";
 				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
 				$trace_args=array("type"=>"::","function"=>$method_name,"class"=>$class);
-				$wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file
+				$context=new EmulatorExecutionContext(["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file
 					,"line"=>$this->current_line,"namespace"=>$this->classes[strtolower($class)]->namespace
-					,"active_namespaces"=>$this->classes[strtolower($class)]->active_namespaces];
+					,"active_namespaces"=>$this->classes[strtolower($class)]->active_namespaces]);
+
+				// $wrappings=["method"=>$method_name,"class"=>$class_name,"self"=>$class,"file"=>$this->classes[strtolower($class)]->file
+				// 	,"line"=>$this->current_line,"namespace"=>$this->classes[strtolower($class)]->namespace
+				// 	,"active_namespaces"=>$this->classes[strtolower($class)]->active_namespaces];
 				if ($object!==null)
 				{
 					$trace_args['object']=$object; //do we need ref here? I don't think so
 					$trace_args['type']="->";
-					$wrappings['this']=$object; //do we need ref here? I don't think so
+					// $wrappings['this']=$object; //do we need ref here? I don't think so
+					$context->this=$object; //do we need ref here? I don't think so
+					
 				}
-				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args, $wrappings, $trace_args);
+				$res=$this->run_function($this->classes[strtolower($class)]->methods[strtolower($method_name)],$args, $context, $trace_args);
 				$flag=true;
 				break;	
 			}

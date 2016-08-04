@@ -205,6 +205,8 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\TryCatch)
 		{
+			$framecount=count($this->trace);
+			$framecount2=count($this->variable_stack);
 			$file=$this->current_file;
 			$this->try++;
 			try {
@@ -214,6 +216,10 @@ trait EmulatorStatement
 			}
 			catch (Exception $e)
 			{
+				var_dump(count($this->variable_stack));
+				var_dump(count($this->trace));
+				var_dump($framecount2,$framecount2);
+				die();
 				$bu=$this->current_file;
 				$this->current_file=$file;
 				$this->verbose("Found an exception of type '".get_class($e)."', testing to see if any catch block matches...\n",3);

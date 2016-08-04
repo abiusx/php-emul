@@ -102,6 +102,25 @@ trait EmulatorFunctions
 		$this->current_line=$line;
 		return $processed_args;
 	}
+
+	private function context_apply(EmulatorExecutionContext $context)
+	{
+		foreach ($context as $k=>&$v)
+		{
+			if (isset($context->{$k}))
+				$this->{"current_{$k}"}=&$v;
+		}
+	}
+	protected function context_switch(EmulatorExecutionContext $context)
+	{
+		$this->context_stack[]=$context;
+		$this->context_apply($context);
+	}
+	protected function context_restore()
+	{
+		$context=array_pop($this->context_stack);
+		$this->context_apply($context);
+	}
 	/**
 	 * Runs a procedure (sub).
 	 * This is used by all function calling structures, such as run_function, run_method, run_static_method, etc.
@@ -113,7 +132,7 @@ trait EmulatorFunctions
 	 * @param  array $trace_args 	the parameters to be set for the trace of this function call (used in backtrace)
 	 * @return mixed return value of function
 	 */
-	protected function run_function($function,$args,$wrappings=array(),$trace_args=array())
+	protected function run_function($function,$args,EmulatorExecutionContext $context,$trace_args=array())
 	{
 		$name=$trace_args['function'];
 		if (isset($trace_args['class']))
@@ -129,20 +148,22 @@ trait EmulatorFunctions
 		foreach ($trace_args as $k=>$v)
 			end($this->trace)->$k=$v;
 		
-		foreach ($wrappings as $k=>&$v)
-		{
-			if (!property_exists($this, "current_{$k}"))
-				$this->error("Invalid wrapping '{$k}'=>'{$v}'.\n");
-			//FIXME: deep copy?
-			$backups[$k]=$this->{"current_{$k}"};
-			// $this->{"current_{$k}"}=$v;
-			// $this->{"current_{$k}"}=&$wrappings[$k];//FIXME?
-			$this->{"current_{$k}"}=&$v;
-		}
+		$this->context_switch($context);
+		// foreach ($wrappings as $k=>&$v)
+		// {
+		// 	if (!property_exists($this, "current_{$k}"))
+		// 		$this->error("Invalid wrapping '{$k}'=>'{$v}'.\n");
+		// 	//FIXME: deep copy?
+		// 	$backups[$k]=$this->{"current_{$k}"};
+		// 	// $this->{"current_{$k}"}=$v;
+		// 	// $this->{"current_{$k}"}=&$wrappings[$k];//FIXME?
+		// 	$this->{"current_{$k}"}=&$v;
+		// }
 		$res=$this->run_code($function->code);
-		
-		foreach ($backups as $k=>$v)
-			$this->{"current_{$k}"}=$v;
+
+		$this->context_restore();		
+		// foreach ($backups as $k=>$v)
+		// 	$this->{"current_{$k}"}=$v;
 		array_pop($this->trace);
 
 		$this->pop();
@@ -160,8 +181,10 @@ trait EmulatorFunctions
 		
 		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
 		$res=$this->run_function($this->functions[strtolower($name)],$args,
+			new EmulatorExecutionContext(
 			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name,"line"=>$this->current_line,
-				"namespace"=>$this->functions[strtolower($name)]->namespace], //wrappings
+				"namespace"=>$this->functions[strtolower($name)]->namespace
+				,"active_namespaces"=>$this->functions[strtolower($name)]->active_namespaces]), //context
 			["function"=>$name] //trace
 			);
 

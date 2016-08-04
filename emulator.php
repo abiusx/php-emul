@@ -13,6 +13,35 @@ require_once "emulator-errors.php";
 require_once "emulator-expression.php";
 require_once "emulator-statement.php";
 
+/**
+ * Holds an execution context, used when switching context
+ */
+class EmulatorExecutionContext
+{
+	function __construct($arr)
+	{
+		foreach ($arr as $k=>&$v)
+		{
+			if (property_exists($this, $k))
+				$this->{$k}=&$v;
+			else
+				throw new \Exception("'{$k}' is not a context variable.");
+		}
+	}
+	public $file;
+	public $line;
+
+	public $namespace;
+	public $active_namespaces;
+
+	public $function;
+
+	public $method;
+	public $this;
+	public $class; //dynamic class
+	public $self; //static class
+}
+
 class Emulator
 {	
 
