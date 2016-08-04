@@ -44,7 +44,24 @@ class EmulatorExecutionContext
 
 class Emulator
 {	
-
+/**
+	 * Emulator constructor
+	 * init the emulator
+	 */
+	function __construct($init_environ=null)
+	{
+		$this->state[]=array_flip(['variables','constants','included_files','output_buffer','functions'
+		,'eval_depth','trace','output','break','continue'
+		,'variable_stack'
+		,'try','loop_depth','return','return_value'
+		,'current_namespace','current_active_namespaces'
+		,'shutdown_functions'
+		,'execution_context_stack'
+		]);
+		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
+		$this->printer = new PhpParser\PrettyPrinter\Standard;
+    	$this->init($init_environ);
+	}
 	use EmulatorVariables;
 	use EmulatorErrors;
 	use EmulatorFunctions;
@@ -738,10 +755,11 @@ class Emulator
 		}		
 		elseif ($node instanceof Node\Stmt\Function_)
 		{
-			$name=$this->name($node->name);
-			$index=strtolower($this->current_namespace($name));
-			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,
-				"file"=>$this->current_file,"statics"=>[],"namespace"=>$this->current_namespace,"active_namespaces"=>$this->current_active_namespaces); 
+			$name=$this->current_namespace($this->name($node->name));
+			$index=strtolower($name);
+			$context=new EmulatorExecutionContext(['function'=>$name,'file'=>$this->current_file,'namespace'=>$this->current_namespace,'active_namespaces'=>$this->current_active_namespaces]);
+			$this->functions[$index]=(object)array("params"=>$node->params,"code"=>$node->stmts,'context'=>$context,'statics'=>[]); 
+				
 		}
 
 	}
@@ -769,6 +787,7 @@ class Emulator
 					$this->verbose(sprintf("%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line),3);
 			}
 			$this->statement_count++;
+			#TODO: create a sample and make sure this works
 			// try 
 			// {
 				$this->run_statement($node);
@@ -817,23 +836,7 @@ class Emulator
 		}
 		return $ast;
 	}
-	/**
-	 * Emulator constructor
-	 * init the emulator
-	 */
-	function __construct($init_environ=null)
-	{
-		$this->state[]=array_flip(['variables','constants','included_files','output_buffer','functions'
-		,'eval_depth','trace','output','break','continue'
-		,'variable_stack'
-		,'try','loop_depth','return','return_value'
-		,'current_namespace','current_active_namespaces'
-		,'shutdown_functions'
-		]);
-		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
-		$this->printer = new PhpParser\PrettyPrinter\Standard;
-    	$this->init($init_environ);
-	}
+	
 	function print_ast($ast)
 	{
 		if (!is_array($ast))

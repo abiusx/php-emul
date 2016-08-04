@@ -151,21 +151,8 @@ trait EmulatorFunctions
 			end($this->trace)->$k=$v;
 		
 		$this->context_switch($context);
-		// foreach ($wrappings as $k=>&$v)
-		// {
-		// 	if (!property_exists($this, "current_{$k}"))
-		// 		$this->error("Invalid wrapping '{$k}'=>'{$v}'.\n");
-		// 	//FIXME: deep copy?
-		// 	$backups[$k]=$this->{"current_{$k}"};
-		// 	// $this->{"current_{$k}"}=$v;
-		// 	// $this->{"current_{$k}"}=&$wrappings[$k];//FIXME?
-		// 	$this->{"current_{$k}"}=&$v;
-		// }
 		$res=$this->run_code($function->code);
-
 		$this->context_restore();		
-		// foreach ($backups as $k=>$v)
-		// 	$this->{"current_{$k}"}=$v;
 		array_pop($this->trace);
 
 		$this->pop();
@@ -180,17 +167,8 @@ trait EmulatorFunctions
 	protected function run_user_function($name,$args)
 	{
 		$this->verbose("Running {$name}() with ".count($args)." args...".PHP_EOL,2);
-		
-		//type	string	The current call type. If a method call, "->" is returned. If a static method call, "::" is returned. If a function call, nothing is returned.
-		$res=$this->run_function($this->functions[strtolower($name)],$args,
-			new EmulatorExecutionContext(
-			["file"=>$this->functions[strtolower($name)]->file,"function"=>$name,"line"=>$this->current_line,
-				"namespace"=>$this->functions[strtolower($name)]->namespace
-				,"active_namespaces"=>$this->functions[strtolower($name)]->active_namespaces]), //context
-			["function"=>$name] //trace
-			);
-
-		
+		$function=&$this->functions[strtolower($name)];
+		$res=$this->run_function($function,$args,$function->context,["function"=>$name]);//trace
 		if ($this->return)
 			$this->return=false;	
 		return $res;

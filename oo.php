@@ -158,8 +158,8 @@ class OOEmulator extends Emulator
 			$class->property_visibilities=[];
 			$class->static=[];
 			$class->parent=$extends;
-			$class->namespace=$this->current_namespace;
-			$class->active_namespaces=$this->current_active_namespaces;
+			$class->context=new EmulatorExecutionContext(['class'=>$classname,'self'=>$classname,'file'=>$this->current_file
+				,'namespace'=>$this->current_namespace,'active_namespaces'=>$this->current_active_namespaces]);
 			foreach ($node->stmts as $part)
 			{
 				if ($part instanceof Node\Stmt\Property)
@@ -194,7 +194,8 @@ class OOEmulator extends Emulator
 					$methodname=$this->name($part->name);
 					$type=$part->type;
 					$class->methods[strtolower($methodname)]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,
-							"file"=>$this->current_file,'type'=>$type,'statics'=>[]); 
+							// "file"=>$this->current_file,
+							'type'=>$type,'statics'=>[]); 
 				}
 				elseif ($part instanceof Node\Stmt\ClassConst)
 				{
@@ -219,10 +220,8 @@ class OOEmulator extends Emulator
 			foreach ($node->implements as $interface)
 				$interfaces[]=$this->name($interface);
 			$class->classtype=$classtype;
-			$class->file=$this->current_file;
+			// $class->file=$this->current_file;
 			$class->interfaces=$interfaces;
-			// $class=(object)["properties"=>$properties,"static"=>$static_properties,"consts"=>$consts,"methods"=>$methods,'parent'=>$extends,'interfaces'=>$interfaces,'type'=>$classtype,'file'=>$this->current_file];
-			// $this->classes[$classname]=$class;
 		}
 		else
 			parent::get_declarations($node);
