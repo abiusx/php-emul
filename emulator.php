@@ -350,6 +350,8 @@ class Emulator
 	protected function shutdown()
 	{
 		$this->verbose("Shutting down...".PHP_EOL);
+		$bu=$this->terminated;
+		$this->terminated=false;
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
 			if (is_array($shutdown_function->callback))
@@ -359,6 +361,7 @@ class Emulator
 			$this->verbose( "Calling shutdown function: {$name}()\n");
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
+		$this->terminated=$bu;
 		$r="";
 		if (count($this->output_buffer))
 		{
@@ -808,18 +811,18 @@ class Emulator
 			}
 			$this->statement_count++;
 			#TODO: create a sample and make sure this works
-			// try 
-			// {
+			try 
+			{
 				$this->run_statement($node);
-			// }
-			// catch (Exception $e)
-			// {
-			// 	$this->throw($e);
-			// }
-			// catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
-			// {
-			// 	$this->throw($e);
-			// }			
+			}
+			catch (Exception $e)
+			{
+				$this->throw($e);
+			}
+			catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
+			{
+				$this->throw($e);
+			}			
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;
 			if ($this->break) break;

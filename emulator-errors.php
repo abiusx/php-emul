@@ -14,7 +14,7 @@ trait EmulatorErrors
 		if ($this->try>0)
 			throw $e;
 		else
-			$this->exception_handler(e);
+			$this->exception_handler($e);
 	}
 	/**
 	 * The depth of error suppression
