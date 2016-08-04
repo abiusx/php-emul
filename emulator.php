@@ -18,7 +18,7 @@ require_once "emulator-statement.php";
  */
 class EmulatorExecutionContext
 {
-	function __construct($arr)
+	function __construct($arr=[])
 	{
 		foreach ($arr as $k=>&$v)
 		{
@@ -183,6 +183,12 @@ class Emulator
 	 */
 	public $trace=[];
 
+
+	/**
+	 * Holds a list of execution contexts currently active (i.e. stack frames)
+	 * @var array
+	 */
+	public $execution_context_stack=[];
 	/**
 	 * Number of breaks/continues
 	 * Whether we still need to break or not

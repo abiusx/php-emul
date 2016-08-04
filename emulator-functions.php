@@ -106,19 +106,21 @@ trait EmulatorFunctions
 	private function context_apply(EmulatorExecutionContext $context)
 	{
 		foreach ($context as $k=>&$v)
-		{
 			if (isset($context->{$k}))
 				$this->{"current_{$k}"}=&$v;
-		}
 	}
 	protected function context_switch(EmulatorExecutionContext $context)
 	{
-		$this->context_stack[]=$context;
+		array_push($this->execution_context_stack, $context);
 		$this->context_apply($context);
 	}
 	protected function context_restore()
 	{
-		$context=array_pop($this->context_stack);
+		array_pop($this->execution_context_stack); //discard the last context on stack (which is current context)
+		if (count($this->execution_context_stack))
+			$context=end($this->execution_context_stack);
+		else
+			$context=new EmulatorExecutionContext;
 		$this->context_apply($context);
 	}
 	/**
