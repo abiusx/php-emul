@@ -50,12 +50,13 @@ class Emulator
 	 */
 	function __construct($init_environ=null)
 	{
-		$this->state[]=array_flip(['variables','constants','included_files','output_buffer','functions'
+		$this->state[]=array_flip(['variables','constants','included_files'
+		,'output','output_buffer','functions'
 		,'eval_depth','trace','output','break','continue'
 		,'variable_stack'
 		,'try','loop_depth','return','return_value'
 		,'current_namespace','current_active_namespaces'
-		,'shutdown_functions'
+		,'shutdown_functions','terminated'
 		,'execution_context_stack'
 		]);
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
@@ -70,6 +71,7 @@ class Emulator
 	/**
 	 * An array that holds all properties that constitute
 	 * emulation state as keys.
+	 * Reaedonly
 	 * @var array
 	 */
 	public $state=[];
@@ -113,6 +115,7 @@ class Emulator
 	/**
 	 * Emulator current settings
 	 * mostly used for error reporting
+	 * @state
 	 * @var string
 	 */
 	protected $current_node,$current_statement_index;
@@ -126,16 +129,19 @@ class Emulator
 
 	/**
 	 * The list of included files. used by *_once include functions as well
+	 * @state
 	 * @var array
 	 */
 	public $included_files=[];
 	/**
 	 * The output of the program
+	 * @state
 	 * @var string
 	 */
 	public $output;
 	/**
 	 * The output buffer
+	 * @state
 	 * @var array
 	 */
 	public $output_buffer=[];
@@ -150,11 +156,13 @@ class Emulator
 
 	/**
 	 * User-defined (emulated) functions
+	 * @state
 	 * @var array
 	 */
 	public $functions=[];
 	/**
 	 * User-defined (emulated) constants
+	 * @state
 	 * @var array
 	 */
 	public $constants=[];
@@ -168,6 +176,7 @@ class Emulator
 	/**
 	 * The depth of eval.
 	 * Everything eval is used, this is incremented. Allows us to know whether we're inside eval'd code or not.
+	 * @state
 	 * @var integer
 	 */
 	public $eval_depth=0; 
@@ -175,12 +184,14 @@ class Emulator
 	/**
 	 * The variable stack (pushdown)
 	 * On function calls and new scopes, $variables is pushed on this
+	 * @state
 	 * @var array
 	 */
 	public $variable_stack=[];
 	/**
 	 * Whether the application has terminated or not.
 	 * Used inside the emulator to prevent further execution, e.g when die is used.
+	 * @state
 	 * @var boolean
 	 */
 	public $terminated=false;
@@ -196,11 +207,10 @@ class Emulator
 	 * Stack trace.
 	 * Used to see if we're inside a function or a method or etc.
 	 * Obeys the structure of debug_backtrace()
+	 * @state
 	 * @var array
 	 */
 	public $trace=[];
-
-
 	/**
 	 * Holds a list of execution contexts currently active (i.e. stack frames)
 	 * @var array
@@ -210,27 +220,32 @@ class Emulator
 	 * Number of breaks/continues
 	 * Whether we still need to break or not
 	 * For a normal break it becomes 1, and then back to 0 in the loop emulation code
+	 * @state
 	 * @var integer
 	 */
 	protected $break=0,$continue=0;
 	/**
 	 * Whether we're inside a try block or not (number of nested tries)
+	 * @state
 	 * @var integer
 	 */
 	protected $try=0;
 	/**
 	 * Whether we're in a loop or not (and the number of nested loops)
+	 * @state
 	 * @var integer
 	 */
 	protected $loop_depth=0;
 
 	/**
 	 * Whether return value is available
+	 * @state
 	 * @var boolean
 	 */
 	protected $return=false;
 	/**
 	 * The return value
+	 * @state
 	 * @var mixed
 	 */
 	protected $return_value=null;
@@ -238,6 +253,7 @@ class Emulator
 	/**
 	 * List of functions to run on shuwtdown
 	 * Each element is an object of callback and args.
+	 * @state
 	 * @var array
 	 */
 	public $shutdown_functions=[]; 
@@ -245,9 +261,11 @@ class Emulator
 	 * Retains a list of active namespaces via "use" PHP statement
 	 * does not include the namespace we are in
 	 * do not use directly, use active_namespaces() instead.
+	 * @state
 	 * @var array
 	 */
 	public $current_active_namespaces=[];
+
 	/**
 	 * Output status messages of the emulator
 	 * @param  string  $msg       
@@ -280,7 +298,12 @@ class Emulator
 		$this->restore_ob();
 	}
 
-	private $isob=false;
+	private $isob=false; //TODO: this is part of state
+	/**
+	 * Temporarily disables output buffering.
+	 * Used by verbose and other functions that need to generate emualtor output
+	 * @return [type] [description]
+	 */
 	function stash_ob()
 	{
 		$this->isob=ob_get_level()!=0;
@@ -314,7 +337,7 @@ class Emulator
 			$this->variables[$k]=$v;
 		$this->variables['GLOBALS']=&$this->variables; //as done by PHP itself
 		if ($this->auto_mock)
-		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives internal and user subarrays.
+		foreach(get_defined_functions()['internal'] as $function) //get_defined_functions gives 'internal' and 'user' subarrays.
 		{
 			if (function_exists($function."_mock"))
 				$this->mock_functions[strtolower($function)]=$function."_mock";
@@ -326,9 +349,7 @@ class Emulator
 	 */
 	protected function shutdown()
 	{
-
 		$this->verbose("Shutting down...".PHP_EOL);
-		//FIXME TODO
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
 			if (is_array($shutdown_function->callback))
@@ -336,7 +357,6 @@ class Emulator
 			else
 				$name=$shutdown_function->callback;
 			$this->verbose( "Calling shutdown function: {$name}()\n");
-			// print_r($shutdown_function);
 			$this->call_function($shutdown_function->callback,$shutdown_function->args);
 		}
 		$r="";
@@ -351,6 +371,7 @@ class Emulator
 	
 	/**
 	 * Outputs the args
+	 * This is equal to calling echo from PHP
 	 * @return [type] [description]
 	 */
 	function output()
@@ -525,9 +546,8 @@ class Emulator
 		}
 	}
 	/**
-	 * Returns the name of nodes that have names
+	 * Resolves symbol name
 	 * e.g function calls, variables, etc.
-	 * Used multiple times in the emulator code
 	 * @param  Node $ast 
 	 * @return string      name
 	 */
@@ -649,7 +669,7 @@ class Emulator
 	/**
 	 * Runs a PHP file
 	 * Basically it sets up current file and other state variables, reads the file,
-	 * parses it and passes the result to run_code
+	 * parses it and passes the AST to run_code
 	 * @param  string $file 
 	 * @return mixed    
 	 */
@@ -673,7 +693,7 @@ class Emulator
 			else
 				$this->folder=dirname($tfolder);
 
-		//restarting namespace
+		//resetting namespace
 		$this->current_namespace="";
 		$this->current_active_namespaces=[];
 
@@ -837,6 +857,11 @@ class Emulator
 		return $ast;
 	}
 	
+	/**
+	 * Converts an AST to printable PHP code.
+	 * @param  Node|Array $ast 
+	 * @return string
+	 */
 	function print_ast($ast)
 	{
 		if (!is_array($ast))
@@ -848,9 +873,6 @@ class Emulator
 	 */
 	function __destruct()
 	{
-		unset ($this->variables['GLOBALS'],$this->variables['_SERVER']);
-		// var_dump($this->variables);
-		// var_dump($this->classes);
 		$this->verbose(sprintf("Memory usage: %.2fMB (%.2fMB)\n",memory_get_usage()/1024.0/1024.0,memory_get_peak_usage()/1024.0/1024.0));
 	}
 
@@ -863,9 +885,5 @@ foreach (glob(__DIR__."/mocks/*.php") as $mock)
 	require_once $mock;
 unset($mock);
 
-
-
 if (isset($argv) and $argv[0]==__FILE__)
-{
 	die("Should not run this directly.".PHP_EOL);
-}
