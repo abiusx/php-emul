@@ -334,8 +334,10 @@ class OOEmulator extends Emulator
 			$method_name=$this->name($node->name);
 			if ($object instanceof EmulatorObject)
 				$classname=$object->classname;
-			else
+			elseif (is_object($object))
 				$classname=get_class($object);
+			else
+				$this->error("Call to a member function '{$method_name()}' on a non-object");
 			$this->verbose("Method call {$classname}::{$method_name}()".PHP_EOL,3);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
