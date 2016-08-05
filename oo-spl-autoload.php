@@ -31,14 +31,15 @@ trait OOEmulator_spl_autoload
 	}
 	public function spl_autoload_call($class)
 	{
-		$this->verbose("Attempting to autoload '{$class}'...\n",4);
+		$this->verbose("Attempting to autoload '{$class}'...\n",3);
 		foreach ($this->autoloaders as $autoloader)
 			if ($this->class_exists($class)) break;
 			else 
 			{
-				$this->verbose("Calling the next autoloader to autoload '{$class}'...\n",5);
+				$this->verbose("Calling the next autoloader to autoload '{$class}'...\n",4);
 				$this->call_function($autoloader,[$class]);
 			}	
+		$this->verbose("Autoloading '{$class}' completed.\n",3);
 	}
 	protected $autoload_extensions=".inc,.php";
 	public function spl_autoload_extensions($extensions=null)

@@ -821,7 +821,6 @@ class Emulator
 					$this->verbose(sprintf("%s:%d\n",$this->filename_only(),$this->current_line),3);
 			}
 			$this->statement_count++;
-			#TODO: create a sample and make sure this works
 			try 
 			{
 				$this->run_statement($node);

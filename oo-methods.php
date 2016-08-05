@@ -240,7 +240,7 @@ trait OOEmulatorMethods {
 				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
 				$trace_args=array("type"=>"::","function"=>$method_name,"class"=>$class);
 				$class_index=&$this->classes[strtolower($class)];
-				$context=$class_index->context;
+				$context=clone $class_index->context;
 				$context->method=$method_name;
 				$context->line=$this->current_line;
 				$context->class=$class_name; //late static bind
