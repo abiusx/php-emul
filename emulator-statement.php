@@ -205,9 +205,8 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\TryCatch)
 		{
+			#context created by try is not available to catch, the context above it is.
 			$framecount=count($this->trace);
-			$framecount2=count($this->variable_stack);
-			$file=$this->current_file;
 			$this->try++;
 			try {
 				$this->verbose("Starting a try block (depth:{$this->try})...\n",3);
@@ -216,13 +215,23 @@ trait EmulatorStatement
 			}
 			catch (Exception $e)
 			{
-				var_dump(count($this->variable_stack));
-				var_dump(count($this->trace));
-				var_dump($framecount2,$framecount2);
-				die();
-				$bu=$this->current_file;
-				$this->current_file=$file;
-				$this->verbose("Found an exception of type '".get_class($e)."', testing to see if any catch block matches...\n",3);
+				$this->verbose("Exception of type '".get_class($e)."' cautght, restoring context...\n",2);
+				// print_r($this->variables);
+				while(count($this->trace)>$framecount)
+				{
+					$this->context_restore();
+					array_pop($this->trace);
+					array_pop($this->variable_stack);
+				}
+				$this->reference_variables_to_stack();
+				// var_dump(count($this->variable_stack));
+				// var_dump(count($this->trace));
+				// var_dump(count($this->execution_context_stack));
+				// var_dump($framecount);
+				// print_r($this->variables);
+				// die();
+				$this->verbose("Context restored for catch block, attempting to find a matching catch...\n",2);
+				$catch_found=false;
 				$this->try--; //no longer in the try
 				foreach ($node->catches as $catch)
 				{
@@ -234,12 +243,18 @@ trait EmulatorStatement
 						$this->verbose("Catch block found, executing...\n",4);
 						$this->variable_set($catch->var,$e);
 						$this->run_code($catch->stmts);
-						print_r($catch->stmts);
+						// print_r($catch->stmts);
+						$catch_found=true;
 						break;
 					}
 				}
-				$this->verbose("Catch block complete.\n",4);
-				$this->current_file=$bu;
+				if ($catch_found)
+					$this->verbose("Catch block complete.\n",3);
+				else
+				{
+					$this->verbose("Could not find any matching catch block, throwing the error for further catching...\n",3);
+					$this->throw($e);
+				}
 				$this->try++; //balance off with the one below
 			}
 			#TODO: handle finally

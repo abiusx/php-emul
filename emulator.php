@@ -332,7 +332,7 @@ class Emulator
 			$init_environ['GLOBALS']=&$init_environ;
 		}
 		$this->variable_stack['global']=array(); //the first key in var_stack is the global scope
-		$this->_reference_variables_to_stack();
+		$this->reference_variables_to_stack();
 		foreach ($init_environ as $k=>$v)
 			$this->variables[$k]=$v;
 		$this->variables['GLOBALS']=&$this->variables; //as done by PHP itself
@@ -396,12 +396,12 @@ class Emulator
 	protected function push()
 	{
 		array_push($this->variable_stack,array()); //create one more symbol table
-		$this->_reference_variables_to_stack();
+		$this->reference_variables_to_stack();
 	}
 	/**
 	 * References $this->variables to the top of the variable_stack, instead of copying it
 	 */
-	private function _reference_variables_to_stack()
+	private function reference_variables_to_stack()
 	{
 		unset($this->variables);
 		end($this->variable_stack);
@@ -415,7 +415,7 @@ class Emulator
 		array_pop($this->variable_stack);
 		// end($this->variable_stack);
 		// unset($this->variable_stack[key($this->variable_stack)]);
-		$this->_reference_variables_to_stack();
+		$this->reference_variables_to_stack();
 	}
 	
 	/**
