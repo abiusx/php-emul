@@ -105,23 +105,22 @@ trait EmulatorFunctions
 
 	private function context_apply(EmulatorExecutionContext $context)
 	{
+		$bu_context=new EmulatorExecutionContext;
 		foreach ($context as $k=>&$v)
 			if (isset($context->{$k}))
+			{
+				$bu_context->{$k}=$this->{"current_{$k}"};
 				$this->{"current_{$k}"}=&$v;
+			}
+		return $bu_context;
 	}
 	protected function context_switch(EmulatorExecutionContext $context)
 	{
-		array_push($this->execution_context_stack, $context);
-		$this->context_apply($context);
+		array_push($this->execution_context_stack, $this->context_apply($context));
 	}
 	protected function context_restore()
 	{
-		array_pop($this->execution_context_stack); //discard the last context on stack (which is current context)
-		if (count($this->execution_context_stack))
-			$context=end($this->execution_context_stack);
-		else
-			$context=new EmulatorExecutionContext;
-		$this->context_apply($context);
+		$this->context_apply(array_pop($this->execution_context_stack)); 
 	}
 	/**
 	 * Runs a procedure (sub).
@@ -150,8 +149,20 @@ trait EmulatorFunctions
 		foreach ($trace_args as $k=>$v)
 			end($this->trace)->$k=$v;
 		
+		// $bu=[];
+		// array_push($this->execution_context_stack,$context);
+		// foreach ($context as $k=>&$v)
+		// 	if (isset($context->{$k}))
+		// 	{	
+		// 		$bu[$k]=$this->{"current_{$k}"};
+		// 		$this->{"current_{$k}"}=&$v;
+		// 	}
 		$this->context_switch($context);
 		$res=$this->run_code($function->code);
+		// print_r(array_keys($bu));
+		// foreach ($context as $k=>&$v)
+		// 	if (isset($context->{$k}))
+		// 		$this->{"current_{$k}"}=$bu[$k];
 		$this->context_restore();		
 		array_pop($this->trace);
 

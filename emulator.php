@@ -34,12 +34,16 @@ class EmulatorExecutionContext
 	public $namespace;
 	public $active_namespaces;
 
+	//only available for functions
 	public $function;
 
+	//only available for [static] methods
 	public $method;
-	public $this;
 	public $class; //dynamic class
 	public $self; //static class
+	
+	//only available for bound methods
+	public $this;
 }
 
 class Emulator

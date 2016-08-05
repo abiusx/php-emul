@@ -226,8 +226,7 @@ trait OOEmulatorMethods {
 	protected function run_user_static_method($original_class_name,$method_name,$args=[],&$object=null)
 	{
 		$class_name=$this->real_class($original_class_name);
-		if ($this->verbose)
-			$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
+		$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$flag=false;
 		foreach ($this->ancestry($class_name) as $class)
 		{
