@@ -205,41 +205,40 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\TryCatch)
 		{
-			#context created by try is not available to catch, the context above it is.
 			$framecount=count($this->trace);
 			$this->try++;
 			try {
-				$this->verbose("Starting a try block (depth:{$this->try})...\n",3);
+				$this->verbose("Starting a Try block (depth:{$this->try})...\n",2);
 				$this->run_code($node->stmts);
-				$this->verbose("Ending a try block without error (depth:{$this->try})...\n",3);
+				$this->verbose("Ending a Try block without error (depth:{$this->try})...\n",3);
 			}
 			catch (Exception $e)
 			{
-				$this->verbose("Exception of type '".get_class($e)."' cautght, restoring context...\n",2);
-				// print_r($this->variables);
-				while(count($this->trace)>$framecount)
+				$diff=count($this->trace)-$framecount;
+				if ($diff>0)
 				{
-					$this->context_restore();
-					array_pop($this->trace);
-					array_pop($this->variable_stack);
+					$this->verbose("Exception of type '".get_class($e)."' cautght, restoring context...\n",2);
+
+					for ($i=0;$i<$diff;++$i)
+					{
+						$this->context_restore();
+						array_pop($this->trace);
+						array_pop($this->variable_stack);
+					}
+					$this->reference_variables_to_stack();
+					$this->verbose("Context restored prior to running catch block ({$diff} stack frames).\n",3);
 				}
-				$this->reference_variables_to_stack();
-				// var_dump(count($this->variable_stack));
-				// var_dump(count($this->trace));
-				// var_dump(count($this->execution_context_stack));
-				// var_dump($framecount);
-				// print_r($this->variables);
-				// die();
-				$this->verbose("Context restored for catch block, attempting to find a matching catch...\n",2);
+				else
+					$this->verbose("Exception of type '".get_class($e)."' caught, and no context restoration needed.\n",2);
 				$catch_found=false;
 				$this->try--; //no longer in the try
+				$this->verbose("Attempting to find matchin Catch block...\n",3);
 				foreach ($node->catches as $catch)
 				{
 					//each has type, the exception type, var, the exception variable, and stmts
 					$type=$this->name($catch->type);
 					if ($e instanceof $type)
 					{
-						#TODO: needs to be executed in the try context, not in the context that threw. restore context here (Wrappings).
 						$this->verbose("Catch block found, executing...\n",4);
 						$this->variable_set($catch->var,$e);
 						$this->run_code($catch->stmts);
@@ -252,7 +251,7 @@ trait EmulatorStatement
 					$this->verbose("Catch block complete.\n",3);
 				else
 				{
-					$this->verbose("Could not find any matching catch block, throwing the error for further catching...\n",3);
+					$this->verbose("Could not find any matching catch block, throwing error for further catching...\n",3);
 					$this->throw($e);
 				}
 				$this->try++; //balance off with the one below

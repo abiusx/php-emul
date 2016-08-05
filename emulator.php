@@ -787,6 +787,17 @@ class Emulator
 
 	}
 	/**
+	 * Returns only file name of a full path, for messaging
+	 * @param  string $file 
+	 * @return string
+	 */
+	private function filename_only($file=null)
+	{
+		if ($file===null)
+			$file=$this->current_file;
+		return substr($file,strlen($this->folder));
+	}
+	/**
 	 * Runs an AST as code.
 	 * It basically loops over statements and runs them.
 	 * @param  Node $ast 
@@ -807,7 +818,7 @@ class Emulator
 			{
 				$this->current_line=$node->getLine();
 				if ($this->verbose) 
-					$this->verbose(sprintf("%s:%d\n",substr($this->current_file,strlen($this->folder)),$this->current_line),3);
+					$this->verbose(sprintf("%s:%d\n",$this->filename_only(),$this->current_line),3);
 			}
 			$this->statement_count++;
 			#TODO: create a sample and make sure this works

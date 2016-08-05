@@ -10,7 +10,7 @@ trait EmulatorErrors
 	 */
 	function throw($e)
 	{
-		$this->verbose("Throwing (try depth: {$this->try})...\n",4);
+		$this->verbose("Throwing at {$this->filename_only()}:{$this->current_line} (try depth: {$this->try})...\n",4);
 		if ($this->try>0)
 			throw $e;
 		else
