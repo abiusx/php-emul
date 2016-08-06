@@ -228,7 +228,7 @@ trait OOEmulatorMethods {
 		$class_name=$this->real_class($original_class_name);
 		$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$flag=false;
-		foreach ([$method_name,'__call',"__callStatic"] as $method)
+		foreach ([$method_name,'__call',"__callStatic"] as $method) //magic methods
 		{
 			if ($flag) break;
 			foreach ($this->ancestry($class_name) as $class)

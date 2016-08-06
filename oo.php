@@ -496,6 +496,10 @@ class OOEmulator extends Emulator
 			else
 				parent::run_statement($node); //static variable in a function
 		}		
+		// elseif ($node instanceof Node\Stmt\Unset_) //magic method
+		// {
+		// 	#TODO:
+		// }
 		else
 			parent::run_statement($node);
 	}
@@ -527,6 +531,14 @@ class OOEmulator extends Emulator
 				{
 					if (!$create)
 					{
+						#TODO: ancestry
+						if ($this->user_method_exists($var,"__get")) //magic_method
+						{
+							$temp=['temp'=>$this->run_user_method($var,"__get",$property_name)];
+							$key='temp';
+							return $temp;
+						}
+						
 						$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 						return $this->null_reference($key);
 					}
