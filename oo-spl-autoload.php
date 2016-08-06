@@ -31,6 +31,7 @@ trait OOEmulator_spl_autoload
 	}
 	public function spl_autoload_call($class)
 	{
+		if (empty($this->autoloaders)) return;
 		$this->verbose("Attempting to autoload '{$class}'...\n",3);
 		foreach ($this->autoloaders as $autoloader)
 			if ($this->class_exists($class)) break;

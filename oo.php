@@ -238,17 +238,17 @@ class OOEmulator extends Emulator
 		$this->verbose("Creating object of type {$classname}...".PHP_EOL,2);
 		$class_index=strtolower($classname);
 		
-		// if (!$this->user_class_exists($class_index) and $this->user_class_exists($this->namespace($class_index)))
-			// $class_index=strtolower($this->namespace($class_index));
-		// if (!$this->user_class_exists($class_index))
-		// 	$class_index=strtolower($class_index);
-
 		$obj=new EmulatorObject($this->classes[$class_index]->name,$this->classes[$class_index]->properties,$this->classes[$class_index]->property_visibilities);
 		$constructor=null;
+		
+		$t=explode("\\",$classname);
+		$old_style_constructor=end($t); //strip namespace
+		
 		if ($this->user_method_exists($classname,"__construct"))
 			$constructor="__construct";
-		elseif ($this->user_method_exists($classname,$classname))
-			$constructor=$classname;
+		elseif ($this->user_method_exists($classname,$old_style_constructor))
+			$constructor=$old_style_constructor;
+		
 		foreach ($this->ancestry($class_index,true) as $class)
 		{
 			if ($this->user_class_exists($class))
@@ -310,7 +310,6 @@ class OOEmulator extends Emulator
 		elseif (class_exists($classname)) //core classes
 			return $this->new_core_object($classname,$args);
 
-
 		$this->error("Class '{$classname}' not found ");
 	}
 	/**
@@ -324,8 +323,7 @@ class OOEmulator extends Emulator
 		if ($node instanceof Node\Expr\New_)
 		{
 
-			$classname=$this->name($node->class);
-			$classname=$this->fully_qualify_name($classname);
+			$classname=$this->namespaced_name($node->class);
 			return $this->new_object($classname,$node->args); //user function
 
 		}
@@ -446,7 +444,7 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
 			$classname=$this->classes[strtolower($this->current_class)]->parent;	
-		return $this->fully_qualify_name($classname);
+		return $classname;
 	}
 	/**
 	 * Returns all parents, including self, of a class, ordered from youngest

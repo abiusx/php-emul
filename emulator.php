@@ -72,6 +72,8 @@ class Emulator
 	use EmulatorFunctions;
 	use EmulatorExpression;
 	use EmulatorStatement;
+	
+	public $namespaces_enabled=true;
 	/**
 	 * An array that holds all properties that constitute
 	 * emulation state as keys.
@@ -597,14 +599,14 @@ class Emulator
 			else
 				return $this->name($ast->name);
 		}
-		elseif ($ast instanceof Node\Name\FullyQualified)
-		{
-			return "\\".implode("\\",$ast->parts);
-		}
-		elseif ($ast instanceof Node\Name\Relative)
-		{
-			return $this->fully_qualify_name(implode("\\",$ast->parts));
-		}
+		// elseif ($ast instanceof Node\Name\FullyQualified)
+		// {
+		// 	return "\\".implode("\\",$ast->parts);
+		// }
+		// elseif ($ast instanceof Node\Name\Relative)
+		// {
+		// 	return $this->fully_qualify_name(implode("\\",$ast->parts));
+		// }
 		elseif ($ast instanceof Node\Name)
 		{
 			//compound name (of any kind), e.g variable, function, class
@@ -625,7 +627,17 @@ class Emulator
 		else
 			$this->error("Can not determine name: ",$ast);
 	}
-
+	function namespaced_name($node)
+	{
+		if (is_string($node))
+			return $this->fully_qualify_name($node);
+		elseif ($node instanceof Node\Name\FullyQualified)
+			return implode("\\",$node->parts);
+		elseif ($node instanceof Node\Name) // or $node instanceof Node\Name\Relative)
+			return $this->fully_qualify_name(implode("\\",$node->parts));
+		else
+			return $this->name($node);
+	}
 	/**
 	 * Returns the fully qualified namespace name associated with a relative/full/base name
 	 * A fully qualified namespace starts with \
@@ -634,17 +646,20 @@ class Emulator
 	 */
 	function fully_qualify_name($name)
 	{
-		if ($name[0]=="\\") return $name; //fully qualified
-		$this->verbose("Resolving relative name '{$name}' to fully qualified name...\n",5);
+		if (!$this->namespaces_enabled) 
+			return $name; 
+		// if ($name[0]=="\\") 
+		// {
+		// 	// $this->notice("FQ called on an already FQ name!")	;
+		// 	return $name; //fully qualified
+		// }
+		$this->verbose("Resolving relative name '{$name}'...\n",5);
+		// $this->verbose("Resolving relative name '{$name}' to fully qualified name...\n",5);
 		$parts=explode("\\",$name);
 		if (!isset($this->current_active_namespaces[strtolower($parts[0])])) //no alias
 			return $this->current_namespace($name);
 		$parts[0]=$this->current_active_namespaces[strtolower($parts[0])];
-		return "\\".implode("\\",$parts);
-	}
-	function is_fully_qualified_namespace($name)
-	{
-		return $name[0]=="\\";
+		return "".implode("\\",$parts);
 	}
 	/**
 	 * Namespaces quirk:
@@ -673,10 +688,11 @@ class Emulator
 	 */
 	function current_namespace($name)
 	{
+		if (!$this->namespaces_enabled) return $name;
 		if ($this->current_namespace)
-			return "\\".$this->current_namespace."\\".$name;
+			return "".$this->current_namespace."\\".$name;
 		else
-			return "\\".$name;
+			return "".$name;
 	}
 	/**
 	 * Runs a PHP file
@@ -763,6 +779,8 @@ class Emulator
 		if (0);
 		elseif ($node instanceof Node\Stmt\Namespace_)
 		{
+			if (!$this->namespaces_enabled) 
+				$this->error("Namespace support is disabled. Please enabled it in the emulator and rerun");
 			$this->current_namespace=$this->name($node);
 			$this->verbose("Extracting declarations of namespace '{$this->current_namespace}'...\n",2);
 			foreach ($node->stmts as $stmt)
