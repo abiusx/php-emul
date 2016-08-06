@@ -531,14 +531,6 @@ class OOEmulator extends Emulator
 				{
 					if (!$create)
 					{
-						#TODO: ancestry
-						if ($this->user_method_exists($var,"__get")) //magic_method
-						{
-							$temp=['temp'=>$this->run_user_method($var,"__get",$property_name)];
-							$key='temp';
-							return $temp;
-						}
-						
 						$this->notice("Undefined property: {$var->classname}::\${$property_name}");
 						return $this->null_reference($key);
 					}
@@ -687,6 +679,157 @@ class OOEmulator extends Emulator
 		return false;
 	}
 
+	/**
+	 * Returns the object and property name from a PropertyFetch expression node
+	 * For internal use by magic_method overriding functions
+	 * @param  Node\Expr\PropertyFetch $node [description]
+	 * @return [type]                        [description]
+	 */
+	private function property_fetch_object(Node\Expr\PropertyFetch $node)
+	{
+			$base=&$this->symbol_table($node->var,$key2,false);
+			if ($key2===null)
+				return null;
+			$var=&$base[$key2];
+			if ($var instanceof EmulatorObject)	
+			{
+				$property_name=$this->name($node->name);
+				return [$var,$property_name];
+			}
+			return null;
+	}
+
+
+	function variable_set($node,$value=null)
+	{
+		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
+		{
+			$res=$this->property_fetch_object($node);
+			if ($res)
+			{
+				list($obj,$prop)=$res;
+				if ($this->user_method_exists($obj,"__set")) //magic_method
+				{
+					$this->verbose("Calling magic method __set() for '{$prop}'...\n",3);
+					return $this->run_user_method($obj,"__set",[$prop,$value]);
+				}
+			}
+		}
+		return parent::variable_set($node,$value);
+		// $r=&$this->symbol_table($node,$key,true);
+		// if ($key!==null)
+		// 	return $r[$key]=$value;
+		// else 
+		// 	return null;
+	}
+	function &variable_reference($node)
+	{
+		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
+		{
+			$res=$this->property_fetch_object($node);
+			if ($res)
+			{
+				list($obj,$prop)=$res;
+				if ($this->user_method_exists($obj,"__get")) //magic_method
+				{
+					$this->verbose("Calling magic method __get() for '{$prop}'...\n",3);
+					$t=$this->run_user_method($obj,"__get",[$prop]);
+					return $t;
+				}
+			}
+		}			
+		return parent::variable_reference($node);
+
+		// $r=&$this->symbol_table($node,$key,false);
+		// if ($key===null) //not found or GLOBALS
+		// 	return $this->null_reference();
+		// elseif (is_array($r))
+		// 	return $r[$key]; //if $r[$key] does not exist, will be created in byref use.
+		// else
+		// 	$this->error("Could not retrieve reference",$node);
+	}
+	function variable_get($node)
+	{
+		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
+		{
+			$res=$this->property_fetch_object($node);
+			if ($res)
+			{
+				list($obj,$prop)=$res;
+				if ($this->user_method_exists($obj,"__get")) //magic_method
+				{
+					$this->verbose("Calling magic method __get() for '{$prop}'...\n",3);
+					return $this->run_user_method($obj,"__get",[$prop]);
+				}
+			}
+		}			
+		return parent::variable_get($node);
+		// $r=&$this->symbol_table($node,$key,false);
+		// if ($key!==null)
+		// 	if (is_string($r))
+		// 		return $r[$key];
+		// 	elseif (!array_key_exists($key, $r)) //only works for arrays, not strings
+		// 	{
+		// 		$this->notice("Undefined index: {$key}");
+		// 		return null;
+		// 	}
+		// 	else
+		// 		return $r[$key];
+		// else 
+		// 	return null;
+	}
+	function variable_isset($node)
+	{
+		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
+		{
+			$res=$this->property_fetch_object($node);
+			if ($res)
+			{
+				list($obj,$prop)=$res;
+				if ($this->user_method_exists($obj,"__isset")) //magic_method
+				{
+					$this->verbose("Calling magic method __isset() for '{$prop}'...\n",3);
+					return $this->run_user_method($obj,"__isset",[$prop]);
+				}
+			}
+		}		
+		return parent::variable_isset($node);	
+	
+		// $this->error_silence();
+		// $r=$this->symbol_table($node,$key,false);
+		// $this->error_restore();
+		// return $key!==null and isset($r[$key]);
+	}
+	function variable_unset($node)
+	{
+		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
+		{
+			$res=$this->property_fetch_object($node);
+			if ($res)
+			{
+				list($obj,$prop)=$res;
+				if ($this->user_method_exists($obj,"__unset")) //magic_method
+				{
+					$this->verbose("Calling magic method __unset() for '{$prop}'...\n",3);
+					return $this->run_user_method($obj,"__unset",[$prop]);
+				}
+			}
+		}			
+		return parent::variable_unset($node);	
+	}
+
+
+
+// #NOTE: __set overrides $create, even if create is true, __set is called first
+// 						#TODO: ancestry
+// 						#TODO: these should be moved to variable_set, etc.
+// 						if ($this->user_method_exists($var,"__get")) //magic_method
+// 						{
+// 							$this->verbose("Calling magic method __get() for '{$property_name}'...\n",3);
+// 							$temp=['temp'=>$this->run_user_method($var,"__get",[$property_name])];
+// 							$key='temp';
+// 							return $temp;
+// 						}
 }
 
 foreach (glob(__DIR__."/mocks/oo/*.php") as $mock)
