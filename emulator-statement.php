@@ -290,6 +290,7 @@ trait EmulatorStatement
 
 				if (!isset($globals_[$name]))
 					$globals_[$name]=null; //create
+				$this->verbose("Aliasing global variable '\${$name}'...\n",3);
 				$this->variables[$name]=&$globals_[$name];
 			}
 		}
@@ -310,13 +311,7 @@ trait EmulatorStatement
 		{
 			#constant definition:
 			foreach ($node->consts as $const)
-			{
-				$index=$this->current_namespace($const->name);
-				if (array_key_exists($index,$this->constants))
-					$this->notice("Constant {$index} already defined");
-				else
-					$this->constants[$index]=$this->evaluate_expression($const->value);
-			}
+				$this->constant_set($const->name,$this->evaluate_expression($const->value));
 		}
 
 		elseif ($node instanceof Node\Stmt\Use_)
@@ -327,5 +322,35 @@ trait EmulatorStatement
 		{
 			$this->error("Unknown node type: ",$node);	
 		}
+	}
+	function constant_exists($name)
+	{
+		if (defined($name)) return true;
+		$root_fqname="\\".$name;
+		$fqname=$this->fully_qualify_name($name);
+		return (array_key_exists($fqname, $this->constants))
+			or	(array_key_exists($root_fqname, $this->constants));
+	}
+	function constant_get($name)
+	{
+		if (defined($name))
+			return constant($name);
+
+		$root_fqname="\\".$name;
+		$fqname=$this->fully_qualify_name($name);
+		if (array_key_exists($fqname, $this->constants))
+			return $this->constants[$fqname];
+		elseif (array_key_exists($root_fqname, $this->constants))
+			return $this->constants[$root_fqname];
+		else
+			$this->error("Undefined constant {$fqname}");
+	}
+	function constant_set($name,$value)
+	{
+		$index=$this->current_namespace($name);
+		if (array_key_exists($index,$this->constants))
+			$this->notice("Constant {$index} already defined");
+		else
+			$this->constants[$index]=$value;
 	}
 }

@@ -599,11 +599,11 @@ class Emulator
 		}
 		elseif ($ast instanceof Node\Name\FullyQualified)
 		{
-			return "".implode("\\",$ast->parts);
+			return "\\".implode("\\",$ast->parts);
 		}
 		elseif ($ast instanceof Node\Name\Relative)
 		{
-			return "".$this->resolve_namespace_aliases(implode("\\",$ast->parts));
+			return $this->fully_qualify_name(implode("\\",$ast->parts));
 		}
 		elseif ($ast instanceof Node\Name)
 		{
@@ -627,20 +627,25 @@ class Emulator
 	}
 
 	/**
-	 * Returns the real namespace name associated with an aliased namespace name
-	 * @param  string $name name, can be either simple or relative namespaced name
-	 * @return array string
+	 * Returns the fully qualified namespace name associated with a relative/full/base name
+	 * A fully qualified namespace starts with \
+	 * @param  string $name name, can be either simple or relative or fully qualified namespaced name
+	 * @return string
 	 */
-	function resolve_namespace_aliases($name)
+	function fully_qualify_name($name)
 	{
-		$this->verbose("Resolving relative name '{$name}'...\n",5);
+		if ($name[0]=="\\") return $name; //fully qualified
+		$this->verbose("Resolving relative name '{$name}' to fully qualified name...\n",5);
 		$parts=explode("\\",$name);
 		if (!isset($this->current_active_namespaces[strtolower($parts[0])])) //no alias
-			return $name;
+			return $this->current_namespace($name);
 		$parts[0]=$this->current_active_namespaces[strtolower($parts[0])];
-		return implode("\\",$parts);
+		return "\\".implode("\\",$parts);
 	}
-
+	function is_fully_qualified_namespace($name)
+	{
+		return $name[0]=="\\";
+	}
 	/**
 	 * Namespaces quirk:
 	 * There are 3 types of names, normal, Fully Qualified (starting with \) and Relative (possibly having \).
@@ -657,7 +662,7 @@ class Emulator
 	 * }
 	 *
 	 * X in the last line is a normal name, but is a relative namespace and needs to be resolved.
-	 * For classes, call to resolve_namespace_aliases is forced.
+	 * For classes, call to fully_qualify_name is forced.
 	 * For constants and functions, first current_namespace+name is checked, then name itself (name is always resolved).
 	 * For classes, only name is checked.
 	 */
@@ -669,9 +674,9 @@ class Emulator
 	function current_namespace($name)
 	{
 		if ($this->current_namespace)
-			return "".$this->current_namespace."\\".$name;
+			return "\\".$this->current_namespace."\\".$name;
 		else
-			return $name;
+			return "\\".$name;
 	}
 	/**
 	 * Runs a PHP file

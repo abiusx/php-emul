@@ -325,6 +325,7 @@ class OOEmulator extends Emulator
 		{
 
 			$classname=$this->name($node->class);
+			$classname=$this->fully_qualify_name($classname);
 			return $this->new_object($classname,$node->args); //user function
 
 		}
@@ -362,13 +363,11 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
 		{
-			#TODO: namespace support
 			$var=&$this->variable_reference($node); //do not create the property in static
 			return $var;
 		}
 		elseif ($node instanceof Node\Expr\ClassConstFetch)
 		{
-			#TODO: namespace support
 			$class=$this->name($node->class);
 			$constant=$this->name($node->name);
 			foreach ($this->ancestry($class) as $cls)
@@ -393,15 +392,18 @@ class OOEmulator extends Emulator
 		elseif ($node instanceof Node\Expr\Instanceof_)
 		{
 			$var=$this->evaluate_expression($node->expr);
-			$classname=$this->name($node->class);
-			if ($var instanceof EmulatorObject)
-			{
-				foreach ($this->ancestry($var->classname) as $class)
-					if (strtolower($class)===strtolower($classname)) return true;
-				return false;
-			}
-			else
-				return $var instanceof $classname;
+			if (!is_object($var)) return false;
+			//here needs FQ because classname is string, not going through ancestry
+			$classname=$this->fully_qualify_name($this->name($node->class));
+			return $this->is_a($var,$classname);
+			// if ($var instanceof EmulatorObject)
+			// {
+			// 	foreach ($this->ancestry($var->classname) as $class)
+			// 		if (strtolower($class)===strtolower($classname)) return true;
+			// 	return false;
+			// }
+			// else
+			// 	return $var instanceof $classname;
 		}		
 		elseif ($node instanceof Node\Expr\Cast\Object_)
 				return $this->to_object($this->evaluate_expression($node->expr));
@@ -444,7 +446,7 @@ class OOEmulator extends Emulator
 			$classname=$this->current_class;
 		elseif ($classname==="parent")
 			$classname=$this->classes[strtolower($this->current_class)]->parent;	
-		return $this->resolve_namespace_aliases($classname);
+		return $this->fully_qualify_name($classname);
 	}
 	/**
 	 * Returns all parents, including self, of a class, ordered from youngest
@@ -645,7 +647,7 @@ class OOEmulator extends Emulator
 			$class=$this->get_class($object_or_string);
 		else
 			$class=$object_or_string;
-		
+
 		foreach ($this->ancestry($class) as $ancestor)
 			if (strtolower($ancestor)===strtolower($class_name))
 				return true;	

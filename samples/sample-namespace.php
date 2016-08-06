@@ -9,13 +9,12 @@ namespace JESUS {
 echo \X1\X2\x;
 // var_dump(\X1\X2\y); //error
 var_dump(y); 
-
 }
 
 
 namespace {
 	function f_root() {return 2;}
-	const root=7;
+	define("root",7);
 	// var_dump(X1\constX1); //error, constants are not declared early
 	var_dump(X1\X2\fx());
 }
@@ -47,8 +46,9 @@ namespace X1\X2\X3\X4\X5\X6\X7\X8\X9\X10\X11\X12\X13\X14\X15\X16\X17\X18\X19
 		$c+=Z\X2\fx();
 	var_dump($c);
 	var_dump(Z\constX1);
+	var_dump(constant("root"));
 	var_dump(root);
-	// var_dump(f_root());
+	var_dump(f_root());
 	$x=new \Exception();
 }
 namespace {

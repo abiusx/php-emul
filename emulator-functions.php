@@ -20,9 +20,13 @@ trait EmulatorFunctions
 	 * @param  string $f 
 	 * @return bool    
 	 */
-	public function user_function_exists($f)
+	public function user_function_exists($name)
 	{
-		return isset($this->functions[strtolower($f)]);	
+		$name=strtolower($name);
+		$root_name="\\{$name}";
+		$fqname=$this->fully_qualify_name($name);
+		return (array_key_exists($fqname, $this->functions) //in this namespace
+		or array_key_exists($root_name, $this->functions)); //in global namespace
 	}
 	/**
 	 * Whether or not a function exists (user or native)
@@ -31,7 +35,7 @@ trait EmulatorFunctions
 	 */
 	public function function_exists($f)
 	{
-		return function_exists($f) or isset($this->functions[strtolower($f)]);
+		return function_exists($f) or $this->user_function_exists($f);
 	}
 	/**
 	 * Prepare arguments and symbol table before running a user function
@@ -149,21 +153,10 @@ trait EmulatorFunctions
 		foreach ($trace_args as $k=>$v)
 			end($this->trace)->$k=$v;
 		
-		// $bu=[];
-		// array_push($this->execution_context_stack,$context);
-		// foreach ($context as $k=>&$v)
-		// 	if (isset($context->{$k}))
-		// 	{	
-		// 		$bu[$k]=$this->{"current_{$k}"};
-		// 		$this->{"current_{$k}"}=&$v;
-		// 	}
 		$this->context_switch($context);
 		$res=$this->run_code($function->code);
-		// print_r(array_keys($bu));
-		// foreach ($context as $k=>&$v)
-		// 	if (isset($context->{$k}))
-		// 		$this->{"current_{$k}"}=$bu[$k];
 		$this->context_restore();		
+	
 		array_pop($this->trace);
 
 		$this->pop();
@@ -288,11 +281,12 @@ trait EmulatorFunctions
 	public function call_function($name,$args)
 	{
 		$this->stash_ob();
-		$name=$this->resolve_namespace_aliases($name);
-		if ($this->user_function_exists($this->current_namespace($name))) //in this namespace
-			$ret=$this->run_user_function($this->current_namespace($name),$args); 
-		elseif ($this->user_function_exists($name)) //in global namespace
-			$ret=$this->run_user_function($name,$args); 
+		$root_name="\\{$name}";
+		$fqname=$this->fully_qualify_name($name);
+		if ($this->user_function_exists($fqname)) //in this namespace
+			$ret=$this->run_user_function($fqname,$args); 
+		elseif ($this->user_function_exists($root_name)) //in global namespace
+			$ret=$this->run_user_function($root_name,$args); 
 		// elseif (function_exists($this->current_namespace($name))) //in this namespace core function (shouldn't really happen)
 		// 	$ret=$this->run_core_function($this->current_namespace($name),$args);
 		elseif (function_exists($name)) //global core function

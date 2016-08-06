@@ -290,16 +290,7 @@ trait EmulatorExpression {
 		}
 		elseif ($node instanceof Node\Expr\ConstFetch)
 		{
-			$name=$this->name($node->name);
-			$name=$this->resolve_namespace_aliases($name);
-			if (array_key_exists($this->current_namespace($name), $this->constants))
-				return $this->constants[$this->current_namespace($name)];
-			elseif (array_key_exists($name, $this->constants))
-				return $this->constants[$name];
-			elseif (defined($name))
-				return constant($name);
-			else
-				$this->error("Undefined constant {$name}");
+			return $this->constant_get($this->name($node->name));
 
 		}
 		elseif ($node instanceof Node\Expr\ErrorSuppress)
