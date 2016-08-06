@@ -627,6 +627,11 @@ class Emulator
 		else
 			$this->error("Can not determine name: ",$ast);
 	}
+	/**
+	 * Used on names that can be a namespace
+	 * @param  Node|String $node 
+	 * @return string
+	 */
 	function namespaced_name($node)
 	{
 		if (is_string($node))
@@ -644,7 +649,7 @@ class Emulator
 	 * @param  string $name name, can be either simple or relative or fully qualified namespaced name
 	 * @return string
 	 */
-	function fully_qualify_name($name)
+	private function fully_qualify_name($name)
 	{
 		if (!$this->namespaces_enabled) 
 			return $name; 

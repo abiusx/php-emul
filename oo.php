@@ -137,8 +137,7 @@ class OOEmulator extends Emulator
 			$extends=null;
 			if (isset($node->extends) and $node->extends)
 			{
-				$extends=$this->name($node->extends);
-				$extends=$this->real_class($extends);
+				$extends=$this->namespaced_name($node->extends);
 				if (!$this->class_exists($extends))	
 					$this->spl_autoload_call($extends);
 				if (!$this->class_exists($extends))
@@ -392,7 +391,7 @@ class OOEmulator extends Emulator
 			$var=$this->evaluate_expression($node->expr);
 			if (!is_object($var)) return false;
 			//here needs FQ because classname is string, not going through ancestry
-			$classname=$this->fully_qualify_name($this->name($node->class));
+			$classname=$this->namespaced_name($node->class);
 			return $this->is_a($var,$classname);
 			// if ($var instanceof EmulatorObject)
 			// {

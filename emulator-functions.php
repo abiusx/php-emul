@@ -280,20 +280,22 @@ trait EmulatorFunctions
 	public function call_function($name,$args)
 	{
 		$this->stash_ob();
-		$fqname=$this->namespaced_name($name);
-		if ($this->user_function_exists($fqname)) //in this namespace
-			$ret=$this->run_user_function($fqname,$args); 
-		elseif ($this->user_function_exists($name)) //in global namespace
-			$ret=$this->run_user_function($name,$args); 
-		// elseif (function_exists($this->current_namespace($name))) //in this namespace core function (shouldn't really happen)
-		// 	$ret=$this->run_core_function($this->current_namespace($name),$args);
-		elseif (function_exists($name)) //global core function
+		if (function_exists($name)) //global core function
 			$ret=$this->run_core_function($name,$args);
-		#TODO: move core function first for speed!
 		else
 		{
-			$this->error("Call to undefined function {$name}()",$args);
-			$ret=null;
+			$fqname=$this->namespaced_name($name);
+			if ($this->user_function_exists($fqname)) //in this namespace
+				$ret=$this->run_user_function($fqname,$args); 
+			elseif ($this->user_function_exists($name)) //in global namespace
+				$ret=$this->run_user_function($name,$args); 
+			// elseif (function_exists($this->current_namespace($name))) //in this namespace core function (shouldn't really happen)
+			// 	$ret=$this->run_core_function($this->current_namespace($name),$args);
+			else
+			{
+				$this->error("Call to undefined function {$name}()",$args);
+				$ret=null;
+			}
 		}
 		$this->restore_ob();
 		return $ret;

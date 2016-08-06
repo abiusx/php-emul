@@ -228,19 +228,22 @@ trait OOEmulatorMethods {
 		$class_name=$this->real_class($original_class_name);
 		$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$flag=false;
+		foreach ([$method_name,'__call'] as $method)
 		foreach ($this->ancestry($class_name) as $class)
 		{
-			if ($this->user_method_exists($class,$method_name))
+			if ($method=="__call")
+				$this->verbose("Method not found, trying magic methods...\n",3);
+			if ($this->user_method_exists($class,$method))
 			{
 				if ($class==$class_name)
 					$word="direct";
 				else
 					$word="ancestor";
-				$this->verbose("Found {$word} method {$class}::{$method_name}()...".PHP_EOL,3);
-				$trace_args=array("type"=>"::","function"=>$method_name,"class"=>$class);
+				$this->verbose("Found {$word} method {$class}::{$method}()...".PHP_EOL,3);
+				$trace_args=array("type"=>"::","function"=>$method,"class"=>$class);
 				$class_index=&$this->classes[strtolower($class)];
 				$context=clone $class_index->context;
-				$context->method=$method_name;
+				$context->method=$method;
 				$context->line=$this->current_line;
 				$context->class=$class_name; //late static bind
 
@@ -250,22 +253,26 @@ trait OOEmulatorMethods {
 					$trace_args['type']="->";
 					$context->this=$object; //do we need ref here? I don't think so
 				}
-				$res=$this->run_function($class_index->methods[strtolower($method_name)],$args, $context, $trace_args);
+				if ($method=="__call")
+					$argz=[$method_name,$args];
+				else
+					$argz=$args;
+				$res=$this->run_function($class_index->methods[strtolower($method)],$argz, $context, $trace_args);
 				$flag=true;
 				break;	
 			}
 			elseif (class_exists($class)) //core class
 			{
-				if ($object and $object->parent and method_exists($object->parent, $method_name))
+				if ($object and $object->parent and method_exists($object->parent, $method))
 				{
-					$res=$this->run_core_static_method($class,$method_name,$args,$object->parent);
+					$res=$this->run_core_static_method($class,$method,$args,$object->parent);
 					$flag=true;
 					break;
 				}
 			}
 
 		}
-		if (!$flag)
+		if (!$flag) //method not found
 		{
 			$this->error("Call to undefined method {$class_name}::{$method_name}()");
 			$res=null;
