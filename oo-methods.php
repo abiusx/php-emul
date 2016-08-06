@@ -228,49 +228,60 @@ trait OOEmulatorMethods {
 		$class_name=$this->real_class($original_class_name);
 		$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$flag=false;
-		foreach ([$method_name,'__call'] as $method)
-		foreach ($this->ancestry($class_name) as $class)
+		foreach ([$method_name,'__call',"__callStatic"] as $method)
 		{
-			if ($method=="__call")
-				$this->verbose("Method not found, trying magic methods...\n",3);
-			if ($this->user_method_exists($class,$method))
+			if ($flag) break;
+			foreach ($this->ancestry($class_name) as $class)
 			{
-				if ($class==$class_name)
-					$word="direct";
-				else
-					$word="ancestor";
-				$this->verbose("Found {$word} method {$class}::{$method}()...".PHP_EOL,3);
-				$trace_args=array("type"=>"::","function"=>$method,"class"=>$class);
-				$class_index=&$this->classes[strtolower($class)];
-				$context=clone $class_index->context;
-				$context->method=$method;
-				$context->line=$this->current_line;
-				$context->class=$class_name; //late static bind
-
-				if ($object!==null)
-				{
-					$trace_args['object']=$object; //do we need ref here? I don't think so
-					$trace_args['type']="->";
-					$context->this=$object; //do we need ref here? I don't think so
-				}
 				if ($method=="__call")
-					$argz=[$method_name,$args];
-				else
-					$argz=$args;
-				$res=$this->run_function($class_index->methods[strtolower($method)],$argz, $context, $trace_args);
-				$flag=true;
-				break;	
-			}
-			elseif (class_exists($class)) //core class
-			{
-				if ($object and $object->parent and method_exists($object->parent, $method))
 				{
-					$res=$this->run_core_static_method($class,$method,$args,$object->parent);
-					$flag=true;
-					break;
+					if ($object===null)	continue;
+					$this->verbose("Method not found, trying '__call' magic method...\n",3);
 				}
-			}
+				elseif ($method=="__callStatic")
+				{
+					if ($object!==null)	continue;
+					$this->verbose("Method not found, trying '__callStatic' magic method...\n",3);
+				}
+				if ($this->user_method_exists($class,$method))
+				{
+					if ($class==$class_name)
+						$word="direct";
+					else
+						$word="ancestor";
+					$this->verbose("Found {$word} method {$class}::{$method}()...".PHP_EOL,3);
+					$trace_args=array("type"=>"::","function"=>$method,"class"=>$class);
+					$class_index=&$this->classes[strtolower($class)];
+					$context=clone $class_index->context;
+					$context->method=$method;
+					$context->line=$this->current_line;
+					$context->class=$class_name; //late static bind
 
+					if ($object!==null)
+					{
+						$trace_args['object']=$object; //do we need ref here? I don't think so
+						$trace_args['type']="->";
+						$context->this=$object; //do we need ref here? I don't think so
+					}
+					if ($method=="__call" or $method=="__callStatic") 
+						$argz=[$method_name,$args];
+					else
+						$argz=$args;
+					$res=$this->run_function($class_index->methods[strtolower($method)],$argz, $context, $trace_args);
+					$flag=true;
+					break;	
+				}
+				elseif (class_exists($class)) //core class
+				{
+					if ($object and $object->parent and method_exists($object->parent, $method))
+					{
+						$res=$this->run_core_static_method($class,$method,$args,$object->parent);
+						$flag=true;
+						break;
+					}
+				}
+
+			}
 		}
 		if (!$flag) //method not found
 		{
