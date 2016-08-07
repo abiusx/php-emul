@@ -1,4 +1,6 @@
 <?php
+session_start();
+die();
 echo "Hi";
 $x=5+2.0;
 $x=(int)($x/3);
