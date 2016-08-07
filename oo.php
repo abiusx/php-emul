@@ -688,7 +688,7 @@ class OOEmulator extends Emulator
 	 */
 	private function handle_magic($node,$magic,&$result,$args=[])
 	{
-		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
+		if ($node instanceof Node\Expr\PropertyFetch)// and !parent::variable_isset($node))
 		{
 
 			$base=&$this->symbol_table($node->var,$key2,false);
@@ -699,6 +699,8 @@ class OOEmulator extends Emulator
 				$prop=$this->name($node->name);
 			else
 				return false;
+			if (array_key_exists($prop, $obj->properties)) return false; //exists
+			
 			foreach ($this->ancestry($obj->classname) as $class)
 				if ($this->user_method_exists($class,"__{$magic}")) //magic_method
 				{
