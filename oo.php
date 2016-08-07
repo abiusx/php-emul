@@ -680,42 +680,41 @@ class OOEmulator extends Emulator
 	}
 
 	/**
-	 * Returns the object and property name from a PropertyFetch expression node
-	 * For internal use by magic_method overriding functions
-	 * @param  Node\Expr\PropertyFetch $node [description]
-	 * @return [type]                        [description]
+	 * Handles magic method
+	 * @param  [type] $node  [description]
+	 * @param  [type] $magic [description]
+	 * @param  array  $args  [description]
+	 * @return [type]        [description]
 	 */
-	private function property_fetch_object(Node\Expr\PropertyFetch $node)
-	{
-			$base=&$this->symbol_table($node->var,$key2,false);
-			if ($key2===null)
-				return null;
-			$var=&$base[$key2];
-			if ($var instanceof EmulatorObject)	
-			{
-				$property_name=$this->name($node->name);
-				return [$var,$property_name];
-			}
-			return null;
-	}
-
-
-	function variable_set($node,$value=null)
+	private function handle_magic($node,$magic,&$result,$args=[])
 	{
 		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
 		{
-			$res=$this->property_fetch_object($node);
-			if ($res)
-			{
-				list($obj,$prop)=$res;
-				if ($this->user_method_exists($obj,"__set")) //magic_method
+
+			$base=&$this->symbol_table($node->var,$key2,false);
+			if ($key2===null)
+				return false;
+			$obj=&$base[$key2];
+			if ($obj instanceof EmulatorObject)	
+				$prop=$this->name($node->name);
+			else
+				return false;
+			foreach ($this->ancestry($obj->classname) as $class)
+				if ($this->user_method_exists($class,"__{$magic}")) //magic_method
 				{
-					$this->verbose("Calling magic method __set() for '{$prop}'...\n",3);
-					return $this->run_user_method($obj,"__set",[$prop,$value]);
+					$this->verbose("Calling magic method {$class}::__{$magic}() for '{$prop}'...\n",3);
+					array_unshift($args,$prop);
+					$result=$this->run_user_method($obj,"__{$magic}",$args,$class);
+					return true;
 				}
-			}
-		}
-		return parent::variable_set($node,$value);
+		}	
+		return false;
+	}
+
+	function variable_set($node,$value=null)
+	{
+		if ($this->handle_magic($node,"set",$r,[$value])) return $r;
+		else return parent::variable_set($node,$value);
 		// $r=&$this->symbol_table($node,$key,true);
 		// if ($key!==null)
 		// 	return $r[$key]=$value;
@@ -724,21 +723,8 @@ class OOEmulator extends Emulator
 	}
 	function &variable_reference($node)
 	{
-		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
-		{
-			$res=$this->property_fetch_object($node);
-			if ($res)
-			{
-				list($obj,$prop)=$res;
-				if ($this->user_method_exists($obj,"__get")) //magic_method
-				{
-					$this->verbose("Calling magic method __get() for '{$prop}'...\n",3);
-					$t=$this->run_user_method($obj,"__get",[$prop]);
-					return $t;
-				}
-			}
-		}			
-		return parent::variable_reference($node);
+		if ($this->handle_magic($node,"get",$r)) return $r;
+		else return parent::variable_reference($node);
 
 		// $r=&$this->symbol_table($node,$key,false);
 		// if ($key===null) //not found or GLOBALS
@@ -750,20 +736,8 @@ class OOEmulator extends Emulator
 	}
 	function variable_get($node)
 	{
-		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
-		{
-			$res=$this->property_fetch_object($node);
-			if ($res)
-			{
-				list($obj,$prop)=$res;
-				if ($this->user_method_exists($obj,"__get")) //magic_method
-				{
-					$this->verbose("Calling magic method __get() for '{$prop}'...\n",3);
-					return $this->run_user_method($obj,"__get",[$prop]);
-				}
-			}
-		}			
-		return parent::variable_get($node);
+		if ($this->handle_magic($node,"get",$r)) return $r;
+		else return parent::variable_get($node);
 		// $r=&$this->symbol_table($node,$key,false);
 		// if ($key!==null)
 		// 	if (is_string($r))
@@ -780,20 +754,8 @@ class OOEmulator extends Emulator
 	}
 	function variable_isset($node)
 	{
-		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
-		{
-			$res=$this->property_fetch_object($node);
-			if ($res)
-			{
-				list($obj,$prop)=$res;
-				if ($this->user_method_exists($obj,"__isset")) //magic_method
-				{
-					$this->verbose("Calling magic method __isset() for '{$prop}'...\n",3);
-					return $this->run_user_method($obj,"__isset",[$prop]);
-				}
-			}
-		}		
-		return parent::variable_isset($node);	
+		if ($this->handle_magic($node,"isset",$r)) return $r;
+		else return parent::variable_isset($node);	
 	
 		// $this->error_silence();
 		// $r=$this->symbol_table($node,$key,false);
@@ -802,20 +764,8 @@ class OOEmulator extends Emulator
 	}
 	function variable_unset($node)
 	{
-		if ($node instanceof Node\Expr\PropertyFetch and !parent::variable_isset($node))
-		{
-			$res=$this->property_fetch_object($node);
-			if ($res)
-			{
-				list($obj,$prop)=$res;
-				if ($this->user_method_exists($obj,"__unset")) //magic_method
-				{
-					$this->verbose("Calling magic method __unset() for '{$prop}'...\n",3);
-					return $this->run_user_method($obj,"__unset",[$prop]);
-				}
-			}
-		}			
-		return parent::variable_unset($node);	
+		if ($this->handle_magic($node,"unset",$r)) return $r;
+		else return parent::variable_unset($node);	
 	}
 
 

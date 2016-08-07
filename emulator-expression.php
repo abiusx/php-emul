@@ -334,7 +334,10 @@ trait EmulatorExpression {
 			$res=true;
 			foreach ($node->vars as $var)
 			{
-				if (!$this->variable_isset($var) or $this->evaluate_expression($var)===null)
+				print_r($var);
+				// if (!$this->variable_isset($var) or $this->evaluate_expression($var)===null)
+				if (!$this->variable_isset($var))
+				// if (!$this->variable_isset($var) or self::variable_get($var)===null)
 				{
 					$res=false;
 					break;
