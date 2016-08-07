@@ -211,7 +211,7 @@ trait OOEmulatorMethods {
 			// return call_user_func_array($class_name."::".$method_name, $args);
 		else
 		{
-			$this->error("Can not call static method '{$class_name}::{$method_name}', class '{$original_class_name}' does not exist.\n");
+			$this->error("Can not call static method '{$class_name}::{$method_name}', class '{$class_name}' does not exist.\n");
 		}
 
 	}

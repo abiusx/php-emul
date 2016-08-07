@@ -16,6 +16,7 @@ trait EmulatorVariables
 	protected function &null_reference(&$var=null)
 	{
 		$var=null;
+		// unset($this->null_reference);
 		$this->null_reference=null;
 		return $this->null_reference;
 

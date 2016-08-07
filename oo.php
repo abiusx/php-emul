@@ -336,7 +336,7 @@ class OOEmulator extends Emulator
 			elseif (is_object($object))
 				$classname=get_class($object);
 			else
-				$this->error("Call to a member function '{$method_name()}' on a non-object");
+				$this->error("Call to a member function '{$method_name}()' on a non-object");
 			$this->verbose("Method call {$classname}::{$method_name}()".PHP_EOL,3);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);
@@ -348,7 +348,7 @@ class OOEmulator extends Emulator
 			if ($node->class instanceof Node\Expr\Variable)
 				$class=$this->evaluate_expression($node->class)->classname;
 			elseif ($node->class instanceof Node\Name)
-				$class=$this->name($node->class);
+				$class=$this->namespaced_name($node->class);
 			else
 				$this->error("Unknown class when calling static function {$method_name}",$node);
 			$args=$node->args;
@@ -438,12 +438,14 @@ class OOEmulator extends Emulator
 	 */
 	protected function real_class($classname)
 	{
-		if ($classname==="self")
-			$classname=$this->current_self;
-		elseif ($classname==="static")
-			$classname=$this->current_class;
-		elseif ($classname==="parent")
-			$classname=$this->classes[strtolower($this->current_class)]->parent;	
+		$t=explode("\\",$classname);
+		$end=array_pop($t);
+		if ($end==="self")
+			return $this->current_self;
+		elseif ($end==="static")
+			return $this->current_class;
+		elseif ($end==="parent")
+			return $this->classes[strtolower($this->current_class)]->parent;	
 		return $classname;
 	}
 	/**
