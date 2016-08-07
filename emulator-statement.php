@@ -242,7 +242,6 @@ trait EmulatorStatement
 						$this->verbose("Catch block found, executing...\n",4);
 						$this->variable_set($catch->var,$e);
 						$this->run_code($catch->stmts);
-						// print_r($catch->stmts);
 						$catch_found=true;
 						break;
 					}

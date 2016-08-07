@@ -321,7 +321,7 @@ trait EmulatorExpression {
 		}
 		elseif ($node instanceof Node\Expr\Empty_)
 		{
-			//return true if not isset, or if false
+			//return true if not isset, or if false. only supports variables, and not expressions
 			$this->error_silence();
 			$res=(!$this->variable_isset($node->expr) or ($this->evaluate_expression($node->expr)==false));
 			$this->error_restore();

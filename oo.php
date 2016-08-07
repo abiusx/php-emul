@@ -96,6 +96,7 @@ class OOEmulator extends Emulator
 		$this->state['current_this']=
 		$this->state['current_self']=
 		$this->state['current_class']=
+		$this->state['magic_method_reentrant']= //re-entrant flag check for magic-methods
 		1; //emulation state elements
 		parent::__construct($init_environ);
 		EmulatorObject::$emul=$this; //HACK for allowing destructor calls
@@ -678,7 +679,7 @@ class OOEmulator extends Emulator
 				return true;	
 		return false;
 	}
-
+	protected $magic_method_reentrant=[];
 	/**
 	 * Handles magic method
 	 * @param  [type] $node  [description]
@@ -700,13 +701,19 @@ class OOEmulator extends Emulator
 			else
 				return false;
 			if (array_key_exists($prop, $obj->properties)) return false; //exists
-			
+
+			$reentrant_index="{$magic}_{$obj->objectid}";
+			if (isset($this->magic_method_reentrant[$reentrant_index]))
+				return false; //already inside
 			foreach ($this->ancestry($obj->classname) as $class)
 				if ($this->user_method_exists($class,"__{$magic}")) //magic_method
 				{
+
+					$this->magic_method_reentrant[$reentrant_index]=true;
 					$this->verbose("Calling magic method {$class}::__{$magic}() for '{$prop}'...\n",3);
 					array_unshift($args,$prop);
 					$result=$this->run_user_method($obj,"__{$magic}",$args,$class);
+					unset($this->magic_method_reentrant[$reentrant_index]);
 					return true;
 				}
 		}	
@@ -772,16 +779,6 @@ class OOEmulator extends Emulator
 
 
 
-// #NOTE: __set overrides $create, even if create is true, __set is called first
-// 						#TODO: ancestry
-// 						#TODO: these should be moved to variable_set, etc.
-// 						if ($this->user_method_exists($var,"__get")) //magic_method
-// 						{
-// 							$this->verbose("Calling magic method __get() for '{$property_name}'...\n",3);
-// 							$temp=['temp'=>$this->run_user_method($var,"__get",[$property_name])];
-// 							$key='temp';
-// 							return $temp;
-// 						}
 }
 
 foreach (glob(__DIR__."/mocks/oo/*.php") as $mock)
