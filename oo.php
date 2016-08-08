@@ -244,10 +244,14 @@ class OOEmulator extends Emulator
 		$t=explode("\\",$classname);
 		$old_style_constructor=end($t); //strip namespace
 		
-		if ($this->user_method_exists($classname,"__construct"))
-			$constructor="__construct";
-		elseif ($this->user_method_exists($classname,$old_style_constructor))
-			$constructor=$old_style_constructor;
+		foreach ($this->ancestry($class_index) as $class) //find the first available constructor
+		{
+			if ($this->user_method_exists($class,"__construct"))
+				$constructor=array($class,"__construct");
+			elseif ($this->user_method_exists($class,$old_style_constructor))
+				$constructor=array($class,$old_style_constructor);
+			if (isset($constructor)) break;
+		}
 		
 		foreach ($this->ancestry($class_index,true) as $class)
 		{
@@ -270,7 +274,7 @@ class OOEmulator extends Emulator
 			}
 		}
 		if ($constructor)
-			$this->run_user_method($obj,$constructor,$args);
+			$this->run_user_method($obj,$constructor[1],$args,$constructor[0]);
 		// $this->verbose("Creation done!".PHP_EOL,2); ///DEBUG
 		return $obj;
 	}
