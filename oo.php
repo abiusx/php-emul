@@ -350,7 +350,8 @@ class OOEmulator extends Emulator
 			#TODO: namespace support
 			$method_name=$this->name($node->name);
 			if ($node->class instanceof Node\Expr\Variable)
-				$class=$this->evaluate_expression($node->class)->classname;
+				// $class=$this->evaluate_expression($node->class)->classname;
+				$class=$this->evaluate_expression($node->class);
 			elseif ($node->class instanceof Node\Name)
 				$class=$this->namespaced_name($node->class);
 			else
