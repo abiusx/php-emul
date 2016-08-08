@@ -177,7 +177,23 @@ trait EmulatorFunctions
 		return $res;
 	}
 	/**
+	 * Converts array of Node\Arg to array of values
+	 * @param  Array of Node $args 
+	 * @return array
+	 */
+	protected function evaluate_args($args)
+	{
+		$argValues=[];
+		foreach ($args as &$arg)
+			if (!$arg instanceof Node\Arg)
+				$this->error("Argument sent to evaluate_args is not Node\Arg");
+			else
+				$argValues[]=$this->evaluate_expression($arg->value);
+		return $argValues;
+	}
+	/**
 	 * Prologue of a native function
+	 * Processes a list of arguments and returns their values
 	 * @param  string $name 
 	 * @param  array $args 
 	 * @param  string $class prologue a class method
@@ -185,7 +201,6 @@ trait EmulatorFunctions
 	 */
 	protected function core_function_prologue($name,$args,$class=null)
 	{
-		#TODO: auto-wrap callables, they are used all over the place
 		if ($class)
 			$function_reflection=new ReflectionMethod($class,$name);
 		else
@@ -213,6 +228,7 @@ trait EmulatorFunctions
 				{
 				 	$val=$this->evaluate_expression($arg->value);
 					#auto-wrap. note: ReflectionParameter::isCallable always returns false , either in PHP 5.4 or 7.0.2
+					#	it probably only works for user-classes
 				 	if ( function_exists("callback_requiring_functions") and isset(callback_requiring_functions()[strtolower($name)]) 
 				 		and isset(callback_requiring_functions()[strtolower($name)][$index]) ) //its a callback, wrap it!
 					{

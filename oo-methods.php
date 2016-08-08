@@ -264,7 +264,11 @@ trait OOEmulatorMethods {
 						$context->this=$object; //do we need ref here? I don't think so
 					}
 					if ($method=="__call" or $method=="__callStatic") 
-						$argz=[$method_name,$args];
+					{
+						// $argz=$this->core_function_prologue($method,$args,$class);
+						$argz=$this->evaluate_args($args);
+						$argz=[$method_name,$argz];
+					}
 					else
 						$argz=$args;
 					$res=$this->run_function($class_index->methods[strtolower($method)],$argz, $context, $trace_args);
