@@ -37,6 +37,8 @@ trait EmulatorExpression {
 		}
 		elseif ($node instanceof Node\Expr\AssignRef)
 		{
+			if (!$this->variable_isset($node->expr)) //referencing creates
+				$this->variable_set($node->expr);
 			$originalVar=&$this->variable_reference($node->expr,$success);
 			if ($success)
 				$this->variable_set_byref($node->var,$originalVar);

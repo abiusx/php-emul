@@ -511,6 +511,8 @@ class Emulator
 			if (is_scalar($base)) //arraydimfetch on scalar returns null 
 				return $this->null_reference($key);
 			
+			// if (is_null($base))
+			// 	return $this->null_reference($key);
 			foreach ($indexes as $index)
 			{
 				if ($index===NULL)
@@ -539,7 +541,6 @@ class Emulator
 				}
 				else
 					$base[$key]=null;
-
 			return $base;
 		}
 		elseif ($node instanceof Node\Expr\Variable)

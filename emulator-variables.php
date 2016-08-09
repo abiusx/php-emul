@@ -55,6 +55,8 @@ trait EmulatorVariables
 		if ($key!==null)
 			if (is_string($r))
 				return $r[$key];
+			elseif (is_null($r)) //any access on null is null [https://bugs.php.net/bug.php?id=72786]
+				return null;
 			elseif (!array_key_exists($key, $r)) //only works for arrays, not strings
 			{
 				$this->notice("Undefined index: {$key}");
@@ -95,7 +97,8 @@ trait EmulatorVariables
 	 */
 	function &variable_reference($node,&$success=null)
 	{
-		$r=&$this->symbol_table($node,$key,false);
+		$r=&$this->symbol_table($node,$key,false); //this should NOT always create, e.g. static property fetch
+		//in fact it should never create, anywhere its needed, it is explicitly created by variable_set
 		if ($key===null) //not found or GLOBALS
 		{
 			$success=false;
