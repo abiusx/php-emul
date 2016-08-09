@@ -505,8 +505,12 @@ class Emulator
 				return $this->null_reference($key);
 			$base=&$base[$key2];
 			$key=array_pop($indexes);
-			if (is_scalar($base))
+			if (is_string($base) and empty($indexes) and is_int($key)) //string arraydimfetch access
+				return $base; //already done
+			
+			if (is_scalar($base)) //arraydimfetch on scalar returns null 
 				return $this->null_reference($key);
+			
 			foreach ($indexes as $index)
 			{
 				if ($index===NULL)
