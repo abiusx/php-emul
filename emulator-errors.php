@@ -309,7 +309,9 @@ trait EmulatorErrors
 	 */
 	protected function _error($msg,$node=null,$details=true)
 	{
+		#TODO: these should be handled by error_handler as well, and the program.
 		$this->verbose($msg." in ".$this->current_file." on line ".$this->current_line.PHP_EOL,0);
+		// $this->output($msg." in ".$this->current_file." on line ".$this->current_line.PHP_EOL);
 		if ($details)
 		{
 			print_r($node);

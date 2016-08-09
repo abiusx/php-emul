@@ -93,15 +93,24 @@ trait EmulatorVariables
 	 * @param  Node $node 
 	 * @return reference
 	 */
-	function &variable_reference($node)
+	function &variable_reference($node,&$success=null)
 	{
 		$r=&$this->symbol_table($node,$key,false);
 		if ($key===null) //not found or GLOBALS
+		{
+			$success=false;
 			return $this->null_reference();
+		}
 		elseif (is_array($r))
+		{
+			$success=true;	
 			return $r[$key]; //if $r[$key] does not exist, will be created in byref use.
+		}
 		else
+		{
+			$success=false;	
 			$this->error("Could not retrieve reference",$node);
+		}
 	}
 
 }

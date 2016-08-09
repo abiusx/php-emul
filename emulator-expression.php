@@ -37,10 +37,11 @@ trait EmulatorExpression {
 		}
 		elseif ($node instanceof Node\Expr\AssignRef)
 		{
-			// $originalVar=$this->name($node->expr);
-			$originalVar=&$this->variable_reference($node->expr);
-			$this->variable_set_byref($node->var,$originalVar);
-			// $var=$originalVar;
+			$originalVar=&$this->variable_reference($node->expr,$success);
+			if ($success)
+				$this->variable_set_byref($node->var,$originalVar);
+			else
+				$this->warning("Can not assign by reference, the referenced variable does not exist");
 		}
 		elseif ($node instanceof Node\Expr\Assign)
 		{

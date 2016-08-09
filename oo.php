@@ -574,7 +574,11 @@ class OOEmulator extends Emulator
 			if ($classname instanceof EmulatorObject) //support for $object::static_method
 				$classname=$classname->classname;
 			$classname=$this->real_class($classname);
+			var_dump("realclass:",$classname);
 			$property_name=$this->name($node->name);
+			var_dump("propname:",$property_name);
+			if ($classname=="JFormHelper")
+			var_dump($this->classes[strtolower($classname)]);
 			if ($this->ancestry($classname))
 			{
 				foreach($this->ancestry($classname)  as $class)
@@ -737,10 +741,10 @@ class OOEmulator extends Emulator
 		// else 
 		// 	return null;
 	}
-	function &variable_reference($node)
+	function &variable_reference($node,&$success=null)
 	{
 		if ($this->handle_magic($node,"get",$r)) return $r;
-		else return parent::variable_reference($node);
+		else return parent::variable_reference($node,$success);
 
 		// $r=&$this->symbol_table($node,$key,false);
 		// if ($key===null) //not found or GLOBALS

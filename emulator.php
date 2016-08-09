@@ -505,6 +505,8 @@ class Emulator
 				return $this->null_reference($key);
 			$base=&$base[$key2];
 			$key=array_pop($indexes);
+			if (is_scalar($base))
+				return $this->null_reference($key);
 			foreach ($indexes as $index)
 			{
 				if ($index===NULL)
