@@ -57,7 +57,8 @@ trait EmulatorVariables
 				return $r[$key];
 			elseif (is_null($r)) //any access on null is null [https://bugs.php.net/bug.php?id=72786]
 				return null;
-			elseif (!array_key_exists($key, $r)) //only works for arrays, not strings
+			elseif (is_array($r) //support for iterable objects
+				and !array_key_exists($key, $r)) //only works for arrays, not strings
 			{
 				$this->notice("Undefined index: {$key}");
 				return null;

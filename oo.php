@@ -113,22 +113,16 @@ class OOEmulator extends Emulator
 	 */
 	protected $current_this=null,$current_self=null,$current_class=null;
 
-	/**
-	 * Extract ClassLike declarations from files.
-	 * @param  [type] $node [description]
-	 * @return [type]       [description]
-	 */
-	protected function get_declarations($node)
+	protected function define_class($node)
 	{
-		if ($node instanceof Node\Stmt\ClassLike)
-		{
-			//has type, implements (array), stmts (Array), name, extends
+//has type, implements (array), stmts (Array), name, extends
 			//type=0 is normal, type=16 is abstract
 			
 			$classtype=null;
 			if (isset($node->type))
 				$classtype=$node->type;
 			$classname=$this->current_namespace($this->name($node->name));
+			var_dump($classname,$this->current_namespace);
 			$type=strtolower(substr(explode("\\",get_class($node))[3],0,-1)); #intertface, class, trait
 			// $class_index=strtolower($this->namespace($classname));
 			$class_index=strtolower($classname);
@@ -221,11 +215,7 @@ class OOEmulator extends Emulator
 				$interfaces[]=$this->name($interface);
 			$class->classtype=$classtype;
 			// $class->file=$this->current_file;
-			$class->interfaces=$interfaces;
-		}
-		else
-			parent::get_declarations($node);
-
+			$class->interfaces=$interfaces;		
 	}
 	/**
 	 * Create an object from a user defined class
@@ -481,7 +471,7 @@ class OOEmulator extends Emulator
 	protected function run_statement($node)
 	{
 		if ($node instanceof Node\Stmt\ClassLike)
-			return;
+			$this->define_class($node);
 		elseif ($node instanceof Node\Stmt\Static_)
 		{
 			//TODO: bind this static variable to the method being runned in the class it belongs to
@@ -574,11 +564,11 @@ class OOEmulator extends Emulator
 			if ($classname instanceof EmulatorObject) //support for $object::static_method
 				$classname=$classname->classname;
 			$classname=$this->real_class($classname);
-			var_dump("realclass:",$classname);
+			// var_dump("realclass:",$classname);
 			$property_name=$this->name($node->name);
-			var_dump("propname:",$property_name);
-			if ($classname=="JFormHelper")
-			var_dump($this->classes[strtolower($classname)]);
+			// var_dump("propname:",$property_name);
+			// if ($classname=="JFormHelper")
+			// 	var_dump($this->classes[strtolower($classname)]);
 			if ($this->ancestry($classname))
 			{
 				foreach($this->ancestry($classname)  as $class)

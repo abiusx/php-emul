@@ -28,6 +28,7 @@ class EmulatorExecutionContext
 				throw new \Exception("'{$k}' is not a context variable.");
 		}
 	}
+	//available for everything, even includes
 	public $file;
 	public $line;
 
@@ -715,7 +716,7 @@ class Emulator
 	 */
 	public function run_file($file)
 	{
-		$last_file=$this->current_file;
+		// $last_file=$this->current_file;
 		$realfile=realpath($file);
 		foreach (explode(":",get_include_path()) as $path)
 		{
@@ -725,8 +726,8 @@ class Emulator
 				break;
 			}
 		}
-		$this->current_file=$realfile;
-		$tfolder=dirname($this->current_file)."/";
+		// $this->current_file=$realfile;
+		$tfolder=dirname($realfile)."/";
 		if (strlen($this->folder)>strlen($tfolder))
 			if (substr($this->folder,0,strlen($tfolder))===$tfolder)
 				$this->folder=$tfolder;
@@ -734,19 +735,24 @@ class Emulator
 				$this->folder=dirname($tfolder);
 
 		//resetting namespace
-		$this->current_namespace="";
-		$this->current_active_namespaces=[];
-
+		$context=new EmulatorExecutionContext;
+		$context->namespace="";
+		$context->active_namespaces=[];
+		$context->file=$realfile;
+		$context->line=1;
+		$this->context_switch($context);
 		$this->verbose(sprintf("Now running %s...\n",substr($this->current_file,strlen($this->folder)) ));
 		
 		$this->included_files[$this->current_file]=true;
-		
+
 		$ast=$this->parse($file);
 		$res=$this->run_code($ast);
 		$this->verbose(substr($this->current_file,strlen($this->folder))." finished.".PHP_EOL,2);
+		$this->context_restore();
+		
 		if ($this->return)
 			$this->return=false;
-		$this->current_file=$last_file;
+		// $this->current_file=$last_file;
 		return $res;
 	}
 	/**
