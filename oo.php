@@ -122,7 +122,6 @@ class OOEmulator extends Emulator
 			if (isset($node->type))
 				$classtype=$node->type;
 			$classname=$this->current_namespace($this->name($node->name));
-			var_dump($classname,$this->current_namespace);
 			$type=strtolower(substr(explode("\\",get_class($node))[3],0,-1)); #intertface, class, trait
 			// $class_index=strtolower($this->namespace($classname));
 			$class_index=strtolower($classname);

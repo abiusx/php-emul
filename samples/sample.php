@@ -1,4 +1,16 @@
 <?php
+$args=['hello',false,true,5];
+$temp = array();
+foreach ($args as &$arg)
+    $temp[] = &$arg;
+var_dump($temp);
+
+$temp=array();
+$temp[]=&$args[0];
+$temp[]=&$args[1];
+$temp[]=&$args[2];
+var_dump($temp);
+die();
 session_start();
 die();
 echo "Hi";
