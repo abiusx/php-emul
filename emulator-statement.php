@@ -123,7 +123,14 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\Foreach_) //Loop 4
 		{
-			$list=$this->evaluate_expression($node->expr);
+			//php 5.5+ support byref even if the expression is not byref itself (via a temporary replacement)
+			//TODO: test all foreach compilations with list
+			$byref=$node->byRef;
+			if ($node->expr instanceof Node\Expr\Variable and $byref)
+				$list=&$this->variable_reference($node->expr);
+			else
+				$list=$this->evaluate_expression($node->expr);
+
 			$keyed=false;
 			if (isset($node->keyVar))
 			{
@@ -132,18 +139,20 @@ trait EmulatorStatement
 					$this->variable_set($node->keyVar);
 				$keyVar=&$this->variable_reference($node->keyVar);
 			}
-			if (!$this->variable_isset($node->valueVar))
-				$this->variable_set($node->valueVar);
-			$valueVar=&$this->variable_reference($node->valueVar);
-
+			// if (!$this->variable_isset($node->valueVar))
+			// 	$this->variable_set($node->valueVar);
+			// $valueVar=&$this->variable_reference($node->valueVar);
 			$this->loop_depth++;
 			if ($this->loop_condition())
 				return null; #if already terminated die
-			foreach ($list as $k=>$v)
+			foreach ($list as $k=>&$v)
 			{
 				if ($keyed)
 					$keyVar=$k;
-				$valueVar=$v;
+				if ($byref)
+					$this->variable_set_byref($node->valueVar,$v);	
+				else
+					$this->variable_set($node->valueVar,$v);
 				$this->run_code($node->stmts);
 				
 				if ($this->loop_condition())
