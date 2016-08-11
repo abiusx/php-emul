@@ -275,7 +275,7 @@ trait EmulatorExpression {
 					return $this->current_function;
 				elseif ($node instanceof Node\Scalar\MagicConst\Class_)
 					return $this->current_class;
-				elseif ($node instanceof Node\Scalar\MagicConst\Method_)
+				elseif ($node instanceof Node\Scalar\MagicConst\Method)
 					return $this->current_method;
 				elseif ($node instanceof Node\Scalar\MagicConst\Namespace_)
 					return $this->current_namespace;
