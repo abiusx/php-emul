@@ -145,14 +145,23 @@ trait EmulatorStatement
 			$this->loop_depth++;
 			if ($this->loop_condition())
 				return null; #if already terminated die
+			if ($byref)
 			foreach ($list as $k=>&$v)
 			{
 				if ($keyed)
 					$keyVar=$k;
-				if ($byref)
-					$this->variable_set_byref($node->valueVar,$v);	
-				else
-					$this->variable_set($node->valueVar,$v);
+				$this->variable_set_byref($node->valueVar,$v);	
+				$this->run_code($node->stmts);
+				
+				if ($this->loop_condition())
+					break;
+			}
+			else
+			foreach ($list as $k=>$v)
+			{
+				if ($keyed)
+					$keyVar=$k;
+				$this->variable_set($node->valueVar,$v);
 				$this->run_code($node->stmts);
 				
 				if ($this->loop_condition())
