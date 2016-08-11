@@ -56,13 +56,14 @@ class Emulator
 	function __construct($init_environ=null)
 	{
 		$this->state[]=array_flip(['variables','constants','included_files'
+		,'current_namespace','current_active_namespaces'
+		,'current_file','current_line','current_function'
 		,'output','output_buffer','functions'
 		,'eval_depth','trace','output','break','continue'
 		,'variable_stack'
 		,'try','loop_depth','return','return_value'
-		,'current_namespace','current_active_namespaces'
 		,'shutdown_functions','terminated'
-		,'execution_context_stack'
+		,'execution_context_stack' //all previous contexts, i.e. all current_* vars
 		]);
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
 		$this->printer = new PhpParser\PrettyPrinter\Standard;
