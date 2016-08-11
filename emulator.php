@@ -494,9 +494,16 @@ class Emulator
 			while ($t instanceof Node\Expr\ArrayDimFetch)
 			{
 				$dim++;
-				if ($t->dim)
-					$indexes[]=$this->evaluate_expression($t->dim);
-				else
+				if ($t->dim) //explicit dimension
+				{
+					$ev=$this->evaluate_expression($t->dim);
+					//a literal null index evaluates to empty string rather than
+					//	a null dim which means a[]=2;
+					if ($ev===null) 
+						$ev="";
+					$indexes[]=$ev; 
+				}
+				else //implicit dimension
 					$indexes[]=null;
 				$t=$t->var;
 			}
@@ -534,14 +541,14 @@ class Emulator
 
 				$base=&$base[$index];
 			}
-			if ($create and !isset($base[$key]))
-				if ($key===null) #$a[...][...][]=x
+			if ($create) 
+				if ($key===null) #$a[...][...][]=x //add mode
 				{
 					$base[]=null;
 					end($base);
 					$key=key($base);
 				}
-				else
+				elseif (!isset($base[$key])) //non-existent index
 					$base[$key]=null;
 			return $base;
 		}
