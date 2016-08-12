@@ -5,7 +5,7 @@ use PhpParser\Node;
 #TODO: namespace,use
 //TODO: magic methods, destructor
 //TODO: enforce visibilities
-//TODO: print_r,var_export and var_dump output EmulatorObject not actual object
+//TODO: print_r,var_export output EmulatorObject not actual object
 
 /**
  * The user defined objects are wrapped in this class.
@@ -586,11 +586,7 @@ class OOEmulator extends Emulator
 			if ($classname instanceof EmulatorObject) //support for $object::static_method
 				$classname=$classname->classname;
 			$classname=$this->real_class($classname);
-			// var_dump("realclass:",$classname);
 			$property_name=$this->name($node->name);
-			// var_dump("propname:",$property_name);
-			// if ($classname=="JFormHelper")
-			// 	var_dump($this->classes[strtolower($classname)]);
 			if ($this->ancestry($classname))
 			{
 				foreach($this->ancestry($classname)  as $class)
@@ -725,15 +721,19 @@ class OOEmulator extends Emulator
 				$property_name=$this->name($node->name);
 				if (array_key_exists($property_name, $var->properties))
 				{
-					$visibility=$var->property_visibilities[$property_name];
-						// echo "___\n";
-						// var_dump($visibility);
-						// var_dump($this->current_class);
-						// var_dump($var->property_class[$property_name]);
-						// var_dump($this->is_a((string)$this->current_self, $var->property_class[$property_name],true));
+					if (isset($var->property_visibilities[$property_name]))
+						$visibility=$var->property_visibilities[$property_name];
+					else //dynamic properties are public
+						$visibility=EmulatorObject::Visibility_Public; 
+
+					if (isset($var->property_class[$property_name]))
+						$class=$var->property_class[$property_name];
+					else //dynamics properties are of the object
+						$class=$var->classname;
+
 					return ($visibility==EmulatorObject::Visibility_Public
-						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_self, $var->property_class[$property_name],true)  )
-						or ($visibility==EmulatorObject::Visibility_Private and $this->current_self==$var->property_class[$property_name] ) 
+						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_self, $class,true)  )
+						or ($visibility==EmulatorObject::Visibility_Private and strtolower($this->current_self)==strtolower($class) ) 
 							);
 				}
 			}
@@ -746,7 +746,6 @@ class OOEmulator extends Emulator
 		}
 		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
 		{
-			#FIXME: haven't wrapped my head around late static binding and visibilities, needs further test and development
 			$classname=$this->name($node->class);
 			if ($classname instanceof EmulatorObject) 
 				$classname=$classname->classname;
@@ -759,13 +758,9 @@ class OOEmulator extends Emulator
 					if (array_key_exists($property_name,$this->classes[strtolower($class)]->static))
 					{
 						$visibility=$this->classes[strtolower($class)]->static_visibility[$property_name];
-						// echo "___\n";
-						// var_dump($classname);
-						// var_dump($visibility);
-						// var_dump($class);
 						return ($visibility==EmulatorObject::Visibility_Public
 						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a($classname, $class,true)  )
-						or ($visibility==EmulatorObject::Visibility_Private and $classname==$class ) 
+						or ($visibility==EmulatorObject::Visibility_Private and strtolower($classname)==strtolower($class) ) 
 							);						
 					}
 				}
@@ -796,14 +791,8 @@ class OOEmulator extends Emulator
 				$prop=$this->name($node->name);
 			else
 				return false;
-			if (array_key_exists($prop, $obj->properties))
-			{
-				// var_dump("panir");
-				// var_dump($obj->property_visibilities[$prop]);
+			if (array_key_exists($prop, $obj->properties) and $this->is_visible($node))
 				return false;
-			}
-				// and $obj->property_visibilities[$prop]==EmulatorObject::Visibility_Public
-				// ) return false; //exists
 
 			$reentrant_index="{$magic}_{$obj->objectid}";
 			if (isset($this->magic_method_reentrant[$reentrant_index]))
@@ -814,7 +803,7 @@ class OOEmulator extends Emulator
 
 					$this->magic_method_reentrant[$reentrant_index]=true;
 					$this->verbose("Calling magic method {$class}::__{$magic}() for '{$prop}'...\n",3);
-					array_unshift($args,$prop);
+					array_unshift($args,$prop); //add name to args
 					$result=$this->run_user_method($obj,"__{$magic}",$args,$class);
 					unset($this->magic_method_reentrant[$reentrant_index]);
 					return true;

@@ -1,5 +1,16 @@
 <?php
 
+class Something {
+	private $x=2;
+	function __get($name)
+	{
+		if ($name=="x") return 3;
+	}
+}
+$x=new Something;
+var_dump($x->x); //should be 3
+
+
 class A
 {
 	public $A_public=1;
@@ -11,7 +22,7 @@ class A
 	}
 }
 
-class B extends A
+class b extends A
 {
 	public $B_public=4;
 	protected $B_protected=5;
@@ -57,5 +68,5 @@ class S2 extends S1 {
 echo S2::$public;
 // echo S2::$protected; //error
 // echo S2::$private; //error
-S1::f();
+s1::f();
 S2::f();
