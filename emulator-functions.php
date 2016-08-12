@@ -110,7 +110,7 @@ trait EmulatorFunctions
 	{
 		$bu_context=new EmulatorExecutionContext;
 		foreach ($context as $k=>&$v)
-			if (isset($context->{$k}))
+			if (property_exists($context, $k))
 			{
 				$bu_context->{$k}=$this->{"current_{$k}"};
 				$this->{"current_{$k}"}=&$v;
@@ -155,7 +155,6 @@ trait EmulatorFunctions
 		$this->context_switch($context);
 		$res=$this->run_code($function->code);
 		$this->context_restore();		
-	
 		array_pop($this->trace);
 
 		$this->pop();

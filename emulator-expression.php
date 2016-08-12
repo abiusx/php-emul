@@ -274,7 +274,7 @@ trait EmulatorExpression {
 				elseif ($node instanceof Node\Scalar\MagicConst\Function_)
 					return $this->current_function;
 				elseif ($node instanceof Node\Scalar\MagicConst\Class_)
-					return $this->current_class;
+					return $this->current_self;
 				elseif ($node instanceof Node\Scalar\MagicConst\Method)
 					return $this->current_method;
 				elseif ($node instanceof Node\Scalar\MagicConst\Namespace_)

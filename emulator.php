@@ -21,30 +21,30 @@ class EmulatorExecutionContext
 	function __construct($arr=[])
 	{
 		foreach ($arr as $k=>&$v)
-		{
-			if (property_exists($this, $k))
+		// {
+			// if (property_exists($this, $k))
 				$this->{$k}=&$v;
-			else
-				throw new \Exception("'{$k}' is not a context variable.");
-		}
+			// else
+				// throw new \Exception("'{$k}' is not a context variable.");
+		// }
 	}
-	//available for everything, even includes
-	public $file;
-	public $line;
+	// //available for everything, even includes
+	// public $file;
+	// public $line;
 
-	public $namespace;
-	public $active_namespaces;
+	// public $namespace;
+	// public $active_namespaces;
 
-	//only available for functions
-	public $function;
+	// //only available for functions
+	// public $function;
 
-	//only available for [static] methods
-	public $method;
-	public $class; //dynamic class
-	public $self; //static class
+	// //only available for [static] methods
+	// public $method;
+	// public $class; //dynamic class
+	// public $self; //static class
 	
-	//only available for bound methods
-	public $this;
+	// //only available for bound methods
+	// public $this;
 }
 
 class Emulator
@@ -68,6 +68,7 @@ class Emulator
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
 		$this->printer = new PhpParser\PrettyPrinter\Standard;
     	$this->init($init_environ);
+
 	}
 	use EmulatorVariables;
 	use EmulatorErrors;
@@ -497,7 +498,7 @@ class Emulator
 				if ($t->dim) //explicit dimension
 				{
 					$ev=$this->evaluate_expression($t->dim);
-					//a literal null index evaluates to empty string rather than
+					//DISCREPENCY: a literal null index evaluates to empty string rather than
 					//	a null dim which means a[]=2;
 					if ($ev===null) 
 						$ev="";

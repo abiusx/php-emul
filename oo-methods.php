@@ -226,6 +226,7 @@ trait OOEmulatorMethods {
 	protected function run_user_static_method($original_class_name,$method_name,$args=[],&$object=null)
 	{
 		$class_name=$this->real_class($original_class_name);
+		$indirect=($class_name!==$original_class_name); //whether its class::x() vs self::x() or the like
 		$this->verbose("Running {$class_name}::{$method_name}()...".PHP_EOL,2);
 		$flag=false;
 		foreach ([$method_name,'__call',"__callStatic"] as $method) //magic methods
@@ -255,7 +256,14 @@ trait OOEmulatorMethods {
 					$context=clone $class_index->context;
 					$context->method=$method;
 					$context->line=$this->current_line;
-					$context->class=$class_name; //late static bind
+					if (!$indirect) //do not update on indirects http://php.net/manual/en/language.oop5.late-static-bindings.php
+					{
+						$context->class=$class_name; //late static bind
+						$this->verbose("Setting class to '{$class_name}' and self to '{$class}'...\n",5);
+					}
+					else
+						$this->verbose("Setting self to '{$class}' and not touching class ('{$this->current_class}')...\n",5);
+					$context->self=$class; //self
 
 					if ($object!==null)
 					{

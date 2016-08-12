@@ -151,7 +151,8 @@ class OOEmulator extends Emulator
 			$class->property_visibilities=[];
 			$class->static=[];
 			$class->parent=$extends;
-			$class->context=new EmulatorExecutionContext(['class'=>$classname,'self'=>$classname,'file'=>$this->current_file
+			$class->context=new EmulatorExecutionContext([ //'class'=>$classname, //this is static, shouldn't be set here
+				'self'=>$classname,'file'=>$this->current_file
 				,'namespace'=>$this->current_namespace,'active_namespaces'=>$this->current_active_namespaces]);
 			foreach ($node->stmts as $part)
 			{
@@ -439,7 +440,7 @@ class OOEmulator extends Emulator
 		elseif ($end==="static")
 			return $this->current_class;
 		elseif ($end==="parent")
-			return $this->classes[strtolower($this->current_class)]->parent;	
+			return $this->classes[strtolower($this->current_self)]->parent;	
 		return $classname;
 	}
 	/**
@@ -506,7 +507,7 @@ class OOEmulator extends Emulator
 	 * See Emulator::symbol_table for more
 	 * @param  Node  $node   
 	 * @param  string  &$key   if null lookup failed
-	 * @param  boolean $create create variable if not exists
+	 * @param  boolean $create create variable if not exists (default behavior in property access, impossible on static property access)
 	 * @return array base array          
 	 */
 	protected function &symbol_table($node,&$key,$create=true)
@@ -536,6 +537,11 @@ class OOEmulator extends Emulator
 						$var->properties[$property_name]=null;
 					}
 				}
+				if (!$this->is_visible($node))
+				{
+					$this->notice("Cannot access property: {$var->classname}::\${$property_name}");
+					return $this->null_reference($key);
+				}					
 				$key=$property_name;
 				return $var->properties; //reference its value only!
 			}
@@ -574,6 +580,11 @@ class OOEmulator extends Emulator
 				{
 					if (array_key_exists($property_name,$this->classes[strtolower($class)]->static))
 					{
+						if (!$this->is_visible($node))
+						{
+							$this->notice("Cannot access property: {$classname}::\${$property_name}");
+							return $this->null_reference($key);
+						}	
 						$key=$property_name;	
 						return $this->classes[strtolower($class)]->static; //only access its value #TODO: check for visibility
 					}
@@ -649,7 +660,6 @@ class OOEmulator extends Emulator
 			$class=$this->get_class($object_or_string);
 		else
 			$class=$object_or_string;
-
 		foreach ($this->ancestry($class) as $ancestor)
 			if (strtolower($ancestor)===strtolower($class_name))
 				return true;	
@@ -679,6 +689,67 @@ class OOEmulator extends Emulator
 				return true;	
 		return false;
 	}
+	
+	/**
+	 * Checks whether a symbol table node is visible or not
+	 */
+	public function is_visible($node)
+	{
+		if ($node instanceof Node\Expr\PropertyFetch)
+		{
+			$base=&$this->symbol_table($node->var,$key2,false);
+			if ($key2===null)
+				return false;
+			$var=&$base[$key2];
+			if ($var instanceof EmulatorObject)
+			{
+				$property_name=$this->name($node->name);
+				if (array_key_exists($property_name, $var->properties))
+				{
+					$visibility=$var->property_visibilities[$property_name];
+					return ($visibility==EmulatorObject::Visibility_Public
+						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_class, $var->property_class[$property_name],true)  )
+						or ($visibility==EmulatorObject::Visibility_Private and $this->current_class==$var->property_class[$property_name] ) 
+							);
+				}
+			}
+			elseif(is_object($var)) //native object
+			{
+				$property_name=$this->name($node->name);
+				return isset($var->{$property_name});
+			}
+			return false;
+		}
+		elseif ($node instanceof Node\Expr\StaticPropertyFetch)
+		{
+			#FIXME: haven't wrapped my head around late static binding and visibilities, needs further test and development
+			$classname=$this->name($node->class);
+			if ($classname instanceof EmulatorObject) 
+				$classname=$classname->classname;
+			$classname=$this->real_class($classname);
+			$property_name=$this->name($node->name);
+			if ($this->ancestry($classname))
+			{
+				foreach($this->ancestry($classname)  as $class)
+				{
+					if (array_key_exists($property_name,$this->classes[strtolower($class)]->static))
+					{
+						$visibility=$this->classes[strtolower($class)]->static_visibility[$property_name];
+						echo "___\n";
+						var_dump($visibility);
+						var_dump($this->current_class);
+						var_dump($class);
+						return ($visibility==EmulatorObject::Visibility_Public
+						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_class, $class,true)  )
+						or ($visibility==EmulatorObject::Visibility_Private and $this->current_class==$class ) 
+							);						
+					}
+				}
+			}
+			return false;
+		}
+	}
+
 	protected $magic_method_reentrant=[];
 	/**
 	 * Handles magic method
@@ -700,7 +771,14 @@ class OOEmulator extends Emulator
 				$prop=$this->name($node->name);
 			else
 				return false;
-			if (array_key_exists($prop, $obj->properties)) return false; //exists
+			if (array_key_exists($prop, $obj->properties))
+			{
+				// var_dump("panir");
+				// var_dump($obj->property_visibilities[$prop]);
+				return false;
+			}
+				// and $obj->property_visibilities[$prop]==EmulatorObject::Visibility_Public
+				// ) return false; //exists
 
 			$reentrant_index="{$magic}_{$obj->objectid}";
 			if (isset($this->magic_method_reentrant[$reentrant_index]))
