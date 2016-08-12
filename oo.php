@@ -108,10 +108,21 @@ class OOEmulator extends Emulator
 	public $classes=[];
 	protected $current_method,$current_trait;
 	/**
-	 * Holds $this and self object and class pointers, as well as late static binding
+	 * Holds $this, a reference to current active object
+	 * @var EmulatorObject
+	 */
+	protected $current_this=null;
+	/**
+	 * Holds the current static class, for example A for A::x()
+	 * This is what self and __CLASS__ resolve to
 	 * @var null
 	 */
-	protected $current_this=null,$current_self=null,$current_class=null;
+	protected $current_self=null;
+	/**
+	 * Holds the current dynamic class (late static binding)
+	 * @var null
+	 */
+	protected $current_class=null;
 
 	protected function define_class($node)
 	{
@@ -166,9 +177,9 @@ class OOEmulator extends Emulator
 							$val=$this->evaluate_expression($property->default);
 						else
 							$val=NULL;
-						if ($type & 4)
+						if ($type & EmulatorObject::Visibility_Private)
 							$visibility=EmulatorObject::Visibility_Private;
-						elseif ($type &2)
+						elseif ($type & EmulatorObject::Visibility_Protected)
 							$visibility=EmulatorObject::Visibility_Protected;
 						else
 							$visibility=EmulatorObject::Visibility_Public;
@@ -185,11 +196,17 @@ class OOEmulator extends Emulator
 				}
 				elseif ($part instanceof Node\Stmt\ClassMethod)
 				{
-					$methodname=$this->name($part->name);
 					$type=$part->type;
+					if ($type & EmulatorObject::Visibility_Private)
+						$visibility=EmulatorObject::Visibility_Private;
+					elseif ($type & EmulatorObject::Visibility_Protected)
+						$visibility=EmulatorObject::Visibility_Protected;
+					else
+						$visibility=EmulatorObject::Visibility_Public;
+					$static=$type&8;
+					$methodname=$this->name($part->name);
 					$class->methods[strtolower($methodname)]=(object)array('name'=>$methodname,"params"=>$part->params,"code"=>$part->stmts,
-							// "file"=>$this->current_file,
-							'type'=>$type,'statics'=>[]); 
+							'type'=>$type,'statics'=>[],'visibility'=>$visibility,'static'=>$static); 
 				}
 				elseif ($part instanceof Node\Stmt\ClassConst)
 				{
@@ -691,9 +708,11 @@ class OOEmulator extends Emulator
 	}
 	
 	/**
-	 * Checks whether a symbol table node is visible or not
+	 * Checks whether a symbol table node is visible or not, in current context
+	 * @param  $node Node
+	 * @return boolean 
 	 */
-	public function is_visible($node)
+	public function is_visible(Node $node)
 	{
 		if ($node instanceof Node\Expr\PropertyFetch)
 		{
@@ -707,9 +726,14 @@ class OOEmulator extends Emulator
 				if (array_key_exists($property_name, $var->properties))
 				{
 					$visibility=$var->property_visibilities[$property_name];
+						// echo "___\n";
+						// var_dump($visibility);
+						// var_dump($this->current_class);
+						// var_dump($var->property_class[$property_name]);
+						// var_dump($this->is_a((string)$this->current_self, $var->property_class[$property_name],true));
 					return ($visibility==EmulatorObject::Visibility_Public
-						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_class, $var->property_class[$property_name],true)  )
-						or ($visibility==EmulatorObject::Visibility_Private and $this->current_class==$var->property_class[$property_name] ) 
+						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_self, $var->property_class[$property_name],true)  )
+						or ($visibility==EmulatorObject::Visibility_Private and $this->current_self==$var->property_class[$property_name] ) 
 							);
 				}
 			}
@@ -735,19 +759,20 @@ class OOEmulator extends Emulator
 					if (array_key_exists($property_name,$this->classes[strtolower($class)]->static))
 					{
 						$visibility=$this->classes[strtolower($class)]->static_visibility[$property_name];
-						echo "___\n";
-						var_dump($visibility);
-						var_dump($this->current_class);
-						var_dump($class);
+						// echo "___\n";
+						// var_dump($classname);
+						// var_dump($visibility);
+						// var_dump($class);
 						return ($visibility==EmulatorObject::Visibility_Public
-						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_class, $class,true)  )
-						or ($visibility==EmulatorObject::Visibility_Private and $this->current_class==$class ) 
+						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a($classname, $class,true)  )
+						or ($visibility==EmulatorObject::Visibility_Private and $classname==$class ) 
 							);						
 					}
 				}
 			}
 			return false;
 		}
+		#TODO: handle method visibility
 	}
 
 	protected $magic_method_reentrant=[];
@@ -802,52 +827,21 @@ class OOEmulator extends Emulator
 	{
 		if ($this->handle_magic($node,"set",$r,[$value])) return $r;
 		else return parent::variable_set($node,$value);
-		// $r=&$this->symbol_table($node,$key,true);
-		// if ($key!==null)
-		// 	return $r[$key]=$value;
-		// else 
-		// 	return null;
 	}
 	function &variable_reference($node,&$success=null)
 	{
 		if ($this->handle_magic($node,"get",$r)) return $r;
 		else return parent::variable_reference($node,$success);
-
-		// $r=&$this->symbol_table($node,$key,false);
-		// if ($key===null) //not found or GLOBALS
-		// 	return $this->null_reference();
-		// elseif (is_array($r))
-		// 	return $r[$key]; //if $r[$key] does not exist, will be created in byref use.
-		// else
-		// 	$this->error("Could not retrieve reference",$node);
 	}
 	function variable_get($node)
 	{
 		if ($this->handle_magic($node,"get",$r)) return $r;
 		else return parent::variable_get($node);
-		// $r=&$this->symbol_table($node,$key,false);
-		// if ($key!==null)
-		// 	if (is_string($r))
-		// 		return $r[$key];
-		// 	elseif (!array_key_exists($key, $r)) //only works for arrays, not strings
-		// 	{
-		// 		$this->notice("Undefined index: {$key}");
-		// 		return null;
-		// 	}
-		// 	else
-		// 		return $r[$key];
-		// else 
-		// 	return null;
 	}
 	function variable_isset($node)
 	{
 		if ($this->handle_magic($node,"isset",$r)) return $r;
 		else return parent::variable_isset($node);	
-	
-		// $this->error_silence();
-		// $r=$this->symbol_table($node,$key,false);
-		// $this->error_restore();
-		// return $key!==null and isset($r[$key]);
 	}
 	function variable_unset($node)
 	{
