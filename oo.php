@@ -75,7 +75,10 @@ class EmulatorObject
 
 	function __toString()
 	{
-		return $this->classname;
+		if (self::$emul->method_exists($this, "__toString"))
+			return self::$emul->run_method($this,"__toString");		
+		self::$emul->warning("No __toString() available for class '{$this->classname}' but treated as string");
+		return "";
 	}
 
 }
@@ -348,7 +351,10 @@ class OOEmulator extends Emulator
 			elseif (is_object($object))
 				$classname=get_class($object);
 			else
+			{
 				$this->error("Call to a member function '{$method_name}()' on a non-object");
+				return null;
+			}
 			$this->verbose("Method call {$classname}::{$method_name}()".PHP_EOL,3);
 			$args=$node->args;
 			return $this->run_method($object,$method_name,$args);

@@ -76,6 +76,13 @@ class Emulator
 	use EmulatorExpression;
 	use EmulatorStatement;
 	
+	/**
+	 * A data storage for use by mock functions and other
+	 * third parties working on this emulator
+	 * @var array
+	 */
+	public $data=[];
+
 	public $namespaces_enabled=true;
 	/**
 	 * An array that holds all properties that constitute

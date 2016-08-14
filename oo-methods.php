@@ -68,9 +68,9 @@ trait OOEmulatorMethodExistence {
 	}
 
 
-
 	/**
 	 * Equivalent to PHP's method_exists
+	 * Does check ancestry
 	 * @param  mixed $class_or_obj [description]
 	 * @param  string $methodname          [description]
 	 * @return bool                      [description]
