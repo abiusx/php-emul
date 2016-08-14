@@ -267,6 +267,7 @@ class OOEmulator extends Emulator
 			{
 				$obj->properties[$property_name]=$property;
 				$obj->property_visibilities[$property_name]=$this->classes[strtolower($class)]->property_visibilities[$property_name];
+				#FIXME: in reality, both classes are preserved by PHP, classname is part of variable name, but here we override:
 				$obj->property_class[$property_name]=$this->classes[strtolower($class)]->name;
 			}
 			else
@@ -731,8 +732,15 @@ class OOEmulator extends Emulator
 					else //dynamics properties are of the object
 						$class=$var->classname;
 
+					// echo "___\n";
+					// var_dump("visibility:",$visibility);
+					// var_dump("class:",$class);
+					// var_dump("self:",$this->current_self);
+					// var_dump("is_a:",$this->is_a((string)$this->current_self, $class,true));
+					// var_dump("is_a2:",$this->is_a($class,(string)$this->current_self,true));
+					// var_dump("ancestry:",$this->ancestry($class));
 					return ($visibility==EmulatorObject::Visibility_Public
-						or ($visibility==EmulatorObject::Visibility_Protected and $this->is_a((string)$this->current_self, $class,true)  )
+						or ($visibility==EmulatorObject::Visibility_Protected and ($this->is_a((string)$this->current_self, $class,true) or $this->is_a( $class,(string)$this->current_self,true)) )
 						or ($visibility==EmulatorObject::Visibility_Private and strtolower($this->current_self)==strtolower($class) ) 
 							);
 				}

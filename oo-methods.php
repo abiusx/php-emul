@@ -60,7 +60,7 @@ trait OOEmulatorMethodExistence {
 			else
 				return property_exists($class_or_obj, $property);
 		}
-		$class=$class_or_obj;		
+		$class=$class_or_obj;	
 		if (!$this->user_class_exists($class)) return property_exists($class,$methodname); //internal php class
 		foreach ($this->ancestry($class) as $ancestor)
 			if ($this->user_property_exists($ancestor,$property)) return true;
@@ -262,7 +262,7 @@ trait OOEmulatorMethods {
 						$this->verbose("Setting class to '{$class_name}' and self to '{$class}'...\n",5);
 					}
 					else
-						$this->verbose("Setting self to '{$class}' and not touching class ('{$this->current_class}')...\n",5);
+						$this->verbose("Setting 'self' to '{$class}' and not changing 'class' ('{$this->current_class}')...\n",5);
 					$context->self=$class; //self
 
 					if ($object!==null)
