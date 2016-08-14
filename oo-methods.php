@@ -56,7 +56,8 @@ trait OOEmulatorMethodExistence {
 		if (!is_string($class_or_obj))
 		{
 			if ($class_or_obj instanceof EmulatorObject)
-				return isset($class_or_obj->properties[$property]);
+				return array_key_exists($property, $class_or_obj->properties);
+				// return isset($class_or_obj->properties[$property]);
 			else
 				return property_exists($class_or_obj, $property);
 		}

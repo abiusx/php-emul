@@ -75,9 +75,10 @@ class EmulatorObject
 
 	function __toString()
 	{
+		#FIXME: this might cause errors if the class has no __toString but is used as one, causing errors
 		if (self::$emul->method_exists($this, "__toString"))
 			return self::$emul->run_method($this,"__toString");		
-		self::$emul->warning("No __toString() available for class '{$this->classname}' but treated as string");
+		self::$emul->error("Object of class '{$this->classname}' could not be converted to string");
 		return "";
 	}
 
