@@ -92,6 +92,16 @@ function callback_requiring_functions()
     array (
       1 => 'value_compare_func',
     ),
+    'session_set_save_handler' =>
+    array (
+      0 => 'open',
+      1 => 'close',
+      2 => 'read',
+      3 => 'write',
+      4 => 'destroy',
+      5 => 'gc',
+      6 => 'create_sid',
+    ),
   );
   return $x;
 }

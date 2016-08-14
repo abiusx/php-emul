@@ -127,8 +127,9 @@ trait EmulatorErrors
 	 */
 	private function object_to_array($obj) 
 	{
-	    if(is_object($obj)) $obj = (array) $obj;
-	    if(is_array($obj)) 
+	    if(is_object($obj)) 
+	    	$new = (array) $obj;
+	    elseif(is_array($obj)) 
 	    {
 	        $new = array();
 	        foreach($obj as $key => $val) 
