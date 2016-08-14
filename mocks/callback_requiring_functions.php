@@ -88,6 +88,10 @@ function callback_requiring_functions()
     array (
       0 => 'callback',
     ),
+    'usort' =>
+    array (
+      1 => 'value_compare_func',
+    ),
   );
   return $x;
 }
