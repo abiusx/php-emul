@@ -11,6 +11,8 @@ abstract class BaseReflection_mock
 	{
 		if ($this->reflection)
 			return call_user_func_array(array($this->reflection,$name), $args);
+		elseif (method_exists($this, "_".$name))
+			return call_user_func_array(array($this,"_".$name), $args);
 		$this->emul()->error(get_class($this)."::{$name}() is not yet implemented ");
 	}
 }
@@ -41,7 +43,7 @@ class ReflectionMethod_mock extends BaseReflection_mock
 		$this->method=$method;
 	}
 
-	function getName()
+	function _getName()
 	{
 		return $this->method()->name;
 	}
@@ -54,7 +56,7 @@ class ReflectionProperty_mock extends BaseReflection_mock
 		return $this->emul()->classes[strtolower($this->class)];
 
 	}
-	function isPrivate()
+	function _isPrivate()
 	{
 		var_dump($this->class()->property_visibilities[$this->prop]);
 		return $this->class()->property_visibilities[$this->prop]==EmulatorObject::Visibility_Private;
@@ -82,16 +84,12 @@ class ReflectionClass_mock extends BaseReflection_mock
 				$this->reflection=new ReflectionClass($arg);	
 		else
 			if ($this->emul()->user_class_exists($arg))
-				$class=$arg;
+				$this->class=$arg;
 			else
 				$this->reflection=new ReflectionClass($arg);	
 	}
-	function getMethods($filter=null)
+	function _getMethods($filter=null)
 	{
-		if ($filter!==null)
-		{
-
-		}
 		$result=[];
 		foreach ($this->class()->methods as $method)
 		{
@@ -112,12 +110,16 @@ class ReflectionClass_mock extends BaseReflection_mock
 		}
 		return $result;
 	}
-	function getProperty($name)
+	function _getProperty($name)
 	{
 		if (!array_key_exists($name,$this->class()->properties))
 			throw new ReflectionException;
 		return new ReflectionProperty_mock($this->class,$name);
 
+	}
+	function _getInterfaceNames()
+	{
+		return $this->class()->interfaces;
 	}
 
 
