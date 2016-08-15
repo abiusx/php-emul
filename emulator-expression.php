@@ -425,7 +425,7 @@ trait EmulatorExpression {
 		}
 		elseif ($node instanceof Node\Expr\Closure)
 		{
-			print_r($node);
+			// print_r($node);
 			$this->verbose("Closure found, emulating...\n",3);
 			$closure=new EmulatorClosure;
 			$closure->name="{closure}";
@@ -434,7 +434,15 @@ trait EmulatorExpression {
 
 			$closure->static=$node->static;
 			$closure->byref=$node->byRef;
-			$closure->uses=$node->uses; //array
+			$uses=[];
+			foreach ($node->uses as $use)
+			{
+				if ($use->byRef)
+					$uses[$use->var]=&$this->variable_reference($use->var);
+				else
+					$uses[$use->var]=$this->variable_get($use->var);
+			}
+			$closure->uses=$uses; 
 			$closure->returnType=$node->returnType;
 
 			$context=new EmulatorExecutionContext(['function'=>"{closure}"

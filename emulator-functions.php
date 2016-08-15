@@ -134,9 +134,10 @@ trait EmulatorFunctions
 	 * @param  array $wrappings 	the parameters to wrap the function call in. An array of key/value pairs that will become current_$key=$value
 	 *                           	for the duration of the function call
 	 * @param  array $trace_args 	the parameters to be set for the trace of this function call (used in backtrace)
+	 * @param  array $vars a list of variables to exist in this function scope (e.g. use in closure)
 	 * @return mixed return value of function
 	 */
-	protected function run_function($function,$args,EmulatorExecutionContext $context,$trace_args=array())
+	protected function run_function($function,$args,EmulatorExecutionContext $context,$trace_args=array(),$vars=[])
 	{
 		$name=$trace_args['function'];
 		if (isset($trace_args['class']))
@@ -145,19 +146,21 @@ trait EmulatorFunctions
 		if ($processed_args===false)
 			return null;
 		$backups=[];
-		//IMPORTANT: these wrappings and backtrace should be set AFTER prologue and BEFORE function execution,
+		//IMPORTANT: these context and backtrace should be set AFTER prologue and BEFORE function execution,
 		//because prologue might have expressions that reference the current context.
 		array_push($this->trace, (object)array("args"=>$processed_args, 
 			"type"=>"","file"=>$this->current_file,"line"=>$this->current_line));
 		foreach ($trace_args as $k=>$v)
 			end($this->trace)->$k=$v;
+		foreach ($vars as $k=>&$v)
+			$this->variables[$k]=&$v;
 		
 		$this->context_switch($context);
 		$res=$this->run_code($function->code);
 		$this->context_restore();		
 		array_pop($this->trace);
 
-		$this->pop();
+		$this->pop(); //pushed in prologue
 		return $res;
 	}
 	/**
@@ -312,7 +315,7 @@ trait EmulatorFunctions
 		if ($name instanceof EmulatorClosure)
 		{
 			$closure=$name;
-			$ret=$this->run_function($closure,$args,$closure->context,["function"=>$closure->name]);
+			$ret=$this->run_function($closure,$args,$closure->context,["function"=>$closure->name],$closure->uses);
 			if ($this->return)
 				$this->return=false;
 			return $ret;
