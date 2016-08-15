@@ -172,11 +172,13 @@ trait EmulatorErrors
 		for ($i=0;$i<$count;++$i)
 		{
 			$t=$trace[$i];
-			$function=$args=$file=$line="";
+			$function=$args=$file=$line=$class="";
 			if (isset($t->function))
 				$function=$t->function;
+			if (isset($t->class))
+				$class=$t->class;
 			if ($t->type) //not function, method or static-method
-				$function=$t->class.$t->type.$function;
+				$function=$class.$t->type.$function;
 			if (isset($t->file))
 				$file=$t->file;
 			if (isset($t->line))
