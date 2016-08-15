@@ -409,6 +409,8 @@ class OOEmulator extends Emulator
 		{
 			$class=$this->name($node->class);
 			$constant=$this->name($node->name);
+			if (class_exists($class))
+				return constant("{$class}::{$constant}");
 			foreach ($this->ancestry($class) as $cls)
 			{
 				if (array_key_exists($constant, $this->classes[strtolower($cls)]->consts))
