@@ -11,14 +11,39 @@ abstract class BaseReflection_mock
 	{
 		if ($this->reflection)
 			return call_user_func_array(array($this->reflection,$name), $args);
-		$this->emul()->error(__CLASS__."::{$name}() is not yet implemented ");
+		$this->emul()->error(get_class($this)."::{$name}() is not yet implemented ");
 	}
 }
 class ReflectionMethod_mock extends BaseReflection_mock
 {
-	function __construct()
+	protected $class,$method;
+	function &class()
 	{
-		#TODO
+		return $this->emul()->classes[strtolower($this->class)];
+	}
+	function &method()
+	{
+		return $this->emul()->classes[strtolower($this->class)]->methods[strtolower($this->method)];
+	}
+	function __construct($class,$method=null)
+	{
+		if ($method===null)
+			list($class,$method)=explode("::",$class);
+		elseif (is_object($class))
+			if ($class instanceof EmulatorObject)
+				$class=$class->classname;
+			else
+				return $this->reflection=new ReflectionMethod($class,$method);
+		if ($this->emul()->user_class_exists($class))
+			$this->class=$class;
+		else
+			$this->reflection=new ReflectionMethod($class,$method);
+		$this->method=$method;
+	}
+
+	function getName()
+	{
+		return $this->method()->name;
 	}
 }
 class ReflectionProperty_mock extends BaseReflection_mock
@@ -55,13 +80,37 @@ class ReflectionClass_mock extends BaseReflection_mock
 				$this->class=$arg->classname;
 			else
 				$this->reflection=new ReflectionClass($arg);	
-				// return parent::__construct($arg);
 		else
 			if ($this->emul()->user_class_exists($arg))
 				$class=$arg;
 			else
 				$this->reflection=new ReflectionClass($arg);	
-				// return parent::__construct($arg);
+	}
+	function getMethods($filter=null)
+	{
+		if ($filter!==null)
+		{
+
+		}
+		$result=[];
+		foreach ($this->class()->methods as $method)
+		{
+			if ($filter!==null)
+			{
+				if ($filter&ReflectionMethod::IS_FINAL or $filter&ReflectionMethod::IS_ABSTRACT)
+					$this->emul()->error("IS_FINAL and IS_ABSTRACT not yet supported");
+				if ($filter&ReflectionMethod::IS_PUBLIC and $method->visibility!=EmulatorObject::Visibility_Public)
+					continue;
+				if ($filter&ReflectionMethod::IS_PRIVATE and $method->visibility!=EmulatorObject::Visibility_Private)
+					continue;
+				if ($filter&ReflectionMethod::IS_PROTECTED and $method->visibility!=EmulatorObject::Visibility_Protected)
+					continue;
+				if ($filter&ReflectionMethod::IS_STATIC and !$method->static)
+					continue;
+			}
+			$result[]=new ReflectionMethod_mock($this->class,$method->name);
+		}
+		return $result;
 	}
 	function getProperty($name)
 	{
