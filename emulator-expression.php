@@ -1,6 +1,7 @@
 <?php
 use PhpParser\Node;
 
+class EmulatorClosure{};
 /**
  * Evaluates an expression for the emulator
  */
@@ -424,18 +425,24 @@ trait EmulatorExpression {
 		}
 		elseif ($node instanceof Node\Expr\Closure)
 		{
-			$static=$node->static;
-			$byref=$node->byRef;
-			$emul=$this;
-			$users=$node->uses; //array
-			$params=$node->params;
-			$returnType=$node->returnType;
-			$statements=$node->stmts;
-			$c=function() use ($emul,$statements) {
-				$args=func_get_args();
-				return $emul->run_code($statements);
-			};
-			return $c;
+			print_r($node);
+			$this->verbose("Closure found, emulating...\n",3);
+			$closure=new EmulatorClosure;
+			$closure->name="{closure}";
+			$closure->code=$node->stmts;
+			$closure->params=$node->params;
+
+			$closure->static=$node->static;
+			$closure->byref=$node->byRef;
+			$closure->uses=$node->uses; //array
+			$closure->returnType=$node->returnType;
+
+			$context=new EmulatorExecutionContext(['function'=>"{closure}"
+				,'namespace'=>$this->current_namespace,'active_namespaces'=>$this->current_active_namespaces
+				,'file'=>$this->current_file,'line'=>$this->current_line]);
+
+			$closure->context=$context;
+			return $closure;
 
 		}
 		else

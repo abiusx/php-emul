@@ -42,7 +42,7 @@ trait EmulatorFunctions
 	 * @param  array $args     
 	 * @return bool           
 	 */
-	protected function user_function_prologue($name,$function,$args)
+	protected function user_function_prologue($name,$params,$args)
 	{
 		$count=count($args);
 	
@@ -51,7 +51,7 @@ trait EmulatorFunctions
 		$processed_args=[];
 		$line=$this->current_line; #TODO: this means of preserving line (also in wrappings), is not very robust
 		reset($args);
-		foreach ($function->params as $param)
+		foreach ($params as $param)
 		{
 			if ($index>=$count) //all explicit arguments processed, remainder either defaults or error
 			{
@@ -141,7 +141,7 @@ trait EmulatorFunctions
 		$name=$trace_args['function'];
 		if (isset($trace_args['class']))
 			$name=$trace_args['class'].$trace_args['type'].$name;
-		$processed_args=$this->user_function_prologue($name,$function,$args);
+		$processed_args=$this->user_function_prologue($name,$function->params,$args);
 		if ($processed_args===false)
 			return null;
 		$backups=[];
@@ -201,15 +201,16 @@ trait EmulatorFunctions
 	protected function core_function_prologue($name,$args,$class=null)
 	{
 		if ($class)
-		{
-
 			if (method_exists($class, $name))
 				$function_reflection=new ReflectionMethod($class,$name);
 			else
 				$function_reflection=null; //fallback for __call and others
-		}
 		else
-			$function_reflection=new ReflectionFunction($name);
+			if ($name instanceof Closure)
+				$function_reflection=null; //nothing for closure
+			else
+				$function_reflection=new ReflectionFunction($name);
+
 		if ($function_reflection)
 			$parameters_reflection=$function_reflection->getParameters();
 		else
@@ -308,12 +309,13 @@ trait EmulatorFunctions
 	public function call_function($name,$args)
 	{
 		$this->stash_ob();
-		if ($name instanceof Closure)
+		if ($name instanceof EmulatorClosure)
 		{
-			$argValues=$this->evaluate_args($args); #this has to be before the trace line, 
-			array_push($this->trace, (object)array("type"=>"","function"=>"{closure}","file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
-				$ret=$this->run_original_core_function($name,$argValues);
-			array_pop($this->trace);
+			$closure=$name;
+			$ret=$this->run_function($closure,$args,$closure->context,["function"=>$closure->name]);
+			if ($this->return)
+				$this->return=false;
+			return $ret;
 		}
 		elseif (function_exists($name)) //global core function
 			$ret=$this->run_core_function($name,$args);
