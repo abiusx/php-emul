@@ -316,7 +316,6 @@ trait OOEmulatorMethods {
 	function run_core_static_method($class_name,$method_name,$args,&$object=null)
 	{
 		$class=$this->real_class($class_name);
-
 		$argValues=$this->core_function_prologue($method_name,$args,$class); #this has to be before the trace line, 
 		if ($this->terminated) return null;
 		#TODO: add mocked class/methods

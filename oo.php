@@ -18,6 +18,7 @@ class EmulatorObject
 
 	public static $emul=null;
 	public static $object_count=0;
+
 	/**
 	 * @var string
 	 */
@@ -95,6 +96,7 @@ class OOEmulator extends Emulator
 
 		$this->state['autoloaders']=
 		$this->state['classes']=
+		$this->state['mock_classes']=
 		$this->state['current_method']=
 		$this->state['current_trait']=
 		$this->state['current_this']=
@@ -103,6 +105,13 @@ class OOEmulator extends Emulator
 		$this->state['magic_method_reentrant']= //re-entrant flag check for magic-methods
 		1; //emulation state elements
 		parent::__construct($init_environ);
+		if ($this->auto_mock)
+		foreach(get_declared_classes() as $class) 
+		{
+			if (class_exists($class."_mock"))
+				$this->mock_classes[strtolower($class)]=$class."_mock";
+		}
+
 		EmulatorObject::$emul=$this; //HACK for allowing destructor calls
 	}
 	/**
@@ -110,6 +119,11 @@ class OOEmulator extends Emulator
 	 * @var array
 	 */
 	public $classes=[];
+	/**
+	 * List of mocked core classes
+	 * @var array
+	 */
+	public $mock_classes=[];
 	protected $current_method,$current_trait;
 	/**
 	 * Holds $this, a reference to current active object
@@ -299,11 +313,18 @@ class OOEmulator extends Emulator
 	protected function new_core_object($classname,array $args)
 	{
 		$this->verbose("New instance of core class '{$classname}'\n",5);
+		$class=$classname;
+		$mocked=isset($this->mock_classes[strtolower($classname)]);
+		if ($mocked)
+		{
+			$class=$this->mock_classes[strtolower($classname)];
+			$class::$emul=$this; //set emulator
+		}
 		$argValues=[];
 		foreach ($args as $arg)
 			$argValues[]=$this->evaluate_expression($arg->value);
 		ob_start();	
-		$r = new ReflectionClass($classname);
+		$r = new ReflectionClass($class);
 		$ret = $r->newInstanceArgs($argValues); #TODO: byref?
 		// $ret=new $classname($argValues); //core class
 		$output=ob_get_clean();
