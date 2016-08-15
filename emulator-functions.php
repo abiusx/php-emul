@@ -201,10 +201,19 @@ trait EmulatorFunctions
 	protected function core_function_prologue($name,$args,$class=null)
 	{
 		if ($class)
-			$function_reflection=new ReflectionMethod($class,$name);
+		{
+
+			if (method_exists($class, $name))
+				$function_reflection=new ReflectionMethod($class,$name);
+			else
+				$function_reflection=null; //fallback for __call and others
+		}
 		else
 			$function_reflection=new ReflectionFunction($name);
-		$parameters_reflection=$function_reflection->getParameters();
+		if ($function_reflection)
+			$parameters_reflection=$function_reflection->getParameters();
+		else
+			$parameters_reflection=[];
 		$argValues=[];
 		$index=0;
 		foreach ($args as &$arg)
