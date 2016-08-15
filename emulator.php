@@ -371,7 +371,10 @@ class Emulator
 		foreach ($this->shutdown_functions as $shutdown_function)
 		{
 			if (is_array($shutdown_function->callback))
-				$name=implode("::",$shutdown_function->callback);
+				if ($shutdown_function->callback[0] instanceof EmulatorObject)
+					$name=$shutdown_function->callback[0]->classname."->".$shutdown_function->callback[1];
+				else
+					$name=implode("::",$shutdown_function->callback);
 			else
 				$name=$shutdown_function->callback;
 			$this->verbose( "Calling shutdown function: {$name}()\n");
