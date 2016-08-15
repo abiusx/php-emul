@@ -14,6 +14,13 @@ abstract class BaseReflection_mock
 		$this->emul()->error(__CLASS__."::{$name}() is not yet implemented ");
 	}
 }
+class ReflectionMethod_mock extends BaseReflection_mock
+{
+	function __construct()
+	{
+		#TODO
+	}
+}
 class ReflectionProperty_mock extends BaseReflection_mock
 {
 	protected $prop,$class;
