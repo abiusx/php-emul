@@ -132,6 +132,9 @@ trait EmulatorStatement
 				$list=$this->evaluate_expression($node->expr);
 
 			$keyed=false;
+			//OO code here, to prevent double evaluation of list
+			if ($list instanceof EmulatorObject)
+				$list=$list->properties;
 			if (isset($node->keyVar))
 			{
 				$keyed=true;	
