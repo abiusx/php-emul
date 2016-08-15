@@ -80,7 +80,6 @@ class EmulatorObject
 		if (self::$emul->method_exists($this, "__toString"))
 			return self::$emul->run_method($this,"__toString");		
 		self::$emul->error("Object of class '{$this->classname}' could not be converted to string");
-		return "";
 	}
 
 }
@@ -386,12 +385,18 @@ class OOEmulator extends Emulator
 			#TODO: namespace support
 			$method_name=$this->name($node->name);
 			if ($node->class instanceof Node\Expr\Variable)
+			{
+
 				// $class=$this->evaluate_expression($node->class)->classname;
 				$class=$this->evaluate_expression($node->class);
+				if ($class instanceof EmulatorObject)
+					$class=$class->classname;
+			}
 			elseif ($node->class instanceof Node\Name)
 				$class=$this->namespaced_name($node->class);
 			else
 				$this->error("Unknown class when calling static function {$method_name}",$node);
+
 			$args=$node->args;
 			return $this->run_static_method($class,$method_name,$args);
 		}
