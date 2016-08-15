@@ -265,7 +265,11 @@ trait EmulatorFunctions
 	}
 	protected function run_original_core_function($name,$argValues)
 	{
-		$this->verbose("Calling core function {$name}()...\n",4);
+		if ($name instanceof Closure)
+			$this->verbose("Calling closure...\n",4);
+		else
+			$this->verbose("Calling core function {$name}()...\n",4);
+
 		#FIXME: not all output in the duration of core function execution is that functions output,
 		#		control might come back to emulator and verbose and others used. Do something.
 		if (ob_get_level()==0) ob_start();	
@@ -304,7 +308,14 @@ trait EmulatorFunctions
 	public function call_function($name,$args)
 	{
 		$this->stash_ob();
-		if (function_exists($name)) //global core function
+		if ($name instanceof Closure)
+		{
+			$argValues=$this->evaluate_args($args); #this has to be before the trace line, 
+			array_push($this->trace, (object)array("type"=>"","function"=>"{closure}","file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
+				$ret=$this->run_original_core_function($name,$argValues);
+			array_pop($this->trace);
+		}
+		elseif (function_exists($name)) //global core function
 			$ret=$this->run_core_function($name,$args);
 		else
 		{

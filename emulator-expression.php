@@ -1,5 +1,6 @@
 <?php
 use PhpParser\Node;
+
 /**
  * Evaluates an expression for the emulator
  */
@@ -420,6 +421,22 @@ trait EmulatorExpression {
 		{
 			if ($this->evaluate_expression($node->cond)) return $this->evaluate_expression($node->if);
 			else return $this->evaluate_expression($node->else);
+		}
+		elseif ($node instanceof Node\Expr\Closure)
+		{
+			$static=$node->static;
+			$byref=$node->byRef;
+			$emul=$this;
+			$users=$node->uses; //array
+			$params=$node->params;
+			$returnType=$node->returnType;
+			$statements=$node->stmts;
+			$c=function() use ($emul,$statements) {
+				$args=func_get_args();
+				return $emul->run_code($statements);
+			};
+			return $c;
+
 		}
 		else
 			$this->error("Unknown expression node: ",$node);
