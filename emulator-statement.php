@@ -331,8 +331,7 @@ trait EmulatorStatement
 			$this->current_active_namespaces=[];
 
 			$this->verbose("Changing namespace to '{$this->current_namespace}'...\n",2);
-			$res=$this->run_code($node->stmts);
-			return $res;
+			$this->run_code($node->stmts);
 
 		}
 		elseif ($node instanceof Node\Stmt\Const_) //constants are not declared ahead of time, they are inline
