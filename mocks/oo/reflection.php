@@ -112,7 +112,7 @@ class ReflectionClass_mock extends BaseReflection_mock
 	}
 	function _getProperty($name)
 	{
-		if (!array_key_exists($name,$this->class()->properties))
+		if (!array_key_exists($name,$this->myclass()->properties))
 			throw new ReflectionException;
 		return new ReflectionProperty_mock($this->class,$name);
 
