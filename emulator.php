@@ -895,7 +895,8 @@ class Emulator
 			}
 			catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
 			{
-				$this->throw_exception($e); //should be throw_error, throw_exception relies on type
+				throw $e;
+				// $this->throw_exception($e); //should be throw_error, throw_exception relies on type
 			}			
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;

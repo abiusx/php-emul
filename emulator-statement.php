@@ -11,7 +11,7 @@ trait EmulatorStatement
 	 * Used to check if loop condition is still valid
 	 * @return boolean
 	 */
-	private function loop_condition($i=0)
+	protected function loop_condition($i=0)
 	{
 		if ($this->terminated)
 			return true;
