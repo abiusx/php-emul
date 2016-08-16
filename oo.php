@@ -605,7 +605,7 @@ class OOEmulator extends Emulator
 				// if (!isset($var->{$property_name}))
 				// 	$this->notice("Undefined property: ".get_class($var)."::\${$property_name}");
 				#TODO: review this
-				$temp=['temp'=>&$var->{$property_name}];
+				$temp=['temp'=>&$var->{$property_name}]; //creates
 				$key='temp';
 				return $temp;
 				// return $var->{$property_name}; //self notice? #TEST

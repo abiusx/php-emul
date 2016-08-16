@@ -63,7 +63,6 @@ trait EmulatorErrors
 	 */
 	public function exception_handler($e)
 	{
-		var_dump($this->try);
 		if (count($this->exception_handlers))
 		{
 			$this->call_function(end($this->exception_handlers),[$e]);
