@@ -1,6 +1,16 @@
 <?php
 #FIXME: call_user_func* should not be in backtrace
 use PhpParser\Node;
+
+class EmulatedException extends Exception {
+	public $object=null;
+	function __construct(EmulatorObject $e)
+	{
+		$this->object=$e;
+	}
+
+
+}
 trait EmulatorErrors
 {
 	/**
@@ -10,9 +20,16 @@ trait EmulatorErrors
 	 */
 	function throw_exception($e)
 	{
-		$this->verbose("Throwing at {$this->filename_only()}:{$this->current_line} (try depth: {$this->try})...\n",4);
-		if (!$e instanceof Throwable)
-			var_dump($e);
+		$class=get_class($e);
+		$this->verbose("Throwing '{$class}' at {$this->filename_only()}:{$this->current_line} (try depth: {$this->try})...\n",4);
+		if (!$e instanceof Exception)
+		{
+			$this->verbose("Exception is user-type, wrapping into EmulatedException...\n",5);
+			if ($this->is_a($e,"Exception"))
+				$e=new EmulatedException($e);
+			else
+				$this->error("Inconsistency: exception of type unrelated to Exception found");
+		}
 		if ($this->try>0)
 			throw $e;
 		else

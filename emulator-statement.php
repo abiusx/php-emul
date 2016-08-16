@@ -258,7 +258,15 @@ trait EmulatorStatement
 				{
 					//each has type, the exception type, var, the exception variable, and stmts
 					$type=$this->name($catch->type);
-					if ($e instanceof $type)
+					if ($e instanceof EmulatedException and $this->is_a($e->object,$type)) //user-defined exception
+					{
+						$this->verbose("Catch block (user-defined exception type) found, executing...\n",4);
+						$this->variable_set($catch->var,$e->object);
+						$this->run_code($catch->stmts);
+						$catch_found=true;
+						break;
+					}
+					elseif ($e instanceof $type)
 					{
 						$this->verbose("Catch block found, executing...\n",4);
 						$this->variable_set($catch->var,$e);
