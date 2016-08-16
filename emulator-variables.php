@@ -57,16 +57,35 @@ trait EmulatorVariables
 				return $r[$key];
 			elseif (is_null($r)) //any access on null is null [https://bugs.php.net/bug.php?id=72786]
 				return null;
-			elseif (is_array($r) //support for iterable objects
-				and !array_key_exists($key, $r)) //only works for arrays, not strings
+			elseif (is_array($r)) //support for iterable objects
 			{
-				$this->notice("Undefined index: {$key}");
-				return null;
+				if (!array_key_exists($key, $r)) //only works for arrays, not strings
+				{
+					$this->notice("Undefined index: {$key}");
+					return null;
+				}
+				return $r[$key];
+			}
+			elseif (is_object($r))
+			{
+				if ($r instanceof ArrayAccess)
+					return $r[$key];
+				else
+				{
+					if ($r instanceof EmulatorObject)
+						$type=$r->classname;		
+					else
+						$type=get_class($r);
+					$this->error("Cannot use object of type {$type} as array");
+					return null;
+				}
 			}
 			else
+			{
+				$this->warning("Using unknown type as array");
 				return $r[$key];
-		else 
-			return null;
+			}
+		return null;
 	}
 	/**
 	 * Check whether or not a variable exists
