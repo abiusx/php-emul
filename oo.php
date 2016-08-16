@@ -53,7 +53,7 @@ class EmulatorObject
 	{
 		$this->objectid=self::$object_count++;
 		$this->classname=$classname;
-		self::$emul->verbose("EmulatorObject('{$this->classname}') __construct() id={$this->objectid}\n",5);
+		self::$emul->verbose("EmulatorObject('{$this->classname}') __construct() id={$this->objectid}\n",8);
 		$this->properties=$properties;
 		$this->property_visibilities=$visibilities;
 		$this->property_class=$classes;
@@ -61,13 +61,13 @@ class EmulatorObject
 	function __clone()
 	{
 		$this->objectid=self::$object_count++;
-		self::$emul->verbose("EmulatorObject('{$this->classname}')) __clone() id={$this->objectid}\n",5);
+		self::$emul->verbose("EmulatorObject('{$this->classname}')) __clone() id={$this->objectid}\n",8);
 		//TODO: call clone
 	}
 	public $destructor=null;
 	function __destruct()
 	{
-		self::$emul->verbose("EmulatorObject('{$this->classname}') __destruct() id={$this->objectid}\n",5);
+		self::$emul->verbose("EmulatorObject('{$this->classname}') __destruct() id={$this->objectid}\n",8);
 		self::$object_count--;
 		if (self::$emul->method_exists($this, "__destruct"))
 			self::$emul->run_method($this,"__destruct");
