@@ -270,6 +270,7 @@ trait EmulatorErrors
 		switch($errno) //http://php.net/manual/en/errorfunc.constants.php
 		{
 			case E_USER_NOTICE:
+			case E_NOTICE:
 				$str="Notice";
 				break;
 			case E_ERROR:
