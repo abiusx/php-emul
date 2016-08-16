@@ -55,7 +55,7 @@ class Emulator
 	 */
 	function __construct($init_environ=null)
 	{
-		$this->state[]=array_flip(['variables','constants','included_files'
+		$this->state=array_flip(['variables','constants','included_files'
 		,'current_namespace','current_active_namespaces'
 		,'current_file','current_line','current_function'
 		,'output','output_buffer','functions'

@@ -1,8 +1,8 @@
 <?php
 function class_implements_mock($emul,$class_or_object,$autoload=true)
 {
-	if ($autoload) $emul->autoload($name);
 	$class=$class_or_object;
+	if ($autoload) $emul->autoload($class);
 	if (!is_string($class))
 		$class=$emul->get_class($class_or_object);
 	if (class_exists($class) and $class!="EmulatorObject" ) return class_implements($class_or_object,$autoload);

@@ -92,6 +92,7 @@ class OOEmulator extends Emulator
 	use OOEmulator_spl_autoload;
 	function __construct($init_environ=null)
 	{
+		parent::__construct($init_environ);
 
 		$this->state['autoloaders']=
 		$this->state['classes']=
@@ -103,7 +104,6 @@ class OOEmulator extends Emulator
 		$this->state['current_class']=
 		$this->state['magic_method_reentrant']= //re-entrant flag check for magic-methods
 		1; //emulation state elements
-		parent::__construct($init_environ);
 		if ($this->auto_mock)
 		foreach(get_declared_classes() as $class) 
 		{
