@@ -222,7 +222,7 @@ trait EmulatorStatement
 		}
 		elseif ($node instanceof Node\Stmt\Throw_)
 		{
-			$this->throw($this->evaluate_expression($node->expr));
+			$this->throw_exception($this->evaluate_expression($node->expr));
 		}
 		elseif ($node instanceof Node\Stmt\TryCatch)
 		{
@@ -272,7 +272,7 @@ trait EmulatorStatement
 				else
 				{
 					$this->verbose("Could not find any matching catch block, throwing error for further catching...\n",3);
-					$this->throw($e);
+					$this->throw_exception($e);
 				}
 				$this->try++; //balance off with the one below
 			}

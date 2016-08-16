@@ -8,9 +8,11 @@ trait EmulatorErrors
 	 * If a try/catch is active, will throw, otherwise will use exception handler
 	 * @param  Exception/Error $e 
 	 */
-	function throw($e)
+	function throw_exception($e)
 	{
 		$this->verbose("Throwing at {$this->filename_only()}:{$this->current_line} (try depth: {$this->try})...\n",4);
+		if (!$e instanceof Throwable)
+			var_dump($e);
 		if ($this->try>0)
 			throw $e;
 		else

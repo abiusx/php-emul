@@ -95,7 +95,7 @@ class Emulator
 	 * Configuration: inifite loop limit
 	 * @var integer
 	 */
-	public $infinite_loop	=	1000; 
+	public $infinite_loop	=	200; 
 	/**
 	 * Maximum PHP version fully supported by the emulator
 	 * this is the version that will be returned via phpversion()
@@ -891,11 +891,11 @@ class Emulator
 			}
 			catch (Exception $e)
 			{
-				$this->throw($e);
+				$this->throw_exception($e);
 			}
 			catch (Error $e) //php 7. fortunately, even though Error is not a class, this will not err in PHP 5
 			{
-				$this->throw($e);
+				$this->throw_exception($e); //should be throw_error, throw_exception relies on type
 			}			
 			if ($this->terminated) return null;
 			if ($this->return) return $this->return_value;

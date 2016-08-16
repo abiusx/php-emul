@@ -19,7 +19,7 @@ abstract class BaseReflection_mock
 class ReflectionMethod_mock extends BaseReflection_mock
 {
 	protected $class,$method;
-	function &class()
+	function &myclass()
 	{
 		return $this->emul()->classes[strtolower($this->class)];
 	}
@@ -51,15 +51,15 @@ class ReflectionMethod_mock extends BaseReflection_mock
 class ReflectionProperty_mock extends BaseReflection_mock
 {
 	protected $prop,$class;
-	function &class()
+	function &myclass()
 	{
 		return $this->emul()->classes[strtolower($this->class)];
 
 	}
 	function _isPrivate()
 	{
-		var_dump($this->class()->property_visibilities[$this->prop]);
-		return $this->class()->property_visibilities[$this->prop]==EmulatorObject::Visibility_Private;
+		// var_dump($this->myclass()->property_visibilities[$this->prop]);
+		return $this->myclass()->property_visibilities[$this->prop]==EmulatorObject::Visibility_Private;
 	}
 	function __construct($class,$name)
 	{
@@ -70,7 +70,7 @@ class ReflectionProperty_mock extends BaseReflection_mock
 class ReflectionClass_mock extends BaseReflection_mock
 {
 	protected $class="";
-	function &class()
+	function &myclass()
 	{
 		return $this->emul()->classes[strtolower($this->class)];
 
@@ -91,7 +91,7 @@ class ReflectionClass_mock extends BaseReflection_mock
 	function _getMethods($filter=null)
 	{
 		$result=[];
-		foreach ($this->class()->methods as $method)
+		foreach ($this->myclass()->methods as $method)
 		{
 			if ($filter!==null)
 			{
@@ -119,7 +119,7 @@ class ReflectionClass_mock extends BaseReflection_mock
 	}
 	function _getInterfaceNames()
 	{
-		return $this->class()->interfaces;
+		return $this->myclass()->interfaces;
 	}
 
 
