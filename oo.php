@@ -291,8 +291,14 @@ class OOEmulator extends Emulator
 			{
 				if ($constructor) //has a constructor, do not auto-construct
 				{
-					$r=new ReflectionClass($class);
-					$obj->parent=$r->newInstanceWithoutConstructor();
+					try {
+						$r=new ReflectionClass($class);
+						$obj->parent=$r->newInstanceWithoutConstructor(); //fails in php 5.6-
+					}
+					catch(ReflectionException $e) 
+					{
+						$obj->parent=$r->newInstance();
+					}
 				}
 				else
 					$obj->parent=new $class;
