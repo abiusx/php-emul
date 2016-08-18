@@ -66,20 +66,20 @@ trait EmulatorVariables
 				}
 				return $r[$key];
 			}
-			elseif (is_object($r))
-			{
-				if ($r instanceof ArrayAccess)
-					return $r[$key];
-				else
-				{
-					if ($r instanceof EmulatorObject)
-						$type=$r->classname;		
-					else
-						$type=get_class($r);
-					$this->error("Cannot use object of type {$type} as array");
-					return null;
-				}
-			}
+			// elseif (is_object($r))
+			// {
+			// 	if ($r instanceof ArrayAccess)
+			// 		return $r[$key];
+			// 	else
+			// 	{
+			// 		if ($r instanceof EmulatorObject)
+			// 			$type=$r->classname;		
+			// 		else
+			// 			$type=get_class($r);
+			// 		$this->error("Cannot use object of type {$type} as array");
+			// 		return null;
+			// 	}
+			// }
 			else
 			{
 				$this->warning("Using unknown type as array");

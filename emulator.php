@@ -530,7 +530,16 @@ class Emulator
 			
 			if (is_scalar($base)) //arraydimfetch on scalar returns null 
 				return $this->null_reference($key);
-			
+
+			if (is_object($base) and !$base instanceof ArrayAccess)			
+			{
+				if ($base instanceof EmulatorObject)
+					$type=$base->classname;
+				else
+					$type=get_class($base);
+				$this->error("Cannot use object of type {$type} as array");
+				return $this->null_reference($key);
+			}
 			// if (is_null($base))
 			// 	return $this->null_reference($key);
 			foreach ($indexes as $index)
