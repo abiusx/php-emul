@@ -64,6 +64,7 @@ class Emulator
 		,'try','loop_depth','return','return_value'
 		,'shutdown_functions','terminated'
 		,'execution_context_stack' //all previous contexts, i.e. all current_* vars
+		,'data'
 		]);
 		$this->parser = new PhpParser\Parser(new PhpParser\Lexer);
 		$this->printer = new PhpParser\PrettyPrinter\Standard;

@@ -320,7 +320,7 @@ trait OOEmulatorMethods {
 		if ($this->terminated) return null;
 		#TODO: add mocked class/methods
 		
-		if ($object) //method
+		if ($object!==null) //method
 		{
 			$this->verbose("Core method has a bound object, calling...\n",4);
 			array_push($this->trace, (object)array("type"=>"->","function"=>$method_name,"file"=>$this->current_file,"line"=>$this->current_line,"args"=>$argValues));
