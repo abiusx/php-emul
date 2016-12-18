@@ -31,6 +31,10 @@ trait OOEmulatorMethodExistence {
 	{
 		return class_exists($classname) or $this->user_class_exists($classname);
 	}
+	public function interface_exists($interface)
+	{
+		return interface_exists($interface) or $this->user_interface_exists($interface);
+	}
 	
 	/**
 	 * Checks whether a user class has a direct property or not

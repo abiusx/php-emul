@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__."/emulator.php";
 use PhpParser\Node;
+#TODO: interfaces behave like classes when using each other, e.g. an interface can "extend"
+#	another interface. Add support. Good example is CakePHP.
 #TODO: closure,closureUse
 #TODO: namespace,use
 //TODO: magic methods, destructor
