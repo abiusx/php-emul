@@ -367,7 +367,15 @@ trait EmulatorStatement
 		elseif (array_key_exists($name, $this->constants))
 			return $this->constants[$name];
 		else
-			$this->error("Undefined constant {$fqname}");
+		{
+			if (is_string($fqname))
+			{
+				$this->notice("Use of undefined constant {$fqname} - assumed '{$fqname}'");
+				return $fqname;
+			}	
+			else
+				$this->error("Undefined constant {$fqname}");
+		}
 	}
 	function constant_set($name,$value)
 	{
